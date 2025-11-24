@@ -3270,20 +3270,54 @@ function startStageCombat(chapterIndex, stageIndex) {
                                 await delay(400);
                                 logCombat(`<em>"${skillToUse.dialogue}"</em>`);
                                 
+                                // 1. 기본 데미지 계산
                                 damage = Math.max(1, Math.floor(card.stats.atk * skillToUse.power) - monsterData.stats.def);
                                 
-                                if (skillToUse.type === 'vampire') {
-                                    const healedAmount = Math.floor(damage * 0.5);
-                                    const maxHpForThisCard = originalBonusDeck[i].stats.hp; // 전투 시작 시점의 최대 HP
-									card.stats.hp = Math.min(maxHpForThisCard, card.stats.hp + healedAmount);
-									logCombat(`<strong>${card.name}</strong>이(가) ${healedAmount}의 체력을 회복했다!`);
+                                // --- [신규] 스킬 타입별 효과 구현 ---
+
+                                // (1) 관통 공격 (True Damage): 방어력 무시
+                                if (skillToUse.type === 'true_damage') {
+                                    damage = Math.floor(card.stats.atk * skillToUse.power);
+                                    logCombat(`방어력을 무시한 강력한 일격!`);
                                 }
-                                if (skillToUse.type === 'debuff_def') {
+
+                                // (2) 치유 (Heal): 공격 안 함, 회복만 함
+                                else if (skillToUse.type === 'heal') {
+                                    damage = 0; // 적에게 주는 데미지 0
+                                    const healAmount = Math.floor(card.stats.atk * skillToUse.power);
+                                    const maxHp = originalBonusDeck[i].stats.hp;
+                                    card.stats.hp = Math.min(maxHp, card.stats.hp + healAmount);
+                                    logCombat(`<strong>${card.name}</strong>이(가) 체력을 ${healAmount} 회복했습니다!`);
+                                }
+
+                                // (3) 흡혈 (Vampire): 데미지 주고 + 회복
+                                else if (skillToUse.type === 'vampire') {
+                                    const healedAmount = Math.floor(damage * 0.5);
+                                    const maxHp = originalBonusDeck[i].stats.hp;
+                                    card.stats.hp = Math.min(maxHp, card.stats.hp + healedAmount);
+                                    logCombat(`<strong>${card.name}</strong>이(가) ${healedAmount}의 체력을 흡수했습니다!`);
+                                }
+
+                                // (4) 방어력 감소 (Debuff Def): 적 방어력 20% 감소
+                                else if (skillToUse.type === 'debuff_def') {
                                     monsterData.stats.def = Math.max(0, Math.floor(monsterData.stats.def * 0.8));
-                                    logCombat(`<strong>${monsterData.name}</strong>의 방어력이 감소했다!`);
+                                    logCombat(`<strong>${monsterData.name}</strong>의 방어력이 감소했습니다!`);
+                                }
+
+                                // (5) 공격력 감소 (Debuff Atk): 적 공격력 10% 감소
+                                else if (skillToUse.type === 'debuff_atk') {
+                                    monsterData.stats.atk = Math.max(0, Math.floor(monsterData.stats.atk * 0.9));
+                                    logCombat(`<strong>${monsterData.name}</strong>의 공격력이 감소했습니다!`);
+                                }
+
+                                // (6) 자가 버프 (Buff Atk): 내 공격력 10% 증가
+                                else if (skillToUse.type === 'buff_atk') {
+                                    card.stats.atk = Math.floor(card.stats.atk * 1.1);
+                                    logCombat(`<strong>${card.name}</strong>의 공격력이 상승했습니다!`);
                                 }
 
                             } else {
+                                // 일반 공격
                                 logCombat(`<strong>${card.name}</strong>의 일반 공격!`);
                                 damage = Math.max(1, card.stats.atk - monsterData.stats.def);
                             }
@@ -4836,6 +4870,7 @@ speed4xButton.addEventListener('click', () => setCombatSpeed(4));
     </script>
 </body>
 </html>
+
 
 
 
