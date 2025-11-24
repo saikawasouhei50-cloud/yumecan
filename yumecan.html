@@ -3720,11 +3720,22 @@ function endCombat(isVictory, combatInfo) { // dungeon, type 대신 combatInfo �
                 // --- 3. 스킬 및 스토리 표시 ---
                 const skillsContainer = document.getElementById('detail-skills-container');
                 skillsContainer.innerHTML = '';
+                
                 character.skills.forEach((skill, index) => {
                     const isUltimate = character.rarity === 'SSR' && index === 1;
                     const skillEl = document.createElement('div');
                     skillEl.className = 'bg-black/20 p-3 rounded-lg';
-                    skillEl.innerHTML = `<h4 class="font-bold ${isUltimate ? 'text-yellow-300' : 'text-white'}">${isUltimate ? '궁극기' : '일반 스킬'}: ${skill.name}</h4><p class="text-gray-300 italic">"${skill.dialogue}"</p><p class="text-sm mt-1">${getSkillDescription(skill)}</p>`;
+                    
+                    // [수정] 구글 시트에 적은 설명(desc)이 있으면 그걸 쓰고, 없으면 자동 생성 함수(getSkillDescription) 사용
+                    const description = skill.desc ? skill.desc : getSkillDescription(skill);
+
+                    skillEl.innerHTML = `
+                        <h4 class="font-bold ${isUltimate ? 'text-yellow-300' : 'text-white'}">
+                            ${isUltimate ? '궁극기' : '일반 스킬'}: ${skill.name}
+                        </h4>
+                        <p class="text-gray-300 italic">"${skill.dialogue}"</p>
+                        <p class="text-sm mt-1 text-green-300">${description}</p>
+                    `;
                     skillsContainer.appendChild(skillEl);
                 });
                 currentStoryPages = character.story.split('[PAGE_BREAK]');
@@ -4870,6 +4881,7 @@ speed4xButton.addEventListener('click', () => setCombatSpeed(4));
     </script>
 </body>
 </html>
+
 
 
 
