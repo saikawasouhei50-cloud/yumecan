@@ -12,7 +12,7 @@ let mainChapters = [];
 let gachaPool = {}; // 가챠 등장 목록
 			// ==========================================
 // 1. 아까 복사한 웹 앱 URL을 따옴표 안에 넣으세요
-const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbyGdqSOh74-MJpzz9_8llpLJo-D-RtP5U3_dPSvZqTuA8mo2CSROGGo3jc4IibNDe2Xcw/exec";
+const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycby5bY6UhCzNuth-81NsrSzxnPXHa-YBUnu2qDgs00l8-J0BZR_7qfIqIW_GPZSwsVHKIg/exec";
 // ==========================================
 
 // 2. 데이터를 가져와서 characters 변수에 채워넣는 함수
@@ -626,6 +626,7 @@ const genericInteractions = [
     ['사건 조사는 잘 돼가나요?', '쉽지 않네요.'],
     ['안녕하세요!', '반갑습니다.']
 ];
+
 
 
 
