@@ -33,8 +33,21 @@ async function loadGameData() {
             cardImageUrl: row.cardImageUrl || row.imageUrl,
             dialogues: row.dialogues ? String(row.dialogues).split('|') : ['...'],
             skills: [
-                { name: row.skill1_name, dialogue: row.skill1_dialogue, power: Number(row.skill1_power), type: row.skill1_type },
-                ...(row.skill2_name ? [{ name: row.skill2_name, dialogue: row.skill2_dialogue, power: Number(row.skill2_power), type: row.skill2_type }] : [])
+                {
+                    name: row.skill1_name,
+                    dialogue: row.skill1_dialogue,
+                    power: Number(row.skill1_power),
+                    type: row.skill1_type,
+                    desc: row.skill1_desc // [추가] 1스킬 설명 가져오기
+                },
+                // 스킬 2가 있다면 추가
+                ...(row.skill2_name ? [{
+                    name: row.skill2_name,
+                    dialogue: row.skill2_dialogue,
+                    power: Number(row.skill2_power),
+                    type: row.skill2_type,
+                    desc: row.skill2_desc // [추가] 2스킬 설명 가져오기
+                }] : [])
             ],
             deathDialogue: row.deathDialogue,
             story: row.story,
@@ -626,6 +639,7 @@ const genericInteractions = [
     ['사건 조사는 잘 돼가나요?', '쉽지 않네요.'],
     ['안녕하세요!', '반갑습니다.']
 ];
+
 
 
 
