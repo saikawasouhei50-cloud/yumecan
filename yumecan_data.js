@@ -10,9 +10,10 @@ let currentEventInfo = {};
 let EVENT_CHARACTER_NAME = "";
 let mainChapters = [];
 let gachaPool = {}; // 가챠 등장 목록
+let characterProfiles = {};
 			// ==========================================
 // 1. 아까 복사한 웹 앱 URL을 따옴표 안에 넣으세요
-const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbztLz-mD0YRhiBKU_9naEv8B2-UTedLdFm_2R8ubEuri15nhD-ex-QlEfz6-emtoMIkkA/exec";
+const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbwrhLurZvyzOcK3iPcg4hiScO_0XKCIhsOdCJiY-1O9cV_XcsyUM2UN9WKS5moN123S7w/exec";
 // ==========================================
 
 // 2. 데이터를 가져와서 characters 변수에 채워넣는 함수
@@ -33,21 +34,8 @@ async function loadGameData() {
             cardImageUrl: row.cardImageUrl || row.imageUrl,
             dialogues: row.dialogues ? String(row.dialogues).split('|') : ['...'],
             skills: [
-                {
-                    name: row.skill1_name,
-                    dialogue: row.skill1_dialogue,
-                    power: Number(row.skill1_power),
-                    type: row.skill1_type,
-                    desc: row.skill1_desc // [추가] 1스킬 설명 가져오기
-                },
-                // 스킬 2가 있다면 추가
-                ...(row.skill2_name ? [{
-                    name: row.skill2_name,
-                    dialogue: row.skill2_dialogue,
-                    power: Number(row.skill2_power),
-                    type: row.skill2_type,
-                    desc: row.skill2_desc // [추가] 2스킬 설명 가져오기
-                }] : [])
+                { name: row.skill1_name, dialogue: row.skill1_dialogue, power: Number(row.skill1_power), type: row.skill1_type },
+                ...(row.skill2_name ? [{ name: row.skill2_name, dialogue: row.skill2_dialogue, power: Number(row.skill2_power), type: row.skill2_type }] : [])
             ],
             deathDialogue: row.deathDialogue,
             story: row.story,
@@ -249,6 +237,22 @@ async function loadGameData() {
             });
 
             console.log("메인 챕터 & 스테이지 스토리 로드 완료");
+        }
+		
+		// 12. 캐릭터 프로필(도감용) 로드
+        if (data.profiles) {
+            characterProfiles = {}; // 초기화
+            data.profiles.forEach(row => {
+                // baseName을 키(Key)로 사용하여 저장
+                characterProfiles[row.baseName] = {
+                    name: row.name,
+                    age: row.age, // 숫자라면 Number(row.age)
+                    job: row.job,
+                    description: row.description,
+                    imageUrl: row.imageUrl
+                };
+            });
+            console.log("캐릭터 프로필 로드 완료");
         }
 		
         console.log("모든 데이터 로딩 완료!");
@@ -491,100 +495,7 @@ const RARITY_COST_MULTIPLIER = {
 
 // ✅ game_data.js 파일 맨 아래에 이 코드를 통째로 추가하세요.
 
-const characterProfiles = {
-    '서도진': {
-        name: '서도진',
-        age: 37,
-        job: '추리소설가',
-        description: '베스트셀러 추리소설가. 남에게 떠밀려 투고된 글이 공전의 히트를 쳤다. 이런 관심 받고 싶지 않지만, 담당 편집자의 격려로 어찌어찌 글쟁이 생활을 이어나가는 중.',
-        imageUrl: 'https://placehold.co/300x500/a0aec0/ffffff?text=서도진+프로필' // 대표 프로필 이미지
-    },
-    '윤필규': {
-        name: '윤필규',
-        age: 32,
-        job: '편집자',
-        description: '서도진의 담당 편집자. 꼼꼼하고 성실한 성격으로, 틈만 나면 슬럼프에 빠지는 서도진과 동거하며 그의 생활을 돕는다. 어디서 나온지 모를 올곧은 정의감을 숨기고 있다.',
-        imageUrl: 'https://placehold.co/300x500/63b3ed/ffffff?text=윤필규+프로필'
-    },
-    '윤서천': {
-        name: '윤서천',
-        age: 31,
-        job: '화학과 대학원생',
-        description: '일본에서 박사과정을 밟다가 모종의 사건으로 지도교수를 잃고 귀국한 연구자. 윤필규의 동생이자 도천영의 학생.',
-        imageUrl: 'https://placehold.co/300x500/f6e05e/000000?text=윤서천+프로필'
-    },
-    '한 현': {
-        name: '한 현',
-        age: 32,
-        job: '동네서점 주인',
-        description: '동네의 작은 서점을 운영하는 평범한 청년. 눈앞의 사건이 그를 다시 현장으로 이끈다.',
-        imageUrl: 'https://placehold.co/300x500/f6e05e/000000?text=한+현+프로필'
-    },
-    '도천영': {
-        name: '도천영',
-        age: 42,
-        job: '화학과 부교수',
-        description: '서울 모 대학교 화학과 소속 부교수. 아직은 열의가 있는 FM. 연구 주제가 마이너해 학생이 별로 오지 않는 게 고민이다.',
-        imageUrl: 'https://placehold.co/300x500/086f83/ffffff?text=도천영+프로필'
-    },
-    '박연우': {
-        name: '박연우',
-        age: 46,
-        job: '화학과 교수',
-        description: '서울 모 대학교 화학과 소속 교수. 한때 학계의 혜성으로 소개되었으나 현재는 열의는 커녕 삶의 의지도 영 보이지 않는다. 그녀의 유기화학 연구실은 학생들의 협조로 어찌어찌 돌아가는 중.',
-        imageUrl: 'https://placehold.co/300x500/c05621/ffffff?text=박연우+프로필'
-    },
-    '강은율': {
-        name: '강은율',
-        age: 36,
-        job: '화학과 조교수',
-        description: '서울 모 대학교 화학과 소속 조교수. 언제나 미소를 잃지 않는 긍정적인 성격의 연구자. 제일 좋아하는 건 4f 오비탈.',
-        imageUrl: 'https://placehold.co/300x500/0987a0/ffffff?text=강은율+프로필'
-    },
-    '백정문': {
-        name: '백정문',
-        age: 32,
-        job: '수학자',
-        description: '서울 모 대학교 수학과 소속 조교수. 부드러운 성격으로 학생들에게 소소하게 인기가 있다. 개인 시간에는 어쩐지 성격이 다르다는 모양이지만...',
-        imageUrl: 'https://placehold.co/300x500/d53f8c/ffffff?text=백정문+프로필'
-    },
-    '독고유진': {
-        name: '독고유진',
-        age: 39,
-        job: '호러소설가',
-        description: '소설보다 더 소설 같은 현실의 사건을 해결하는 호러소설가. 아니, 사실 해결은 나 말고 교수님이 하신다고 봐야 하지만. 손 정도는 빌려드리니까 말이야.',
-        imageUrl: 'https://placehold.co/300x500/553c9a/ffffff?text=독고유진+프로필'
-    },
-    '양석민': {
-        name: '양석민',
-        age: 48,
-        job: '민속학과 교수',
-        description: '충청 모 대학 민속학과 소속 교수. 세부전공이 무어나고? 종교학이란다. 인간의 종교도 외우주의 종교도 연구하고 있지. 외우주의 종교가 무어냐고? 후후...',
-        imageUrl: 'https://placehold.co/300x500/22543d/ffffff?text=양석민+프로필'
-    },
-    '윤유준': {
-        name: '윤유준',
-        age: 29,
-        job: '약학과 학생',
-        description: '충청 모 대학 약학과 소속 학부생. 오컬트를 좋아하기는 하지만 막 믿지는 않았다고요. 재미삼아 괴담 블로그 정도나 자주 봤을 뿐인데, 설마 이렇게 될 거라고는.',
-        imageUrl: 'https://placehold.co/300x500/742a2a/ffffff?text=윤유준+프로필'
-    },
-	'선생': {
-        name: '선생',
-        age: 42, // (스토리 기반 추정)
-        job: '고등학교 수학 교사',
-        description: '실패한 도시로 이사 온 고등학교 수학 선생님. 멍한 눈을 하고 있지만, 아이를 키워본 경험에서 나온 날카로운 통찰력으로 사건의 핵심을 꿰뚫는다.',
-        imageUrl: 'https://placehold.co/300x500/8B4513/ffffff?text=선생+프로필'
-    },
-    // 👇 [신규 추가 2]
-    '백도화': {
-        name: '백도화',
-        age: 37, // (스토리 기반 추정)
-        job: '인터넷 방송인',
-        description: '고양이 귀 헤드셋을 쓴 스트리머. 하지만 그 이면에는 또다른 얼굴이 숨겨져 있는 모양인데. ',
-        imageUrl: 'https://placehold.co/300x500/FFC0CB/000000?text=백도화+프로필'
-    }
-};
+
 
 const CURRENT_EVENT_ID = "mini_event_202510_dohwa";
 
@@ -639,9 +550,6 @@ const genericInteractions = [
     ['사건 조사는 잘 돼가나요?', '쉽지 않네요.'],
     ['안녕하세요!', '반갑습니다.']
 ];
-
-
-
 
 
 
