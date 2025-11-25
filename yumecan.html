@@ -2158,24 +2158,35 @@ function pullCharacter(allowedRarities = null, gachaType = 'normal') {
     const sortedInventory = [...filteredInventory].sort((a, b) => {
         const charA = findCharacter(a.name);
         const charB = findCharacter(b.name);
+
+        // 🛡️ [안전장치] 캐릭터 데이터가 없는 유령 카드는 맨 뒤로 보냄 (에러 방지)
+        if (!charA && !charB) return 0;
+        if (!charA) return 1;
+        if (!charB) return -1;
+
         let comparison = 0;
+        
+        // 안전장치 2: 혹시 데이터는 있는데 등급(rarity)이 비어있을 경우 대비
+        const rarityA = (charA.rarity && rarityOrder[charA.rarity]) ? rarityOrder[charA.rarity] : 0;
+        const rarityB = (charB.rarity && rarityOrder[charB.rarity]) ? rarityOrder[charB.rarity] : 0;
+
         switch (currentSortOrder) {
             case 'level':
                 // 퇴고 순: 레벨 높은 순 > 등급 높은 순 > 이름 가나다 순
-                comparison = b.level - a.level || rarityOrder[charB.rarity] - rarityOrder[charA.rarity] || charA.baseName.localeCompare(charB.baseName);
+                comparison = (b.level - a.level) || (rarityB - rarityA) || charA.baseName.localeCompare(charB.baseName);
                 break;
             case 'revision':
                 // 개정 순: 개정 높은 순 > 등급 높은 순 > 이름 가나다 순
-                comparison = b.revision - a.revision || rarityOrder[charB.rarity] - rarityOrder[charA.rarity] || charA.baseName.localeCompare(charB.baseName);
+                comparison = (b.revision - a.revision) || (rarityB - rarityA) || charA.baseName.localeCompare(charB.baseName);
                 break;
-            case 'name': 
+            case 'name':
                 // 이름 순: 이름 가나다 순 > 등급 높은 순 > 레벨 높은 순
-                comparison = charA.baseName.localeCompare(charB.baseName) || rarityOrder[charB.rarity] - rarityOrder[charA.rarity] || b.level - a.level;
+                comparison = charA.baseName.localeCompare(charB.baseName) || (rarityB - rarityA) || (b.level - a.level);
                 break;
             case 'rarity':
             default:
-                // ✨ 등급 순: 등급 높은 순 > 이름 가나다 순 > 레벨 높은 순 (요청하신 부분!)
-                comparison = rarityOrder[charB.rarity] - rarityOrder[charA.rarity] || charA.baseName.localeCompare(charB.baseName) || b.level - a.level;
+                // ✨ 등급 순: 등급 높은 순 > 이름 가나다 순 > 레벨 높은 순
+                comparison = (rarityB - rarityA) || charA.baseName.localeCompare(charB.baseName) || (b.level - a.level);
                 break;
         }
         return isSortAscending ? comparison * -1 : comparison;
@@ -5056,6 +5067,7 @@ speed4xButton.addEventListener('click', () => setCombatSpeed(4));
     </script>
 </body>
 </html>
+
 
 
 
