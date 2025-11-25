@@ -1279,10 +1279,10 @@ function saveGame() {
 			
             function initializeNewGameData() {
     // ✨ 게임 첫 시작 시 기본 지급 카드에 고유 ID와 레벨 부여
-    addCardToInventory('[편집자] 윤필규');
-    addCardToInventory('[조수] 한 현');
-	collectedCardNames.add('[편집자] 윤필규');
-                collectedCardNames.add('[조수] 한 현');
+    addCardToInventory('[관리인] Ki');
+    addCardToInventory('[관리인] Ai');
+	collectedCardNames.add('[관리인] Ki');
+                collectedCardNames.add('[관리인] Ai');
 	playerCurrency = 100; // 💎 초기 보석 100개 지급
     playerFountainPens = 500; // 🖋️ 초기 펜 수량도 명시적으로 지정
     playerBookmarks = MAX_BOOKMARKS;
@@ -2059,9 +2059,18 @@ function pullCharacter(allowedRarities = null, gachaType = 'normal') {
 
     // 만약 설정 실수로 해당 등급에 뽑을 캐릭터가 하나도 없다면? (안전장치)
     if (possibleCharacters.length === 0) {
-        console.warn(`경고: ${gachaType} 뽑기의 ${selectedRarity} 등급에 해당하는 캐릭터가 없습니다!`);
-        // N등급 아무나 리턴하거나 에러 방지용 더미 리턴
-        return characters.find(c => c.rarity === 'N') || characters[0];
+        console.warn(`경고: ${gachaType} 뽑기의 ${selectedRarity} 등급에 해당하는 캐릭터가 없습니다! N등급으로 대체합니다.`);
+        
+        // ▼▼▼ [수정] N등급 캐릭터들을 모두 찾아서 그 중 랜덤으로 하나를 줍니다 ▼▼▼
+        const nRankChars = characters.filter(c => c.rarity === 'N');
+        
+        if (nRankChars.length > 0) {
+            return nRankChars[Math.floor(Math.random() * nRankChars.length)];
+        }
+        
+        // (만약 N등급조차 하나도 없다면 어쩔 수 없이 전체 목록의 첫 번째를 줍니다)
+        return characters[0];
+        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
     }
 
     // 3. 픽업 캐릭터 확률 적용 (이벤트 뽑기인 경우)
@@ -4922,6 +4931,7 @@ speed4xButton.addEventListener('click', () => setCombatSpeed(4));
     </script>
 </body>
 </html>
+
 
 
 
