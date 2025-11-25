@@ -2982,31 +2982,77 @@ function toggleEditMode() {
 // ================== 🔨 배치 모드 로직 끝 ==================
 // ================== ✨ 마이룸 로직 끝 ✨ ==================
 
+            // ✅ [수정됨] 편찬(덱 관리) 화면 표시 함수
             function displayDeckManagement() {
                 deckStatus.textContent = `현재 편찬: ${playerDeck.length} / ${DECK_CAPACITY}`;
-                deckStatus.classList.toggle('text-green-400', playerDeck.length === DECK_CAPACITY);
                 
-                // 덱 슬롯 표시
+                // 덱 꽉 참 여부에 따라 색상 변경
+                if (playerDeck.length === DECK_CAPACITY) {
+                    deckStatus.classList.remove('text-yellow-300');
+                    deckStatus.classList.add('text-green-400');
+                } else {
+                    deckStatus.classList.add('text-yellow-300');
+                    deckStatus.classList.remove('text-green-400');
+                }
+                
+                // 1. 상단 덱 슬롯 표시
                 deckSlotsContainer.innerHTML = '';
                 for (let i = 0; i < DECK_CAPACITY; i++) {
                     if (playerDeck[i]) {
                         const baseCharacter = findCharacter(playerDeck[i].name);
-                        deckSlotsContainer.appendChild(createCard(baseCharacter, { mode: 'deckSlot', instance: playerDeck[i] }));
+                        // 데이터가 있는 경우에만 카드 생성
+                        if (baseCharacter) {
+                            deckSlotsContainer.appendChild(createCard(baseCharacter, { mode: 'deckSlot', instance: playerDeck[i] }));
+                        } else {
+                            // 데이터 오류 시 빈 슬롯 처리
+                            const errorSlot = document.createElement('div');
+                            errorSlot.className = 'deck-slot rounded-lg text-red-500 text-xs'; 
+                            errorSlot.textContent = '데이터 오류';
+                            deckSlotsContainer.appendChild(errorSlot);
+                        }
                     } else {
                         const emptySlot = document.createElement('div');
-                        emptySlot.className = 'deck-slot rounded-lg'; emptySlot.textContent = '비어있음';
+                        emptySlot.className = 'deck-slot rounded-lg'; 
+                        emptySlot.textContent = '비어있음';
                         deckSlotsContainer.appendChild(emptySlot);
                     }
                 }
 
-                // 덱에 추가할 수 있는 인벤토리 카드 목록 표시
+                // 2. 하단 인벤토리 리스트 표시
                 deckInventoryContainer.innerHTML = '';
                 if (playerInventory.length === 0) {
                     deckInventoryContainer.innerHTML = `<p class="col-span-full text-center text-gray-400 mt-10">편찬할 등장인물이 없습니다.</p>`;
                 } else {
-                    playerInventory.forEach((cardInstance, index) => {
+                    // ✨ [개선] 편찬하기 쉽도록 정렬 (등급 > 레벨 > 이름)
+                    const rarityOrder = { 'SSR': 4, 'SR': 3, 'R': 2, 'N': 1 };
+                    const sortedInventory = [...playerInventory].sort((a, b) => {
+                        const charA = findCharacter(a.name);
+                        const charB = findCharacter(b.name);
+                        
+                        // 데이터가 없는 카드는 맨 뒤로 보냄
+                        if (!charA) return 1;
+                        if (!charB) return -1;
+
+                        // 정렬 우선순위: 덱에 포함된 것(보기 편하게) > 등급 > 레벨
+                        const inDeckA = playerDeck.some(d => d.id === a.id) ? 1 : 0;
+                        const inDeckB = playerDeck.some(d => d.id === b.id) ? 1 : 0;
+                        
+                        return (inDeckB - inDeckA) || // 덱에 있는 것 먼저
+                               (rarityOrder[charB.rarity] - rarityOrder[charA.rarity]) || // 등급 높은 순
+                               (b.level - a.level) || // 레벨 높은 순
+                               charA.baseName.localeCompare(charB.baseName); // 이름 순
+                    });
+
+                    sortedInventory.forEach((cardInstance, index) => {
                         const baseCharacter = findCharacter(cardInstance.name);
-                        // 이제 '이미 덱에 들어간 카드인지' 여부만 체크합니다.
+                        
+                        // ✨ [핵심 수정] 캐릭터 데이터가 없으면(undefined) 그리지 않고 건너뜀 (에러 방지)
+                        if (!baseCharacter) {
+                            console.warn(`데이터 불일치 카드 발견: ${cardInstance.name} (ID: ${cardInstance.id})`);
+                            return; 
+                        }
+
+                        // 이미 덱에 들어간 카드인지 확인
                         const isCardInDeck = playerDeck.some(deckCard => deckCard.id === cardInstance.id);
                         const isDeckFull = playerDeck.length >= DECK_CAPACITY;
                         
@@ -5067,6 +5113,7 @@ speed4xButton.addEventListener('click', () => setCombatSpeed(4));
     </script>
 </body>
 </html>
+
 
 
 
