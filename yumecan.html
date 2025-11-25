@@ -3860,18 +3860,57 @@ enhanceButton.disabled = playerFountainPens < cost;
                         revisionMaterialSelect.disabled = true;
                     }
                 }
-				<div id="publication-container" class="hidden mt-4 bg-gradient-to-r from-indigo-900 to-purple-900 p-4 rounded-lg border border-yellow-400/30">
-    <div class="flex justify-between items-center">
-        <div>
-            <h3 class="font-bold text-xl text-yellow-300 mb-1">✨ 정식 출판</h3>
-            <p class="text-sm text-gray-300">완벽해진 원고를 상위 등급으로 출판합니다.</p>
-            <p id="publication-target-name" class="text-sm font-bold text-white mt-1">Target: ???</p>
-        </div>
-        <button id="publish-card-button" class="gacha-button bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 px-6 rounded-full shadow-[0_0_15px_rgba(234,179,8,0.5)] transition-all transform hover:scale-105">
-            출판하기
-        </button>
-    </div>
-</div>
+				// yumecan.html - showCardDetails 함수 내부의 맨 끝부분
+
+                // ... (기존 개정판 제작 UI 로직 끝) ...
+
+                // ▼▼▼ [신규] 출판(등급업) 로직 추가 ▼▼▼
+                const pubContainer = document.getElementById('publication-container');
+                const pubButton = document.getElementById('publish-card-button');
+                const pubTargetText = document.getElementById('publication-target-name');
+                
+                // 1. 등급 순서 정의
+                const rarityOrder = ['N', 'R', 'SR', 'SSR'];
+                const currentRarityIndex = rarityOrder.indexOf(character.rarity);
+
+                // 2. 출판 조건 확인: (최대 레벨) AND (최대 개정) AND (다음 등급 존재)
+                const isMaxLevel = cardInstance.level >= MAX_ENHANCEMENT_LEVEL; // +9
+                const isMaxRevision = cardInstance.revision >= MAX_REVISION_LEVEL; // 5성
+                const hasNextRarity = currentRarityIndex !== -1 && currentRarityIndex < rarityOrder.length - 1;
+
+                let nextRarityChar = null;
+
+                if (isMaxLevel && isMaxRevision && hasNextRarity) {
+                    const nextRarity = rarityOrder[currentRarityIndex + 1];
+                    
+                    // 같은 인물(baseName)이면서 다음 등급인 캐릭터 찾기
+                    // (가챠 풀이나 전체 캐릭터 목록에서 검색)
+                    nextRarityChar = characters.find(c => 
+                        c.baseName === character.baseName && c.rarity === nextRarity
+                    );
+                }
+
+                // 3. UI 표시/숨김 처리
+                if (nextRarityChar) {
+                    // 조건 만족 & 상위 등급 캐릭터 데이터 존재함 -> 버튼 보이기
+                    pubContainer.classList.remove('hidden');
+                    
+                    // 퇴고/개정 UI는 숨김 (더 이상 성장 불가능하므로)
+                    document.getElementById('enhancement-container').classList.add('hidden');
+                    document.getElementById('revision-container').classList.add('hidden');
+
+                    pubTargetText.textContent = `대상: [${nextRarityChar.rarity}] ${nextRarityChar.name}`;
+                    
+                    // 버튼 클릭 이벤트 연결 (일회성)
+                    pubButton.onclick = () => publishCard(currentDetailCardId, nextRarityChar);
+                } else {
+                    // 조건 불만족 -> 숨기기
+                    pubContainer.classList.add('hidden');
+                }
+                // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
+                cardDetailModal.classList.remove('hidden');
+            }
 
                 cardDetailModal.classList.remove('hidden');
             }
@@ -4991,6 +5030,7 @@ speed4xButton.addEventListener('click', () => setCombatSpeed(4));
     </script>
 </body>
 </html>
+
 
 
 
