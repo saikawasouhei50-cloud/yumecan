@@ -3978,16 +3978,29 @@ enhanceButton.disabled = playerFountainPens < cost;
                 const isMaxRevision = cardInstance.revision >= (typeof MAX_REVISION_LEVEL !== 'undefined' ? MAX_REVISION_LEVEL : 5);
                 const hasNextRarity = currentRarityIndex !== -1 && currentRarityIndex < rarityOrder.length - 1;
 
-                let nextRarityChar = null;
+                // yumecan.html 의 showCardDetails 함수 내부
 
-                if (isMaxLevel && isMaxRevision && hasNextRarity) {
-                    const nextRarity = rarityOrder[currentRarityIndex + 1];
-                    
-                    // 같은 인물(baseName)이면서 다음 등급인 캐릭터 찾기
-                    nextRarityChar = characters.find(c => 
-                        c.baseName === character.baseName && c.rarity === nextRarity
-                    );
-                }
+// ... (이전 코드: isMaxLevel, isMaxRevision 등 확인하는 곳)
+
+let nextRarityChar = null;
+
+if (isMaxLevel && isMaxRevision && hasNextRarity) {
+    const nextRarity = rarityOrder[currentRarityIndex + 1];
+
+    // ✨ [수정] 1순위: 엑셀에 정해둔 'publish_target'이 있으면 무조건 그걸로 진화!
+    if (character.publishTarget) {
+        nextRarityChar = characters.find(c => c.name === character.publishTarget);
+    }
+    
+    // 2순위: 만약 정해둔 게 없으면, 기존 방식대로 (같은 이름 + 다음 등급) 찾기
+    if (!nextRarityChar) {
+        nextRarityChar = characters.find(c => 
+            c.baseName === character.baseName && c.rarity === nextRarity
+        );
+    }
+}
+
+// ... (이후 코드: UI 표시 로직 등 그대로 유지)
 
                 // 3. UI 표시/숨김 처리
                 if (nextRarityChar) {
@@ -5135,6 +5148,7 @@ speed4xButton.addEventListener('click', () => setCombatSpeed(4));
     </script>
 </body>
 </html>
+
 
 
 
