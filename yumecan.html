@@ -3741,13 +3741,33 @@ function endCombat(isVictory, combatInfo) { // dungeon, type 대신 combatInfo �
             }
 
             function getSkillDescription(skill) {
-                switch(skill.type) {
-                    case 'damage': return `공격력의 ${skill.power * 100}% 만큼 피해를 줍니다.`;
-                    case 'debuff_def': return `적의 방어력을 일시적으로 감소시킵니다.`;
-                    case 'vampire': return `가한 피해의 50% 만큼 체력을 회복합니다.`;
-                    default: return '특별한 효과를 가진 스킬입니다.';
-                }
-            }
+    // 1. 구글 시트에 적어둔 '커스텀 설명'이 있다면 그걸 최우선으로 보여줌
+    if (skill.desc && skill.desc !== "") {
+        return skill.desc;
+    }
+
+    // 2. 커스텀 설명이 없으면, 스킬 타입에 따라 자동 생성
+    const powerPercent = Math.round(skill.power * 100); // 예: 1.5 -> 150
+    
+    switch(skill.type) {
+        case 'damage': 
+            return `적에게 공격력의 ${powerPercent}% 만큼 피해를 줍니다.`;
+        case 'heal': 
+            return `자신의 체력을 공격력의 ${powerPercent}% 만큼 회복합니다.`;
+        case 'vampire': 
+            return `적을 공격하고 피해량의 50%를 체력으로 흡수합니다.`;
+        case 'true_damage': 
+            return `적의 방어력을 무시하고 공격력의 ${powerPercent}% 피해를 줍니다.`;
+        case 'buff_atk': 
+            return `자신의 공격력이 10% 증가합니다.`;
+        case 'debuff_atk': 
+            return `적의 공격력을 10% 감소시킵니다.`;
+        case 'debuff_def': 
+            return `적의 방어력을 20% 감소시킵니다.`;
+        default: 
+            return '특별한 효과를 가진 스킬입니다.'; // 타입을 모를 때 나오는 기본 문구
+    }
+}
 
             let currentDetailCardId = null;
 
@@ -5036,6 +5056,7 @@ speed4xButton.addEventListener('click', () => setCombatSpeed(4));
     </script>
 </body>
 </html>
+
 
 
 
