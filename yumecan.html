@@ -3918,7 +3918,10 @@ enhanceButton.disabled = playerFountainPens < cost;
 			// ✅ showCardDetails 함수 바로 다음에 이 새로운 함수를 추가하세요.
 
 function publishCard(cardId, targetCharacterData) {
-    if (!confirm(`축하합니다! 이 원고를 [${targetCharacterData.name}]으로 정식 출판하시겠습니까?\n\n(주의: 레벨과 개정 수치가 초기화됩니다.)`)) {
+    // ▼▼▼ [주의] 여기 따옴표는 숫자 1 옆에 있는 `(백틱) 이어야 합니다! ▼▼▼
+    const confirmMsg = `축하합니다! 이 원고를 [${targetCharacterData.name}]으로 정식 출판하시겠습니까?\n\n(주의: 레벨과 개정 수치가 초기화됩니다.)`;
+    
+    if (!confirm(confirmMsg)) {
         return;
     }
 
@@ -3926,28 +3929,28 @@ function publishCard(cardId, targetCharacterData) {
     const myCard = playerInventory.find(c => c.id === cardId);
     if (!myCard) return;
 
-    // 2. 데이터 변환 (핵심!)
-    // ID는 유지하되, 내용물을 상위 등급 캐릭터로 교체하고 스탯 초기화
+    // 2. 데이터 변환
     const oldName = myCard.name;
     
-    myCard.name = targetCharacterData.name; // 이름 변경 (이걸로 등급/이미지 다 바뀜)
-    myCard.level = 0;      // +0 으로 초기화
-    myCard.revision = 0;   // 0성으로 초기화
+    myCard.name = targetCharacterData.name; // 이름 변경 (등급/이미지 변경됨)
+    myCard.level = 0;      // +0 초기화
+    myCard.revision = 0;   // 0성 초기화
     
-    // 3. 수집 도감에 등록 (새로 얻은 거니까)
+    // 3. 수집 도감에 등록
     collectedCardNames.add(targetCharacterData.name);
 
     // 4. 저장 및 UI 갱신
     saveGame();
     updateUI();
     
-    // 축하 메시지 및 상세창 새로고침
+    // ▼▼▼ [주의] 여기도 `(백틱) 입니다! ▼▼▼
     alert(`[${oldName}] 원고가 [${targetCharacterData.name}]으로 훌륭하게 출판되었습니다!`);
     
-    showCardDetails(cardId); // 바뀐 정보로 모달 다시 로드
+    showCardDetails(cardId); // 상세창 새로고침
     
     // 인벤토리 화면이면 갱신
-    if (!document.getElementById('inventory-view').classList.contains('hidden')) {
+    const inventoryView = document.getElementById('inventory-view');
+    if (inventoryView && !inventoryView.classList.contains('hidden')) {
         displayInventory();
     }
 }
@@ -5030,6 +5033,7 @@ speed4xButton.addEventListener('click', () => setCombatSpeed(4));
     </script>
 </body>
 </html>
+
 
 
 
