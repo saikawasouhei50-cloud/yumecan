@@ -735,6 +735,19 @@ body.pointer-events-none {
                     </div>
                 </div>
 
+				<div id="publication-container" class="hidden mt-4 bg-gradient-to-r from-indigo-900 to-purple-900 p-4 rounded-lg border border-yellow-400/30">
+    <div class="flex justify-between items-center">
+        <div>
+            <h3 class="font-bold text-xl text-yellow-300 mb-1">✨ 정식 출판</h3>
+            <p class="text-sm text-gray-300">완벽해진 원고를 상위 등급으로 출판합니다.</p>
+            <p id="publication-target-name" class="text-sm font-bold text-white mt-1">Target: ???</p>
+        </div>
+        <button id="publish-card-button" class="gacha-button bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 px-6 rounded-full shadow-[0_0_15px_rgba(234,179,8,0.5)] transition-all transform hover:scale-105">
+            출판하기
+        </button>
+    </div>
+</div>
+
                 <div class="mt-4 bg-black/20 p-3 rounded-lg">
                     <h3 class="font-bold text-lg mb-2 text-yellow-300">능력치</h3>
                     <div class="grid grid-cols-3 gap-2 text-center">
@@ -3847,12 +3860,59 @@ enhanceButton.disabled = playerFountainPens < cost;
                         revisionMaterialSelect.disabled = true;
                     }
                 }
+				<div id="publication-container" class="hidden mt-4 bg-gradient-to-r from-indigo-900 to-purple-900 p-4 rounded-lg border border-yellow-400/30">
+    <div class="flex justify-between items-center">
+        <div>
+            <h3 class="font-bold text-xl text-yellow-300 mb-1">✨ 정식 출판</h3>
+            <p class="text-sm text-gray-300">완벽해진 원고를 상위 등급으로 출판합니다.</p>
+            <p id="publication-target-name" class="text-sm font-bold text-white mt-1">Target: ???</p>
+        </div>
+        <button id="publish-card-button" class="gacha-button bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 px-6 rounded-full shadow-[0_0_15px_rgba(234,179,8,0.5)] transition-all transform hover:scale-105">
+            출판하기
+        </button>
+    </div>
+</div>
 
                 cardDetailModal.classList.remove('hidden');
             }
 
 			// ✅ showCardDetails 함수 바로 다음에 이 새로운 함수를 추가하세요.
 
+function publishCard(cardId, targetCharacterData) {
+    if (!confirm(`축하합니다! 이 원고를 [${targetCharacterData.name}]으로 정식 출판하시겠습니까?\n\n(주의: 레벨과 개정 수치가 초기화됩니다.)`)) {
+        return;
+    }
+
+    // 1. 인벤토리에서 내 카드 찾기
+    const myCard = playerInventory.find(c => c.id === cardId);
+    if (!myCard) return;
+
+    // 2. 데이터 변환 (핵심!)
+    // ID는 유지하되, 내용물을 상위 등급 캐릭터로 교체하고 스탯 초기화
+    const oldName = myCard.name;
+    
+    myCard.name = targetCharacterData.name; // 이름 변경 (이걸로 등급/이미지 다 바뀜)
+    myCard.level = 0;      // +0 으로 초기화
+    myCard.revision = 0;   // 0성으로 초기화
+    
+    // 3. 수집 도감에 등록 (새로 얻은 거니까)
+    collectedCardNames.add(targetCharacterData.name);
+
+    // 4. 저장 및 UI 갱신
+    saveGame();
+    updateUI();
+    
+    // 축하 메시지 및 상세창 새로고침
+    alert(`[${oldName}] 원고가 [${targetCharacterData.name}]으로 훌륭하게 출판되었습니다!`);
+    
+    showCardDetails(cardId); // 바뀐 정보로 모달 다시 로드
+    
+    // 인벤토리 화면이면 갱신
+    if (!document.getElementById('inventory-view').classList.contains('hidden')) {
+        displayInventory();
+    }
+}
+		
 function showCollectionCardDetails(cardBaseName) {
     const character = findCharacter(cardBaseName);
     if (!character) {
@@ -4931,6 +4991,7 @@ speed4xButton.addEventListener('click', () => setCombatSpeed(4));
     </script>
 </body>
 </html>
+
 
 
 
