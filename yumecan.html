@@ -831,6 +831,11 @@ body.pointer-events-none {
 
     let currentUser = null; // 현재 로그인된 유저 정보
 
+	// ▼▼▼ [수정] 도감 그룹 관리 변수 ▼▼▼
+let currentCollectionGroup = '히어로 대 빌런: 각축전'; // 처음에 보여줄 기수
+// 탭으로 만들 그룹 목록 (순서대로 나옵니다)
+const COLLECTION_GROUPS = ['히어로 대 빌런: 각축전', '히어로 대 빌런: 점령전', 'NPC'];
+
     // DOM이 모두 로드된 후 게임 스크립트 실행
     document.addEventListener('DOMContentLoaded', async () => {
 	document.body.classList.add('loading');
@@ -1563,30 +1568,66 @@ function saveGame() {
 // ✅ '도감' 탭의 메인 함수 (캐릭터 목록 생성)
 function displayCollectionView() {
     const charListContainer = document.getElementById('collection-character-list');
-    const detailView = document.getElementById('collection-character-detail-view');
-    const defaultMessage = document.getElementById('collection-default-message');
     
+    // 1. 화면 초기화
     charListContainer.innerHTML = '';
-    
-    // 1. 플레이어가 수집한 모든 고유 'baseName' 목록을 만듭니다.
-    const collectedBaseNames = new Set(playerInventory.map(card => findCharacter(card.name)?.baseName).filter(Boolean));
 
-    // 2. characterProfiles 객체를 순회하며 목록을 만듭니다.
-    Object.keys(characterProfiles).forEach(baseName => {
-        const profile = characterProfiles[baseName];
-        const isCollected = collectedBaseNames.has(baseName); // 이 캐릭터의 카드를 하나라도 모았는가?
+    // 2. [탭 버튼 영역] 생성
+    const tabContainer = document.createElement('div');
+    tabContainer.className = 'flex flex-wrap gap-2 mb-4 justify-center'; // 버튼들을 가로로 배치
+
+    COLLECTION_GROUPS.forEach(groupName => {
+        const tabBtn = document.createElement('button');
+        // 현재 선택된 탭이면 색상을 다르게
+        const isActive = (groupName === currentCollectionGroup);
+        tabBtn.className = `px-3 py-1 rounded-full text-xs font-bold transition-all ${
+            isActive ? 'bg-yellow-400 text-black shadow-lg scale-105' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+        }`;
+        tabBtn.textContent = groupName;
         
-        const button = document.createElement('button');
-        button.className = `w-full text-left font-bold py-2 px-3 rounded-lg transition-colors duration-200 ${isCollected ? 'gacha-button bg-white/10 hover:bg-white/20' : 'bg-black/30 text-gray-500'}`;
-        button.textContent = isCollected ? profile.name : '?????';
-        button.dataset.baseName = baseName; // 클릭 시 이 baseName을 사용
-        
-        charListContainer.appendChild(button);
+        tabBtn.onclick = (e) => {
+            e.stopPropagation();
+            currentCollectionGroup = groupName; // 그룹 변경
+            displayCollectionView(); // 화면 갱신
+        };
+        tabContainer.appendChild(tabBtn);
     });
-    
-    // 3. 상세 정보 뷰와 기본 메시지 숨기기 (초기 상태)
-    detailView.classList.add('hidden');
-    defaultMessage.classList.remove('hidden');
+    charListContainer.appendChild(tabContainer); // 목록 맨 위에 탭 추가
+
+    // 3. [캐릭터 목록] 필터링 및 생성
+    const collectedBaseNames = new Set(playerInventory.map(card => findCharacter(card.name)?.baseName).filter(Boolean));
+    const allBaseNames = Object.keys(characterProfiles);
+
+    // 현재 선택된 그룹(currentCollectionGroup)에 해당하는 캐릭터만 필터링
+    const filteredNames = allBaseNames.filter(baseName => {
+        const profile = characterProfiles[baseName];
+        // 시트에 적힌 group과 현재 탭이 일치하는지 확인
+        return profile.group === currentCollectionGroup;
+    });
+
+    // (선택사항) 이름순 정렬
+    // filteredNames.sort(); 
+
+    if (filteredNames.length === 0) {
+        charListContainer.innerHTML += `<p class="text-center text-gray-500 py-4">해당 기수의 데이터가 없습니다.</p>`;
+    } else {
+        filteredNames.forEach(baseName => {
+            const profile = characterProfiles[baseName];
+            const isCollected = collectedBaseNames.has(baseName);
+            
+            const button = document.createElement('button');
+            const isActiveChar = document.getElementById('collection-profile-name')?.textContent === profile.name;
+            
+            button.className = `w-full text-left font-bold py-2 px-3 rounded-lg transition-colors duration-200 mb-1 ${
+                isActiveChar ? 'bg-blue-600 text-white' : 
+                (isCollected ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-black/30 text-gray-500')
+            }`;
+            button.textContent = isCollected ? profile.name : '?????';
+            button.dataset.baseName = baseName;
+            
+            charListContainer.appendChild(button);
+        });
+    }
 }
 
 // ✅ (신규) 캐릭터 상세 정보 표시 함수
@@ -4881,6 +4922,7 @@ speed4xButton.addEventListener('click', () => setCombatSpeed(4));
     </script>
 </body>
 </html>
+
 
 
 
