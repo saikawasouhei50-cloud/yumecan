@@ -3076,18 +3076,33 @@ function toggleEditMode() {
             }
 
             
-           function autoFillDeck() {
+           // ✅ [수정됨] 자동 편성 함수 (안전장치 추가)
+            function autoFillDeck() {
+                // 1. 인벤토리의 모든 카드에 대해 전투력 계산
                 const inventoryWithPower = playerInventory.map(cardInstance => {
+                    // 카드의 현재 스탯(퇴고/개정 적용)을 가져옴
                     const enhancedStats = getEnhancedStats(cardInstance);
+
+                    // ✨ [핵심 수정] 데이터가 유실된 카드는 stats가 null로 반환됨
+                    // 이때 atk를 읽으려 하면 에러가 나므로, 안전하게 전투력을 0(또는 -1)으로 처리
+                    if (!enhancedStats) {
+                        return { instance: cardInstance, power: -1 }; 
+                    }
+
+                    // 정상적인 카드라면 전투력 계산 (공 + 방 + 체력/10)
                     const power = enhancedStats.atk + enhancedStats.def + Math.floor(enhancedStats.hp / 10);
                     return { instance: cardInstance, power: power };
                 });
 
+                // 2. 전투력 높은 순으로 정렬 (오류 카드는 power가 -1이므로 맨 뒤로 감)
                 inventoryWithPower.sort((a, b) => b.power - a.power);
                 
-                // 이제 중복 체크 없이, 전투력이 가장 높은 5장을 바로 선택합니다.
-                playerDeck = inventoryWithPower.slice(0, DECK_CAPACITY).map(item => item.instance);
+                // 3. 상위 5장 선택 (단, 전투력이 0보다 큰 '정상 카드'만 선택)
+                const validCards = inventoryWithPower.filter(item => item.power > 0);
+                
+                playerDeck = validCards.slice(0, DECK_CAPACITY).map(item => item.instance);
 
+                // 4. 화면 갱신 및 저장
                 displayDeckManagement();
                 showMessage('가장 강력한 등장인물로 덱을 자동 편성했습니다!', 'text-blue-300', messageArea);
                 saveGame();
@@ -5120,6 +5135,7 @@ speed4xButton.addEventListener('click', () => setCombatSpeed(4));
     </script>
 </body>
 </html>
+
 
 
 
