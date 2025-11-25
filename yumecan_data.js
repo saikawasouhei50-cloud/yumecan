@@ -13,7 +13,7 @@ let gachaPool = {}; // 가챠 등장 목록
 let characterProfiles = {};
 			// ==========================================
 // 1. 아까 복사한 웹 앱 URL을 따옴표 안에 넣으세요
-const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbwrhLurZvyzOcK3iPcg4hiScO_0XKCIhsOdCJiY-1O9cV_XcsyUM2UN9WKS5moN123S7w/exec";
+const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbyDuh6E_IdlyGs4zVSTUIwcBJD5MzCRfansKh8MHc_YfgKO7hnNxuuVAiVPRP0twweMPQ/exec";
 // ==========================================
 
 // 2. 데이터를 가져와서 characters 변수에 채워넣는 함수
@@ -241,15 +241,15 @@ async function loadGameData() {
 		
 		// 12. 캐릭터 프로필(도감용) 로드
         if (data.profiles) {
-            characterProfiles = {}; // 초기화
+            characterProfiles = {}; 
             data.profiles.forEach(row => {
-                // baseName을 키(Key)로 사용하여 저장
                 characterProfiles[row.baseName] = {
                     name: row.name,
-                    age: row.age, // 숫자라면 Number(row.age)
+                    age: row.age,
                     job: row.job,
                     description: row.description,
-                    imageUrl: row.imageUrl
+                    imageUrl: row.imageUrl,
+                    group: row.group || '기타' // [추가] 기수 정보 가져오기 (없으면 '기타')
                 };
             });
             console.log("캐릭터 프로필 로드 완료");
@@ -550,6 +550,7 @@ const genericInteractions = [
     ['사건 조사는 잘 돼가나요?', '쉽지 않네요.'],
     ['안녕하세요!', '반갑습니다.']
 ];
+
 
 
 
