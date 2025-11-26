@@ -2665,35 +2665,26 @@ const isBlocked = playerRoom.furniture.some(f => {
 }
 
 // ✨ [신규] 교환소 인벤토리 클릭 이벤트 리스너 (여기에 추가하세요!)
-const tradeInvContainer = document.getElementById('trade-inventory-container');
-if (tradeInvContainer) {
-    tradeInvContainer.addEventListener('click', (e) => {
-        // 클릭된 요소가 카드(또는 카드 내부)인지 확인
-        const cardEl = e.target.closest('[data-card-id]');
-        
-        if (cardEl) {
-            // 1. 클릭된 카드의 ID 가져오기
-            const clickedId = cardEl.dataset.cardId;
-            selectedTradeCardId = clickedId;
-
-            // 2. 선택된 카드 정보 찾기
-            const cardInstance = playerInventory.find(c => c.id === clickedId);
-            
-            if (cardInstance) {
-                // 3. 미리보기 화면 업데이트
-                const charData = findCharacter(cardInstance.name);
-                document.getElementById('trade-selected-name').innerHTML = 
-                    `<span class="text-yellow-300">${charData.name}</span> <span class="text-xs text-gray-400">(Lv.${cardInstance.level})</span>`;
-                
-                // 미리보기 박스 보이기
-                document.getElementById('trade-selected-card-preview').classList.remove('hidden');
-                
-                // 4. 화면 다시 그려서 노란 테두리 갱신
-                loadTradeInventory();
-            }
+// 4. 인벤토리 클릭 이벤트 (위임) - [변수명 중복 해결 버전]
+        const tradeInvWrapper = document.getElementById('trade-inventory-container'); // 변수명 변경됨
+        if (tradeInvWrapper) {
+            tradeInvWrapper.addEventListener('click', (e) => {
+                const cardEl = e.target.closest('[data-card-id]');
+                if (cardEl) {
+                    const clickedId = cardEl.dataset.cardId;
+                    selectedTradeCardId = clickedId;
+                    
+                    const cardInstance = playerInventory.find(c => c.id === clickedId);
+                    if (cardInstance) {
+                        const charData = findCharacter(cardInstance.name);
+                        document.getElementById('trade-selected-name').innerHTML = 
+                            `<span class="text-yellow-300">${charData.name}</span> <span class="text-xs text-gray-400">(Lv.${cardInstance.level})</span>`;
+                        document.getElementById('trade-selected-card-preview').classList.remove('hidden');
+                        loadTradeInventory();
+                    }
+                }
+            });
         }
-    });
-}
 
 // ================== ✨ 수정된 initDragEvents (배치 모드) ✨ ==================
 function initDragEvents() {
