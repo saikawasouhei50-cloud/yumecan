@@ -677,7 +677,7 @@ body.pointer-events-none {
         <option value="SR">SR</option>
         <option value="SSR">SSR</option>
     </select>
-    <input type="text" id="trade-target-name" placeholder="예: 서도진 (정확히 입력)" class="bg-gray-700 text-white px-3 py-2 rounded-md w-2/3">
+    <input type="text" id="trade-target-name" placeholder="예: 신성일 (정확히 입력)" class="bg-gray-700 text-white px-3 py-2 rounded-md w-2/3">
 </div>
 <p class="text-xs text-gray-400 mb-4">* 이름과 등급이 모두 일치하는 카드를 받습니다.</p>
 
@@ -5292,7 +5292,7 @@ speed4xButton.addEventListener('click', () => setCombatSpeed(4));
             });
         }
 
-        // 3. 거래소 인벤토리 로드 함수 (디버깅판)
+        // 3. 거래소 인벤토리 로드 함수 (등급 표시 추가됨)
         function loadTradeInventory() {
             const container = document.getElementById('trade-inventory-container');
             if (!container) return;
@@ -5323,11 +5323,25 @@ speed4xButton.addEventListener('click', () => setCombatSpeed(4));
 
                 const imageUrl = charData ? charData.imageUrl : '';
                 const displayName = charData ? charData.name : cardInstance.name;
+                
+                // ✨ [추가] 등급별 색상 및 텍스트 설정
+                const rarity = charData ? charData.rarity : '?';
+                const rarityColors = {
+                    'N': 'bg-gray-500 text-white',
+                    'R': 'bg-blue-600 text-white',
+                    'SR': 'bg-purple-600 text-white',
+                    'SSR': 'bg-yellow-400 text-black' // SSR은 노란 배경에 검은 글씨
+                };
+                const badgeClass = rarityColors[rarity] || 'bg-gray-600 text-white';
 
                 cardEl.innerHTML = `
                     <div class="pointer-events-none">
-                        <div class="aspect-[2/3] overflow-hidden rounded mb-1">
+                        <div class="aspect-[2/3] overflow-hidden rounded mb-1 relative">
                              <img src="${imageUrl}" class="w-full h-full object-cover">
+                             
+                             <span class="absolute top-0 right-0 ${badgeClass} text-[10px] font-bold px-1.5 py-0.5 rounded-bl shadow-md">
+                                ${rarity}
+                             </span>
                         </div>
                         <p class="text-xs text-center text-white truncate mt-1">${displayName}</p>
                         <p class="text-[10px] text-center text-gray-400">Lv.${cardInstance.level}</p>
@@ -5654,6 +5668,7 @@ speed4xButton.addEventListener('click', () => setCombatSpeed(4));
     </script>
 </body>
 </html>
+
 
 
 
