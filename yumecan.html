@@ -5616,18 +5616,36 @@ speed4xButton.addEventListener('click', () => setCombatSpeed(4));
             const userRef = db.collection('users').doc(currentUser.uid);
 
             try {
+                let returnedCard = null; // 회수한 카드를 담을 변수
+
                 await db.runTransaction(async (transaction) => {
                     const tradeDoc = await transaction.get(tradeRef);
                     if (!tradeDoc.exists || tradeDoc.data().status !== 'active') throw "취소 불가 상태";
-                    const returnedCard = tradeDoc.data().offeredCard;
+                    
+                    returnedCard = tradeDoc.data().offeredCard; // DB에서 카드 정보 가져오기
+                    
                     const userDoc = await transaction.get(userRef);
                     const newInventory = [...(userDoc.data().inventory || []), returnedCard];
+                    
                     transaction.update(userRef, { inventory: newInventory });
                     transaction.delete(tradeRef);
                 });
+
+                // ✨ [수정] 새로고침(location.reload) 삭제하고 로컬 데이터만 갱신
                 alert("회수 완료");
-                location.reload();
+                
+                // 1. 내 인벤토리 변수에 회수한 카드 다시 추가
+                if (returnedCard) {
+                    playerInventory.push(returnedCard);
+                }
+                
+                // 2. 화면 목록들만 부분 새로고침
+                loadTradeList();      // 전체 거래 목록 갱신
+                loadMyTrades();       // 내 거래 목록 갱신
+                loadTradeInventory(); // 거래 등록창의 인벤토리 갱신
+
             } catch (e) {
+                console.error(e);
                 alert("취소 실패: " + e);
             }
         };
@@ -5636,6 +5654,7 @@ speed4xButton.addEventListener('click', () => setCombatSpeed(4));
     </script>
 </body>
 </html>
+
 
 
 
