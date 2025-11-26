@@ -5365,7 +5365,7 @@ speed4xButton.addEventListener('click', () => setCombatSpeed(4));
                         const newTradeRef = tradesCollection.doc();
                         transaction.set(newTradeRef, {
                             senderUid: currentUser.uid,
-                            senderName: userData.representative || "익명의 탐정",
+                            senderName: (currentUser.displayName || currentUser.email.split('@')[0]) || "익명의 탐정",
                             offeredCard: cardToTrade,
                             targetName: targetName,
                             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
