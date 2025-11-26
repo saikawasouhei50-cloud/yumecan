@@ -5320,7 +5320,7 @@ speed4xButton.addEventListener('click', () => setCombatSpeed(4));
             });
         }
 
-        // 5. 거래 등록 버튼
+        // 5. 거래 등록 버튼 (새로고침 없이 이동 + 내 거래 표시)
         const btnRegister = document.getElementById('btn-register-trade');
         if (btnRegister) {
             btnRegister.addEventListener('click', async () => {
@@ -5349,10 +5349,12 @@ speed4xButton.addEventListener('click', () => setCombatSpeed(4));
                         if (cardIndex === -1) throw "카드를 찾을 수 없습니다.";
 
                         const cardToTrade = currentInventory[cardIndex];
-                        const newInventory = [...currentInventory];
-                        newInventory.splice(cardIndex, 1);
                         
-                        const newCurrency = (userData.currency || 0) - 10;
+                        // DB 업데이트 준비
+                        const newInventory = [...currentInventory];
+                        newInventory.splice(cardIndex, 1); // 인벤토리에서 제거
+                        
+                        const newCurrency = (userData.currency || 0) - 10; // 수수료 차감
                         if (newCurrency < 0) throw "보석 부족";
 
                         transaction.update(userRef, { 
@@ -5371,8 +5373,25 @@ speed4xButton.addEventListener('click', () => setCombatSpeed(4));
                         });
                     });
 
-                    alert("거래 등록 완료!");
-                    location.reload();
+                    // ✨ [핵심 변경] 새로고침 없이 즉시 반영 로직 ✨
+                    
+                    // 1. 로컬 데이터(내 인벤토리/돈) 수동 업데이트
+                    const localCardIndex = playerInventory.findIndex(c => c.id === selectedTradeCardId);
+                    if (localCardIndex > -1) playerInventory.splice(localCardIndex, 1);
+                    playerCurrency -= 10;
+                    
+                    // 2. UI 갱신
+                    updateUI(); // 보석 숫자 갱신
+                    selectedTradeCardId = null; // 선택 초기화
+                    document.getElementById('trade-selected-card-preview').classList.add('hidden'); // 미리보기 숨김
+                    document.getElementById('trade-target-name').value = ''; // 입력창 초기화
+                    
+                    alert("거래가 등록되었습니다!");
+
+                    // 3. '거래소 목록' 탭으로 화면 강제 전환
+                    const marketTabBtn = document.getElementById('trade-sub-tab-market');
+                    if(marketTabBtn) marketTabBtn.click(); // 탭 클릭 효과를 줘서 목록 화면으로 이동
+
                 } catch (e) {
                     console.error(e);
                     alert("등록 실패: " + e);
@@ -5380,7 +5399,7 @@ speed4xButton.addEventListener('click', () => setCombatSpeed(4));
             });
         }
 
-        // 6. 거래 목록 로드 함수
+        // 6. 거래 목록 로드 함수 (내 거래도 표시됨)
         async function loadTradeList() {
             const container = document.getElementById('trade-list-container');
             if (!container) return;
@@ -5405,22 +5424,27 @@ speed4xButton.addEventListener('click', () => setCombatSpeed(4));
                     const charData = findCharacter(trade.offeredCard.name);
                     const imgUrl = charData ? charData.imageUrl : '';
 
+                    // ✨ 내 거래일 경우 테두리 색상과 배경색을 다르게 표시
+                    const bgClass = isMyTrade ? 'bg-blue-900/40 border-blue-500' : 'bg-gray-800 border-gray-600';
+
                     const el = document.createElement('div');
-                    el.className = 'bg-gray-800 p-3 rounded-lg border border-gray-600 flex gap-3 items-center';
+                    el.className = `${bgClass} p-3 rounded-lg border flex gap-3 items-center`;
                     el.innerHTML = `
-                        <div class="w-16 h-16 flex-shrink-0">
+                        <div class="w-16 h-16 flex-shrink-0 relative">
                             <img src="${imgUrl}" class="w-full h-full object-cover rounded border border-white/20">
+                            ${isMyTrade ? '<span class="absolute top-0 left-0 bg-blue-600 text-white text-[10px] px-1 font-bold">ME</span>' : ''}
                         </div>
                         <div class="flex-grow">
                             <p class="text-yellow-300 font-bold text-sm">${trade.offeredCard.name} <span class="text-xs text-gray-400">(Lv.${trade.offeredCard.level})</span></p>
+                            <p class="text-xs text-gray-400">From: ${trade.senderName}</p>
                             <div class="mt-1 text-white text-sm bg-black/30 p-1 rounded text-center">
                                 구함: <span class="font-bold text-green-400">${trade.targetName}</span>
                             </div>
                         </div>
                         <div class="flex flex-col gap-1">
                             ${isMyTrade 
-                                ? `<button onclick="cancelTrade('${doc.id}')" class="bg-red-500 text-white text-xs px-3 py-2 rounded">취소</button>`
-                                : `<button onclick="executeTrade('${doc.id}', '${trade.targetName}')" class="bg-blue-500 text-white text-xs px-3 py-2 rounded font-bold">교환</button>`
+                                ? `<button onclick="cancelTrade('${doc.id}')" class="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-2 rounded">회수</button>`
+                                : `<button onclick="executeTrade('${doc.id}', '${trade.targetName}')" class="bg-blue-500 hover:bg-blue-600 text-white text-xs px-3 py-2 rounded font-bold">교환</button>`
                             }
                         </div>
                     `;
