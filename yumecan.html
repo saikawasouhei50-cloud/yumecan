@@ -901,6 +901,18 @@ body.pointer-events-none {
                 </div>
             </div>
 
+			<div id="trade-select-card-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+    <div class="bg-gray-800 p-6 rounded-lg max-w-2xl w-full relative border border-gray-600">
+        <h3 class="text-2xl font-bold text-yellow-300 mb-2">보낼 카드 선택</h3>
+        <p class="text-gray-400 mb-4 text-sm">조건에 맞는 카드가 여러 장 있습니다.<br>상대방에게 보낼 카드를 선택해주세요.</p>
+        
+        <div id="trade-select-list" class="grid grid-cols-3 sm:grid-cols-4 gap-4 max-h-96 overflow-y-auto mb-4 bg-black/20 p-4 rounded-lg">
+        </div>
+        
+        <button onclick="document.getElementById('trade-select-card-modal').classList.add('hidden')" class="gacha-button bg-red-500 hover:bg-red-600 text-white py-3 px-4 rounded-full w-full font-bold">취소</button>
+    </div>
+</div>
+
         </main>
 
 
@@ -5758,29 +5770,99 @@ if(marketTabBtn) marketTabBtn.click();
             }
         }
 
-        window.executeTrade = async function(tradeId, targetName, targetRarity) {
-            const rarityMsg = (targetRarity && targetRarity !== 'ALL') ? `[${targetRarity} 등급]` : '(모든 등급)';
-            if (!confirm(`나의 [${targetName}] ${rarityMsg} 카드를 주고 거래를 성사시키겠습니까?`)) return;
-
-            // 1. 내 인벤토리에서 줄 카드 찾기
-            const myOfferCard = playerInventory.find(c => {
+        // 1. 거래 버튼 클릭 시 실행 (카드 검색 및 분기 처리)
+        window.executeTrade = function(tradeId, targetName, targetRarity) {
+            // 내가 가진 카드 중 조건에 맞는 것들을 모두 찾습니다.
+            const candidates = playerInventory.filter(c => {
                 const charData = findCharacter(c.name);
                 if (!charData) return false;
                 
+                // 이름 확인 (풀네임이 같거나, 베이스 이름이 같거나)
                 const isNameMatch = (c.name === targetName) || (charData.baseName === targetName);
                 if (!isNameMatch) return false;
+
+                // 덱에 있는 카드는 제외
                 if (playerDeck.some(d => d.id === c.id)) return false;
-                if (targetRarity && targetRarity !== 'ALL' && charData.rarity !== targetRarity) return false;
+
+                // 등급 조건 확인
+                if (targetRarity && targetRarity !== 'ALL') {
+                    if (charData.rarity !== targetRarity) return false;
+                }
                 
                 return true;
             });
 
-            if (!myOfferCard) return alert("조건에 맞는 카드가 없습니다.");
+            // 경우의 수 처리
+            if (candidates.length === 0) {
+                return alert(`조건에 맞는 카드가 없습니다.\n(덱에 장착 중인 카드는 거래할 수 없습니다.)`);
+            }
+            
+            if (candidates.length === 1) {
+                // 1장뿐이면 바로 거래 진행
+                confirmTradeTransaction(tradeId, candidates[0], targetName, targetRarity);
+            } else {
+                // ✨ 여러 장이면 선택 모달 띄우기
+                openTradeSelectModal(tradeId, candidates, targetName, targetRarity);
+            }
+        };
+
+        // 2. 카드 선택 모달 열기 (개정 단계 표시 추가됨)
+        function openTradeSelectModal(tradeId, candidates, targetName, targetRarity) {
+            const modal = document.getElementById('trade-select-card-modal');
+            const list = document.getElementById('trade-select-list');
+            
+            list.innerHTML = ''; 
+
+            candidates.forEach(cardInstance => {
+                const charData = findCharacter(cardInstance.name);
+                const revision = cardInstance.revision || 0; // 개정 수치 (없으면 0)
+                const stars = '⭐'.repeat(revision); // 별 문자열 생성
+
+                const cardEl = document.createElement('div');
+                cardEl.className = 'relative bg-gray-700 p-2 rounded cursor-pointer hover:bg-gray-600 border border-gray-500 transition-transform hover:scale-105';
+                
+                // 클릭하면 이 카드로 거래 실행
+                cardEl.onclick = () => {
+                    document.getElementById('trade-select-card-modal').classList.add('hidden');
+                    confirmTradeTransaction(tradeId, cardInstance, targetName, targetRarity);
+                };
+
+                cardEl.innerHTML = `
+                    <div class="aspect-[2/3] overflow-hidden rounded mb-2 relative">
+                        <img src="${charData.imageUrl}" class="w-full h-full object-cover">
+                        
+                        <span class="absolute bottom-0 right-0 bg-blue-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-tl shadow-md z-10">
+                            Lv.${cardInstance.level}
+                        </span>
+                        
+                        <div class="absolute bottom-0 left-0 p-1 text-[10px] text-yellow-300 font-bold z-10" style="text-shadow: 1px 1px 2px black;">
+                            ${stars}
+                        </div>
+                    </div>
+                    
+                    <p class="text-xs font-bold text-center text-white truncate">${cardInstance.name}</p>
+                    <p class="text-[10px] text-center text-gray-400">
+                        Lv.${cardInstance.level} 
+                        <span class="text-yellow-400">${revision > 0 ? `(+${revision}개정)` : ''}</span>
+                    </p>
+                `;
+                list.appendChild(cardEl);
+            });
+
+            modal.classList.remove('hidden');
+        }
+
+        // 3. 실제 거래 트랜잭션 실행
+        window.confirmTradeTransaction = async function(tradeId, myOfferCard, targetName, targetRarity) {
+            const rarityMsg = (targetRarity && targetRarity !== 'ALL') ? `[${targetRarity}]` : '';
+            
+            // 어떤 카드를 보내는지 명확히 보여줌
+            const msg = `나의 [${myOfferCard.name}] (Lv.${myOfferCard.level}) 카드를 보내시겠습니까?`;
+            
+            if (!confirm(msg)) return;
 
             const tradeRef = db.collection('trades').doc(tradeId);
             const buyerRef = db.collection('users').doc(currentUser.uid);
-            
-            // ✨ [추가] 받아올 카드를 임시 저장할 변수
             let receivedCard = null;
 
             try {
@@ -5788,25 +5870,19 @@ if(marketTabBtn) marketTabBtn.click();
                     const tradeDoc = await transaction.get(tradeRef);
                     if (!tradeDoc.exists || tradeDoc.data().status !== 'active') throw "이미 완료되었거나 취소된 거래입니다.";
                     
-                    // ✨ [중요] 상대방이 올려둔 카드 정보를 가져옴
                     receivedCard = tradeDoc.data().offeredCard;
-
                     const buyerDoc = await transaction.get(buyerRef);
                     const buyerInventory = buyerDoc.data().inventory || [];
                     
-                    // 내 카드 인덱스 찾기
                     const cardIndex = buyerInventory.findIndex(c => c.id === myOfferCard.id);
                     if (cardIndex === -1) throw "카드를 찾을 수 없습니다.";
 
-                    // DB 인벤토리 갱신 (내 거 빼고, 상대 거 넣기)
                     const newBuyerInventory = [...buyerInventory];
                     newBuyerInventory.splice(cardIndex, 1); 
-                    newBuyerInventory.push(receivedCard); // DB에 상대 카드 추가
+                    newBuyerInventory.push(receivedCard);
 
-                    // DB 업데이트
                     transaction.update(buyerRef, { inventory: newBuyerInventory });
                     
-                    // 거래 문서 업데이트 (내 카드를 맡겨둠)
                     transaction.update(tradeRef, { 
                         status: 'waiting_claim', 
                         receivedCard: myOfferCard, 
@@ -5816,20 +5892,12 @@ if(marketTabBtn) marketTabBtn.click();
                     });
                 });
 
-                // ✨ [수정] 새로고침(location.reload) 삭제! 대신 로컬 데이터 즉시 갱신
-                
-                // 1. 내 가방에서 보낸 카드 삭제
+                // 로컬 데이터 갱신
                 const localIndex = playerInventory.findIndex(c => c.id === myOfferCard.id);
                 if(localIndex > -1) playerInventory.splice(localIndex, 1);
-                
-                // 2. 내 가방에 받은 카드 추가
-                if (receivedCard) {
-                    playerInventory.push(receivedCard);
-                }
+                if (receivedCard) playerInventory.push(receivedCard);
 
-                alert(`거래 성공! [${receivedCard.name}] 카드를 획득했습니다.`);
-                
-                // 3. 거래소 목록만 새로고침 (전체 로딩 X)
+                alert(`거래 성공! [${receivedCard.name}] 획득!`);
                 loadTradeList(); 
 
             } catch (e) {
@@ -5930,6 +5998,7 @@ if(marketTabBtn) marketTabBtn.click();
     </script>
 </body>
 </html>
+
 
 
 
