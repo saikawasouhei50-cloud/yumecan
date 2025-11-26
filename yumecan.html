@@ -5836,6 +5836,55 @@ if(marketTabBtn) marketTabBtn.click();
                 alert("거래 실패: " + e);
             }
         };
+
+// ✨ [수정] 거래 취소 및 카드 회수 함수 (새로고침 없음)
+        window.cancelTrade = async function(tradeId) {
+            if(!confirm("거래를 취소하고 카드를 회수하시겠습니까?")) return;
+            
+            const tradeRef = db.collection('trades').doc(tradeId);
+            const userRef = db.collection('users').doc(currentUser.uid);
+
+            try {
+                let returnedCard = null;
+
+                await db.runTransaction(async (transaction) => {
+                    const tradeDoc = await transaction.get(tradeRef);
+                    if (!tradeDoc.exists) throw "거래가 존재하지 않습니다.";
+                    
+                    const data = tradeDoc.data();
+                    if (data.status !== 'active') throw "이미 성사되었거나 취소된 거래입니다.";
+                    if (data.senderUid !== currentUser.uid) throw "본인의 거래만 취소할 수 있습니다.";
+
+                    returnedCard = data.offeredCard;
+
+                    // 1. 내 DB 인벤토리에 카드 복구
+                    const userDoc = await transaction.get(userRef);
+                    const currentInventory = userDoc.data().inventory || [];
+                    const newInventory = [...currentInventory, returnedCard];
+                    
+                    transaction.update(userRef, { inventory: newInventory });
+                    
+                    // 2. 거래 문서 삭제
+                    transaction.delete(tradeRef);
+                });
+
+                // 3. 로컬 데이터(내 가방) 즉시 갱신
+                if (returnedCard) {
+                    playerInventory.push(returnedCard);
+                }
+                
+                alert(`[${returnedCard.name}] 회수 완료!`);
+
+                // 4. 화면 목록 갱신 (로딩 없이 즉시 반영)
+                if (typeof loadTradeList === 'function') loadTradeList();       // 전체 목록 갱신
+                if (typeof loadMyTrades === 'function') loadMyTrades();         // 내 거래 목록 갱신
+                if (typeof loadTradeInventory === 'function') loadTradeInventory(); // 등록 화면 인벤토리 갱신
+
+            } catch (e) {
+                console.error(e);
+                alert("회수 실패: " + e);
+            }
+        };
 		
 		// ✨ [신규] 판매자가 맡겨진 카드를 수령하는 함수
         window.receiveTradeItem = async function(tradeId) {
@@ -5881,6 +5930,7 @@ if(marketTabBtn) marketTabBtn.click();
     </script>
 </body>
 </html>
+
 
 
 
