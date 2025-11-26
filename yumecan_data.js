@@ -28,6 +28,7 @@ async function loadGameData() {
             name: row.name,
             baseName: row.baseName || row.name.split('] ')[1] || row.name,
             rarity: row.rarity,
+			publishTarget: row.publish_target,
             faction: row.faction,
             stats: { hp: Number(row.hp), atk: Number(row.atk), def: Number(row.def) },
             imageUrl: row.imageUrl,
@@ -550,7 +551,6 @@ const genericInteractions = [
     ['사건 조사는 잘 돼가나요?', '쉽지 않네요.'],
     ['안녕하세요!', '반갑습니다.']
 ];
-
 
 
 
