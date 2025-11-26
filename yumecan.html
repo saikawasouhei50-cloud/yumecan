@@ -5613,29 +5613,34 @@ if (tradeFilterContainer) {
         // 8. 전역 함수로 등록 (onclick 작동용)
         window.executeTrade = async function(tradeId, targetName, targetRarity) {
             
-            // 메시지에 등급 조건 표시
             const rarityMsg = (targetRarity && targetRarity !== 'ALL') ? `[${targetRarity} 등급]` : '(모든 등급)';
             if (!confirm(`나의 [${targetName}] ${rarityMsg} 카드를 주고 거래를 성사시키겠습니까?`)) return;
 
-            // ✨ [핵심 수정] 이름 AND 등급 일치 여부 확인
             const myOfferCard = playerInventory.find(c => {
-                // 1. 이름 일치 확인
-                if (c.name !== targetName) return false;
-                // 2. 덱 포함 여부 확인
+                // 카드 정보 조회
+                const charData = findCharacter(c.name);
+                if (!charData) return false; // 데이터가 없는 카드는 제외
+
+                // ✨ [수정] 이름 비교 로직 개선 (핵심!)
+                // 1. 입력받은 이름이 카드의 '풀네임'과 같거나
+                // 2. 카드의 '본명(baseName)'과 같다면 일치하는 것으로 판정
+                const isNameMatch = (c.name === targetName) || (charData.baseName === targetName);
+                
+                if (!isNameMatch) return false;
+
+                // 3. 덱에 포함된 카드는 제외
                 if (playerDeck.some(d => d.id === c.id)) return false;
                 
-                // 3. 등급 일치 확인 (targetRarity가 'ALL'이 아닐 때만 체크)
+                // 4. 등급 조건 확인
                 if (targetRarity && targetRarity !== 'ALL') {
-                    const charData = findCharacter(c.name);
-                    if (!charData || charData.rarity !== targetRarity) return false;
+                    if (charData.rarity !== targetRarity) return false;
                 }
                 
                 return true;
             });
 
             if (!myOfferCard) {
-                // 실패 메시지도 구체적으로 변경
-                return alert(`조건에 맞는 카드가 없습니다.\n\n필요한 카드: ${targetName}\n필요한 등급: ${targetRarity === 'ALL' ? '상관없음' : targetRarity}\n(덱에 포함된 카드는 제외)`);
+                return alert(`조건에 맞는 카드가 없습니다.\n\n필요한 카드: ${targetName}\n필요한 등급: ${targetRarity === 'ALL' ? '상관없음' : targetRarity}\n(덱에 포함된 카드는 제외)\n\n* 팁: 카드가 덱에 장착되어 있지 않은지 확인해보세요!`);
             }
 
             const tradeRef = db.collection('trades').doc(tradeId);
@@ -5722,6 +5727,7 @@ if (tradeFilterContainer) {
     </script>
 </body>
 </html>
+
 
 
 
