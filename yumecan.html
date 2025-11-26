@@ -5595,16 +5595,31 @@ if (tradeFilterContainer) {
                     playerCurrency -= 10;
                     
                     // 2. UI 갱신
-                    updateUI(); // 보석 숫자 갱신
-                    selectedTradeCardId = null; // 선택 초기화
-                    document.getElementById('trade-selected-card-preview').classList.add('hidden'); // 미리보기 숨김
-                    document.getElementById('trade-target-name').value = ''; // 입력창 초기화
-                    
-                    alert("거래가 등록되었습니다!");
+                    updateUI(); 
+selectedTradeCardId = null; 
+document.getElementById('trade-selected-card-preview').classList.add('hidden'); 
 
-                    // 3. '거래소 목록' 탭으로 화면 강제 전환
-                    const marketTabBtn = document.getElementById('trade-sub-tab-market');
-                    if(marketTabBtn) marketTabBtn.click(); // 탭 클릭 효과를 줘서 목록 화면으로 이동
+// ✨ [수정] 옛날 입력창 초기화 코드를 지우고, 선택 상자들을 초기화합니다.
+const baseSelect = document.getElementById('trade-target-basename');
+if(baseSelect) baseSelect.value = ""; // 첫 번째 상자 초기화
+
+const raritySelect = document.getElementById('trade-target-rarity-select');
+if(raritySelect) {
+    raritySelect.innerHTML = '<option value="">-</option>';
+    raritySelect.disabled = true;
+}
+
+const specificSelect = document.getElementById('trade-target-specific-card');
+if(specificSelect) {
+    specificSelect.innerHTML = '<option value="">-</option>';
+    specificSelect.disabled = true;
+}
+
+alert("거래가 등록되었습니다!");
+
+// 3. '거래소 목록' 탭으로 화면 강제 전환
+const marketTabBtn = document.getElementById('trade-sub-tab-market');
+if(marketTabBtn) marketTabBtn.click();
 
                 } catch (e) {
                     console.error(e);
@@ -5866,6 +5881,7 @@ if (tradeFilterContainer) {
     </script>
 </body>
 </html>
+
 
 
 
