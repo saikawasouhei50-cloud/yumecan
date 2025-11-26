@@ -1089,6 +1089,9 @@ const STAT_INCREASE_PER_REVISION = 0.10; // ✨ 개정 1단계당 기본 능력�
 			const MAX_ENHANCEMENT_LEVEL = 9;
 const ENHANCEMENT_COSTS = [5, 10, 15, 25, 40, 60, 85, 115, 150]; // 레벨 0->1, 1->2, ..., 8->9 비용
 			const ENHANCEMENT_BASE_COSTS = [5, 10, 15, 25, 40, 60, 85, 115, 150]; // 👈 이 코드를 추가
+		// ✨ [추가] 퇴고 성공 확률 정의 (0->1, 1->2, ..., 8->9)
+// 1.0은 100%, 0.5는 50%입니다.
+const ENHANCEMENT_PROBABILITIES = [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2];
 const RARITY_COST_MULTIPLIER = { // 👈 이 코드를 추가
     'N': 0.7,
     'R': 1.0,
@@ -4074,17 +4077,32 @@ function endCombat(isVictory, combatInfo) { // dungeon, type 대신 combatInfo �
                 const previewDisplay = document.getElementById('enhancement-preview');
                 const costDisplay = document.getElementById('enhancement-cost');
                 const enhanceButton = document.getElementById('enhance-card-button');
+                
                 levelDisplay.textContent = `+${cardInstance.level}`;
+                
                 if (cardInstance.level >= MAX_ENHANCEMENT_LEVEL) {
                     previewDisplay.textContent = '최대 레벨에 도달했습니다.';
                     enhanceButton.disabled = true;
                     costDisplay.textContent = '퇴고 불가';
                 } else {
                     const nextLevelStats = getEnhancedStats({ ...cardInstance, level: cardInstance.level + 1 });
-                    previewDisplay.innerHTML = `HP ${currentStats.hp} <span class="text-gray-400">&rarr;</span> ${nextLevelStats.hp} (+${nextLevelStats.hp - currentStats.hp})<br>ATK ${currentStats.atk} <span class="text-gray-400">&rarr;</span> ${nextLevelStats.atk} (+${nextLevelStats.atk - currentStats.atk})`;
-                    const cost = getEnhancementCost(cardInstance); // ✨ 새로운 함수 호출로 변경
-costDisplay.textContent = `🖋️ ${cost}`;
-enhanceButton.disabled = playerFountainPens < cost;
+                    
+                    // ✨ [수정] 확률 정보 가져오기 및 표시
+                    const prob = ENHANCEMENT_PROBABILITIES[cardInstance.level];
+                    const probPercent = Math.floor(prob * 100);
+                    
+                    // 확률에 따라 색상 변경 (높으면 초록, 낮으면 빨강)
+                    const probColor = prob >= 0.8 ? 'text-green-400' : (prob >= 0.5 ? 'text-yellow-400' : 'text-red-400');
+
+                    previewDisplay.innerHTML = `
+                        HP ${currentStats.hp} <span class="text-gray-400">&rarr;</span> ${nextLevelStats.hp}<br>
+                        ATK ${currentStats.atk} <span class="text-gray-400">&rarr;</span> ${nextLevelStats.atk}<br>
+                        <span class="${probColor} font-bold mt-1 block">성공 확률: ${probPercent}%</span>
+                    `;
+                    
+                    const cost = getEnhancementCost(cardInstance);
+                    costDisplay.textContent = `🖋️ ${cost}`;
+                    enhanceButton.disabled = playerFountainPens < cost;
                 }
 
                 // --- 5. ✨ '개정' UI 업데이트 로직 (새로 추가된 부분) ✨ ---
@@ -4664,23 +4682,45 @@ function dismantleMultipleCards() {
 			
 
 			
-			function enhanceCard() {
+			// [수정된 enhanceCard 함수]
+function enhanceCard() {
     if (!currentDetailCardId) return;
     const cardInstance = playerInventory.find(c => c.id === currentDetailCardId);
     if (!cardInstance || cardInstance.level >= MAX_ENHANCEMENT_LEVEL) return;
 
-    // 수정: ENHANCEMENT_COSTS 배열 대신 새로운 함수 사용
     const cost = getEnhancementCost(cardInstance);
-    if (cost === null) return; // 비용을 가져올 수 없으면 종료
+    if (cost === null) return;
 
     if (playerFountainPens >= cost) {
+        // 1. 비용 소모 (성공하든 실패하든 소모됨)
         playerFountainPens -= cost;
-        cardInstance.level++;
+
+        // 2. 성공 확률 가져오기
+        const successRate = ENHANCEMENT_PROBABILITIES[cardInstance.level];
+        
+        // 3. 주사위 굴리기 (0.0 ~ 1.0 사이 랜덤값)
+        const isSuccess = Math.random() < successRate;
+
+        if (isSuccess) {
+            // ✨ 성공!
+            cardInstance.level++;
+            alert(`퇴고 성공! (+${cardInstance.level}) 원고가 더 완벽해졌습니다.`);
+            checkAchievements(); // 업적 체크
+        } else {
+            // 💥 실패... (레벨 유지, 비용만 소모)
+            alert("퇴고 실패... 잉크만 낭비했습니다. 문장이 마음에 들지 않습니다.");
+        }
+
+        // 4. 저장 및 UI 갱신
         updateUI();
         saveGame();
-        // 변경된 정보로 모달을 다시 표시
-        showCardDetails(currentDetailCardId);
-        checkAchievements(); // ✨ 업적 달성 여부 확인
+        showCardDetails(currentDetailCardId); // 바뀐 정보(또는 그대로인 정보) 다시 표시
+        
+        // 인벤토리창이 열려있다면 갱신
+        if (!document.getElementById('inventory-view').classList.contains('hidden')) {
+            displayInventory();
+        }
+
     } else {
         alert('만년필이 부족합니다!');
     }
@@ -6015,6 +6055,7 @@ if(marketTabBtn) marketTabBtn.click();
     </script>
 </body>
 </html>
+
 
 
 
