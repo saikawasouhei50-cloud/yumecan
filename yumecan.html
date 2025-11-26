@@ -1280,6 +1280,7 @@ const closeDismantleResultButton = document.getElementById('close-dismantle-resu
 		collectedCardNames: Array.from(collectedCardNames),
 		myRoom: playerRoom,        // 마이룸 배치 정보 저장
         ownedFurniture: ownedFurniture // 보유 가구 목록 저장
+					collectedCardNames: Array.from(collectedCardNames),
     };
     
     // 'users' 컬렉션에 현재 유저의 UID를 문서 ID로 사용하여 데이터 저장
@@ -1288,46 +1289,43 @@ const closeDismantleResultButton = document.getElementById('close-dismantle-resu
 }
 
             // ✅ 이 코드로 기존 loadGame 함수를 통째로 교체해주세요.
-            // [gacha.html의 loadGameFromFirebase 함수를 이걸로 교체하세요]
-async function loadGameFromFirebase(uid) {
-                const docRef = db.collection('users').doc(uid);
-                const doc = await docRef.get();
+           async function loadGameFromFirebase(uid) {
+    const docRef = db.collection('users').doc(uid);
+    const doc = await docRef.get();
 
-                if (doc.exists) {
-                    console.log("Firebase에서 게임 데이터를 불러옵니다.");
-                    const savedData = doc.data();
-                    
-                    // ✨ [추가] 저장된 닉네임 불러오기 (없으면 기존 방식대로)
-                    currentPlayerNickname = savedData.nickname || currentUser.displayName || "익명의 탐정";
-                    document.getElementById('nickname-display').textContent = currentPlayerNickname;
+    if (doc.exists) {
+        console.log("Firebase에서 게임 데이터를 불러옵니다.");
+        const savedData = doc.data();
+        
+        // 닉네임 로드
+        currentPlayerNickname = savedData.nickname || currentUser.displayName || "익명의 탐정";
+        document.getElementById('nickname-display').textContent = currentPlayerNickname;
 
-                    // ... (나머지 로드 로직 그대로 유지) ...
-                    playerCurrency = savedData.currency ?? 100;
+        playerCurrency = savedData.currency ?? 100;
         playerFountainPens = savedData.fountainPens ?? 500;
         playerInkwells = savedData.inkwells ?? 0;
         const loadedInventory = savedData.inventory || [];
         
-        // ▼▼▼ [수정됨] 데이터를 불러올 때 level과 revision이 없으면 0으로 채워주는 안전장치 ▼▼▼
+        // 인벤토리 로드 (안전장치 포함)
         playerInventory = loadedInventory.map(card => ({
             ...card,
-            // 기존에 revision이 없으면 0으로 설정
             revision: (card.revision !== undefined && card.revision !== null) ? card.revision : 0,
-            // 기존에 level이 없으면 0으로 설정 (이게 핵심!)
             level: (card.level !== undefined && card.level !== null) ? card.level : 0
         }));
-        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
+        // ✨ [핵심 수정] 수집 도감 데이터 로드 + 동기화
         collectedCardNames = new Set(savedData.collectedCardNames || []);
+        
+        // 💡 기존에 카드를 가지고 있던 유저를 위해, 현재 인벤토리의 카드를 수집 목록에 강제 등록
+        playerInventory.forEach(card => collectedCardNames.add(card.name));
+
         const savedDeckIds = savedData.deck || [];
         playerDeck = savedDeckIds.map(id => playerInventory.find(card => card.id === id)).filter(Boolean);
-		playerRoom = savedData.myRoom || { furniture: [], characters: [] };
+        playerRoom = savedData.myRoom || { furniture: [], characters: [] };
         
-        if (!Array.isArray(playerRoom.furniture)) {
-            playerRoom.furniture = []; // 가구 목록이 없으면 빈 배열 생성
-        }
-        if (!Array.isArray(playerRoom.characters)) {
-            playerRoom.characters = []; // 캐릭터 목록이 없으면 빈 배열 생성
-        }
+        if (!Array.isArray(playerRoom.furniture)) playerRoom.furniture = [];
+        if (!Array.isArray(playerRoom.characters)) playerRoom.characters = [];
+        
         ownedFurniture = savedData.ownedFurniture || [];
         inventoryCapacity = savedData.capacity ?? 100;
         if (savedData.representative) {
@@ -1340,41 +1338,35 @@ async function loadGameFromFirebase(uid) {
         playerStats = savedData.stats || { totalPulls: 0 };
         clearedStageStories = savedData.clearedStageStories || [];
         
-        // 2. ✨ 이벤트 데이터 로드 (핵심 수정) ✨
-        // 저장된 이벤트 ID와 현재 게임의 이벤트 ID를 비교합니다.
+        // 이벤트 데이터 로드
         if (savedData.currentEventId === CURRENT_EVENT_ID) {
-            // ID가 같으면 = 진행 중이던 이벤트를 계속
             console.log("이전 이벤트를 이어서 진행합니다:", CURRENT_EVENT_ID);
-            playerEventPoints = savedData.eventPoints ?? 0; //
-            clearedEventDungeons = savedData.clearedEventDungeons || []; //
-            purchasedEventItems = savedData.purchasedEventItems || {}; //
-            playerChoices = savedData.playerChoices || {}; //
+            playerEventPoints = savedData.eventPoints ?? 0; 
+            clearedEventDungeons = savedData.clearedEventDungeons || []; 
+            purchasedEventItems = savedData.purchasedEventItems || {}; 
+            playerChoices = savedData.playerChoices || {}; 
         } else {
-            // ID가 다르면 = 새 이벤트 시작 (또는 첫 이벤트)
             console.log("새 이벤트가 시작되어 이전 이벤트 기록을 초기화합니다.");
             playerEventPoints = 0;
             clearedEventDungeons = [];
             purchasedEventItems = {};
-            playerChoices = {}; // 이벤트 선택지 기록도 초기화
+            playerChoices = {}; 
         }
 
     } else {
-        // --- 처음 가입한 새로운 유저 ---
         console.log("새로운 유저입니다. 초기 데이터로 시작합니다.");
         initializeNewGameData();
-        await saveGameToFirebase(); // 초기 데이터를 Firebase 계정에 저장
+        await saveGameToFirebase(); 
     }
 
-    // 데이터 로드 후 공통으로 실행할 UI 업데이트 및 게임 준비
     calculateOfflineRegen();
-	playerInventory.forEach(card => {
-    if (!card.id) {
-        // ID가 없으면 현재 시간 + 랜덤숫자로 만들어줌
-        card.id = Date.now().toString(36) + Math.random().toString(36).substr(2);
-        console.log("ID 없는 카드 복구됨:", card.name, card.id);
-    }
-});
-saveGame(); // 복구한 내용을 저장
+    playerInventory.forEach(card => {
+        if (!card.id) {
+            card.id = Date.now().toString(36) + Math.random().toString(36).substr(2);
+            console.log("ID 없는 카드 복구됨:", card.name, card.id);
+        }
+    });
+    saveGame(); 
     updateUI();
     checkEventStatus();
     switchTab('home');
@@ -1693,11 +1685,10 @@ function displayCollectionView() {
 
     // 2. [탭 버튼 영역] 생성
     const tabContainer = document.createElement('div');
-    tabContainer.className = 'flex flex-wrap gap-2 mb-4 justify-center'; // 버튼들을 가로로 배치
+    tabContainer.className = 'flex flex-wrap gap-2 mb-4 justify-center';
 
     COLLECTION_GROUPS.forEach(groupName => {
         const tabBtn = document.createElement('button');
-        // 현재 선택된 탭이면 색상을 다르게
         const isActive = (groupName === currentCollectionGroup);
         tabBtn.className = `px-3 py-1 rounded-full text-xs font-bold transition-all ${
             isActive ? 'bg-yellow-400 text-black shadow-lg scale-105' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
@@ -1706,32 +1697,39 @@ function displayCollectionView() {
         
         tabBtn.onclick = (e) => {
             e.stopPropagation();
-            currentCollectionGroup = groupName; // 그룹 변경
-            displayCollectionView(); // 화면 갱신
+            currentCollectionGroup = groupName;
+            displayCollectionView();
         };
         tabContainer.appendChild(tabBtn);
     });
-    charListContainer.appendChild(tabContainer); // 목록 맨 위에 탭 추가
+    charListContainer.appendChild(tabContainer);
 
     // 3. [캐릭터 목록] 필터링 및 생성
-    const collectedBaseNames = new Set(playerInventory.map(card => findCharacter(card.name)?.baseName).filter(Boolean));
+    
+    // ✨ [수정됨] 현재 인벤토리가 아닌, '영구 수집 기록(collectedCardNames)'을 기준으로 확인합니다.
+    const collectedBaseNames = new Set();
+    if (typeof collectedCardNames !== 'undefined') {
+        collectedCardNames.forEach(cardName => {
+            const charData = findCharacter(cardName);
+            if (charData) collectedBaseNames.add(charData.baseName);
+        });
+    }
+
     const allBaseNames = Object.keys(characterProfiles);
 
-    // 현재 선택된 그룹(currentCollectionGroup)에 해당하는 캐릭터만 필터링
+    // 현재 선택된 그룹에 해당하는 캐릭터만 필터링
     const filteredNames = allBaseNames.filter(baseName => {
         const profile = characterProfiles[baseName];
-        // 시트에 적힌 group과 현재 탭이 일치하는지 확인
         return profile.group === currentCollectionGroup;
     });
-
-    // (선택사항) 이름순 정렬
-    // filteredNames.sort(); 
 
     if (filteredNames.length === 0) {
         charListContainer.innerHTML += `<p class="text-center text-gray-500 py-4">해당 기수의 데이터가 없습니다.</p>`;
     } else {
         filteredNames.forEach(baseName => {
             const profile = characterProfiles[baseName];
+            
+            // ✨ 수집 기록에 있는지 확인 (파쇄해도 true 유지됨)
             const isCollected = collectedBaseNames.has(baseName);
             
             const button = document.createElement('button');
@@ -1759,7 +1757,16 @@ function displayCharacterDetail(baseName) {
     document.getElementById('collection-default-message').classList.add('hidden');
     
     // 2. 프로필 정보 채우기
-    const isCollected = Array.from(collectedCardNames).some(cardName => findCharacter(cardName)?.baseName === baseName); // 👈 이렇게 수정하세요.
+    // ✨ [핵심 수정] 인벤토리가 아니라 '수집 기록(collectedCardNames)'을 확인합니다.
+    let isCollected = false;
+    
+    if (typeof collectedCardNames !== 'undefined') {
+        // Set을 배열로 바꿔서 하나씩 확인 (내 수집 목록 중에 이 캐릭터(baseName)가 있는가?)
+        isCollected = Array.from(collectedCardNames).some(cardName => {
+            const charData = findCharacter(cardName);
+            return charData && charData.baseName === baseName;
+        });
+    }
 
     if (isCollected) {
         document.getElementById('collection-profile-image').src = profile.imageUrl;
@@ -1778,8 +1785,16 @@ function displayCharacterDetail(baseName) {
     
     // 3. 활성화된 탭 버튼 스타일 업데이트
     document.querySelectorAll('#collection-character-list button').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.baseName === baseName);
-        btn.classList.toggle('bg-blue-500', btn.dataset.baseName === baseName);
+        const match = btn.dataset.baseName === baseName;
+        btn.classList.toggle('active', match);
+        // 활성화된 버튼은 파란색, 아니면 (수집 여부에 따라) 투명/회색 유지
+        if (match) {
+            btn.classList.add('bg-blue-500');
+            btn.classList.remove('bg-white/10', 'bg-black/30');
+        } else {
+            btn.classList.remove('bg-blue-500');
+            // 원래 클래스로 복구하는 로직은 displayCollectionView에서 처리하므로 여기선 색만 뺍니다.
+        }
     });
 
     // 4. 서브 탭을 '카드 모음'으로 초기화
@@ -2083,15 +2098,17 @@ function displayEventHomeView() {
 }
 
 function addCardToInventory(cardName) {
-    const newCard = {
-        id: generateUniqueId(), // 고유 ID 생성
-        name: cardName,
-        level: 0, // 최초 레벨은 0
-		revision: 0 // ✨ 최초 개정 레벨은 0
-    };
-    playerInventory.push(newCard);
-	collectedCardNames.add(cardName); //
-}
+            const newCard = {
+                id: generateUniqueId(),
+                name: cardName,
+                level: 0, 
+                revision: 0 
+            };
+            playerInventory.push(newCard);
+            
+            // ✨ [추가] 수집 기록에 등록 (중복이어도 Set이라 상관없음)
+            collectedCardNames.add(cardName); 
+        }
 
             function performPulls(count, gachaType = 'normal') {
     const results = [];
@@ -5998,6 +6015,7 @@ if(marketTabBtn) marketTabBtn.click();
     </script>
 </body>
 </html>
+
 
 
 
