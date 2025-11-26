@@ -888,328 +888,7 @@ body.pointer-events-none {
     const db = firebase.firestore();
     const auth = firebase.auth(); // 인증 서비스 변수 추가
 
-    let currentUser = null; // 현재 로그인된 유저 정보
-	
-	// --- 교환소 시스템 변수 ---
-let selectedTradeCardId = null; // 거래 등록 시 선택한 내 카드 ID
-
-// 1. 탭 전환 리스너 연결
-document.getElementById('tab-trade').addEventListener('click', () => {
-    switchTab('trade');
-    loadTradeList(); // 탭 열 때 목록 갱신
-});
-
-document.getElementById('trade-sub-tab-market').addEventListener('click', () => {
-    document.getElementById('trade-market-view').classList.remove('hidden');
-    document.getElementById('trade-register-view').classList.add('hidden');
-    document.getElementById('trade-sub-tab-market').classList.add('active');
-    document.getElementById('trade-sub-tab-register').classList.remove('active');
-    loadTradeList();
-});
-
-document.getElementById('trade-sub-tab-register').addEventListener('click', () => {
-    document.getElementById('trade-market-view').classList.add('hidden');
-    document.getElementById('trade-register-view').classList.remove('hidden');
-    document.getElementById('trade-sub-tab-market').classList.remove('active');
-    document.getElementById('trade-sub-tab-register').classList.add('active');
-    loadTradeInventory();
-    loadMyTrades();
-});
-
-// [수정됨] 거래 등록용 인벤토리 표시 함수
-function loadTradeInventory() {
-    const container = document.getElementById('trade-inventory-container');
-    container.innerHTML = '';
-    
-    // 덱에 없는 카드만 필터링
-    const tradableCards = playerInventory.filter(card => 
-        !playerDeck.some(d => d.id === card.id)
-    );
-
-    if (tradableCards.length === 0) {
-        container.innerHTML = '<p class="col-span-full text-center text-gray-400 py-4">교환할 수 있는 카드가 없습니다.<br>(덱에 있는 카드는 제외됩니다)</p>';
-        return;
-    }
-
-    tradableCards.forEach(cardInstance => {
-        const charData = findCharacter(cardInstance.name);
-        if(!charData) return;
-
-        // 작은 카드 UI 생성
-        const cardEl = document.createElement('div');
-        // 선택된 카드면 노란 테두리, 아니면 투명 테두리
-        const borderClass = (selectedTradeCardId === cardInstance.id) 
-            ? 'border-yellow-400 bg-white/10' 
-            : 'border-transparent bg-black/40 hover:bg-white/5';
-            
-        cardEl.className = `relative cursor-pointer border-2 rounded-lg p-1 transition-colors ${borderClass}`;
-        
-        // ✨ 중요: 클릭 시 식별할 수 있도록 데이터 속성(data-card-id) 추가
-        cardEl.dataset.cardId = cardInstance.id; 
-        
-        cardEl.innerHTML = `
-            <div class="pointer-events-none"> <img src="${charData.imageUrl}" class="w-full h-auto rounded">
-                <p class="text-xs text-center text-white truncate mt-1">${charData.name}</p>
-                <p class="text-[10px] text-center text-gray-400">Lv.${cardInstance.level}</p>
-            </div>
-        `;
-        
-        container.appendChild(cardEl);
-    });
-}
-
-// 3. 거래 등록 함수 (핵심: 트랜잭션)
-document.getElementById('btn-register-trade').addEventListener('click', async () => {
-    if (!currentUser) return alert("로그인이 필요합니다.");
-    if (!selectedTradeCardId) return alert("보낼 카드를 선택해주세요.");
-    
-    const targetName = document.getElementById('trade-target-name').value.trim();
-    if (!targetName) return alert("원하는 등장인물 이름을 입력해주세요.");
-
-    // 수수료 확인
-    if (playerCurrency < 10) return alert("보석이 부족합니다. (수수료 10)");
-
-    if (!confirm(`정말 [${targetName}]을(를) 구하는 거래를 등록하시겠습니까?\n등록 시 카드는 인벤토리에서 사라집니다.`)) return;
-
-    const userRef = db.collection('users').doc(currentUser.uid);
-    const tradesCollection = db.collection('trades');
-
-    try {
-        await db.runTransaction(async (transaction) => {
-            const userDoc = await transaction.get(userRef);
-            if (!userDoc.exists) throw "User not found";
-
-            const userData = userDoc.data();
-            const currentInventory = userData.inventory || [];
-            
-            // 카드 존재 여부 확인
-            const cardIndex = currentInventory.findIndex(c => c.id === selectedTradeCardId);
-            if (cardIndex === -1) throw "카드를 찾을 수 없습니다.";
-
-            const cardToTrade = currentInventory[cardIndex];
-
-            // 1. 유저 인벤토리에서 카드 제거 및 수수료 차감
-            const newInventory = [...currentInventory];
-            newInventory.splice(cardIndex, 1);
-            
-            const newCurrency = (userData.currency || 0) - 10;
-            if (newCurrency < 0) throw "보석 부족";
-
-            transaction.update(userRef, { 
-                inventory: newInventory,
-                currency: newCurrency
-            });
-
-            // 2. 거래 컬렉션에 문서 생성
-            const newTradeRef = tradesCollection.doc();
-            transaction.set(newTradeRef, {
-                senderUid: currentUser.uid,
-                senderName: userData.representative || "익명의 탐정",
-                offeredCard: cardToTrade, // 카드 데이터 통째로 저장
-                targetName: targetName,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                status: 'active'
-            });
-        });
-
-        alert("거래가 등록되었습니다!");
-        
-        // 로컬 데이터 동기화 (새로고침이 가장 안전)
-        location.reload();
-
-    } catch (e) {
-        console.error(e);
-        alert("거래 등록 실패: " + e);
-    }
-});
-
-// 4. 거래 목록 불러오기
-async function loadTradeList() {
-    const container = document.getElementById('trade-list-container');
-    container.innerHTML = '<p class="text-white">불러오는 중...</p>';
-
-    const snapshot = await db.collection('trades')
-        .where('status', '==', 'active')
-        .orderBy('createdAt', 'desc')
-        .limit(20)
-        .get();
-
-    container.innerHTML = '';
-
-    if (snapshot.empty) {
-        container.innerHTML = '<p class="col-span-full text-center text-gray-500">등록된 거래가 없습니다.</p>';
-        return;
-    }
-
-    snapshot.forEach(doc => {
-        const trade = doc.data();
-        // 내가 올린 거래는 여기서 안 보여주거나 표시
-        const isMyTrade = trade.senderUid === currentUser?.uid;
-
-        const el = document.createElement('div');
-        el.className = 'bg-gray-800 p-3 rounded-lg border border-gray-600 flex gap-3 items-center';
-        
-        // 카드 이미지
-        const charData = findCharacter(trade.offeredCard.name);
-        const imgUrl = charData ? charData.imageUrl : '';
-        
-        el.innerHTML = `
-            <div class="w-16 h-16 flex-shrink-0">
-                <img src="${imgUrl}" class="w-full h-full object-cover rounded border border-white/20">
-            </div>
-            <div class="flex-grow">
-                <p class="text-yellow-300 font-bold text-sm">${trade.offeredCard.name} <span class="text-xs text-gray-400">(Lv.${trade.offeredCard.level})</span></p>
-                <p class="text-gray-400 text-xs">From: ${trade.senderName}</p>
-                <div class="mt-1 text-white text-sm bg-black/30 p-1 rounded text-center">
-                    구함: <span class="font-bold text-green-400">${trade.targetName}</span>
-                </div>
-            </div>
-            <div class="flex flex-col gap-1">
-                ${isMyTrade 
-                    ? `<button onclick="cancelTrade('${doc.id}')" class="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-2 rounded">취소</button>`
-                    : `<button onclick="executeTrade('${doc.id}', '${trade.targetName}')" class="bg-blue-500 hover:bg-blue-600 text-white text-xs px-3 py-2 rounded font-bold">교환</button>`
-                }
-            </div>
-        `;
-        container.appendChild(el);
-    });
-}
-
-// 5. 내 거래 목록 (취소용)
-async function loadMyTrades() {
-    if (!currentUser) return;
-    const list = document.getElementById('my-trade-list');
-    list.innerHTML = '로딩 중...';
-    
-    const snapshot = await db.collection('trades')
-        .where('senderUid', '==', currentUser.uid)
-        .where('status', '==', 'active')
-        .get();
-
-    list.innerHTML = '';
-    if(snapshot.empty) {
-        list.innerHTML = '<p class="text-gray-500 text-sm">진행 중인 거래가 없습니다.</p>';
-        return;
-    }
-
-    snapshot.forEach(doc => {
-        const trade = doc.data();
-        const div = document.createElement('div');
-        div.className = 'flex justify-between items-center bg-gray-700 p-2 rounded';
-        div.innerHTML = `
-            <span class="text-white text-sm">[${trade.offeredCard.name}] ↔ [${trade.targetName}]</span>
-            <button onclick="cancelTrade('${doc.id}')" class="text-red-400 text-xs hover:text-white">회수</button>
-        `;
-        list.appendChild(div);
-    });
-}
-
-// 6. 거래 실행 (구매자 입장) - 핵심 트랜잭션
-async function executeTrade(tradeId, targetName) {
-    if (!confirm(`나의 [${targetName}] 카드를 주고 거래를 성사시키겠습니까?`)) return;
-
-    // 내 인벤토리에 해당 카드가 있는지 확인 (이름 일치, 덱 미포함)
-    const myOfferCard = playerInventory.find(c => 
-        c.name === targetName && !playerDeck.some(d => d.id === c.id)
-    );
-
-    if (!myOfferCard) {
-        return alert(`조건에 맞는 카드([${targetName}])가 없거나 덱에 포함되어 있습니다.`);
-    }
-
-    const tradeRef = db.collection('trades').doc(tradeId);
-    const buyerRef = db.collection('users').doc(currentUser.uid); // 나
-    
-    try {
-        await db.runTransaction(async (transaction) => {
-            // 1. 거래 문서 확인
-            const tradeDoc = await transaction.get(tradeRef);
-            if (!tradeDoc.exists || tradeDoc.data().status !== 'active') {
-                throw "이미 완료되었거나 취소된 거래입니다.";
-            }
-            const tradeData = tradeDoc.data();
-            const sellerRef = db.collection('users').doc(tradeData.senderUid);
-
-            // 2. 구매자(나) 데이터 확인
-            const buyerDoc = await transaction.get(buyerRef);
-            const buyerData = buyerDoc.data();
-            const buyerInventory = buyerData.inventory || [];
-            
-            // 구매자 카드 재확인 (DB 기준)
-            const cardIndex = buyerInventory.findIndex(c => c.id === myOfferCard.id);
-            if (cardIndex === -1) throw "카드를 찾을 수 없습니다.";
-
-            // 3. 판매자 데이터 확인 (카드를 넣어줘야 하므로)
-            const sellerDoc = await transaction.get(sellerRef);
-            if (!sellerDoc.exists) throw "판매자 계정을 찾을 수 없습니다.";
-            const sellerData = sellerDoc.data();
-            const sellerInventory = sellerData.inventory || [];
-
-            // --- 교환 로직 실행 ---
-
-            // A. 구매자: 내 카드 제거, 받은 카드 추가
-            const newBuyerInventory = [...buyerInventory];
-            newBuyerInventory.splice(cardIndex, 1); // 내 카드 줌
-            newBuyerInventory.push(tradeData.offeredCard); // 받은 카드 가짐 (새 ID 부여하면 더 좋음)
-
-            // B. 판매자: 받은 카드 추가
-            const newSellerInventory = [...sellerInventory];
-            newSellerInventory.push(myOfferCard); // 내 카드를 판매자에게 줌
-
-            // C. 업데이트 수행
-            transaction.update(buyerRef, { inventory: newBuyerInventory });
-            transaction.update(sellerRef, { inventory: newSellerInventory });
-            
-            // D. 거래 완료 처리
-            transaction.update(tradeRef, { 
-                status: 'completed',
-                buyerUid: currentUser.uid,
-                buyerName: buyerData.representative || "탐정",
-                completedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-        });
-
-        alert("거래가 성공적으로 완료되었습니다!");
-        location.reload();
-
-    } catch (e) {
-        console.error(e);
-        alert("거래 실패: " + e);
-    }
-}
-
-// 7. 거래 취소 (판매자 입장)
-async function cancelTrade(tradeId) {
-    if(!confirm("거래를 취소하고 카드를 회수하시겠습니까? (수수료는 반환되지 않습니다)")) return;
-
-    const tradeRef = db.collection('trades').doc(tradeId);
-    const userRef = db.collection('users').doc(currentUser.uid);
-
-    try {
-        await db.runTransaction(async (transaction) => {
-            const tradeDoc = await transaction.get(tradeRef);
-            if (!tradeDoc.exists || tradeDoc.data().status !== 'active') throw "취소할 수 없는 상태입니다.";
-            
-            if (tradeDoc.data().senderUid !== currentUser.uid) throw "권한이 없습니다.";
-
-            const userDoc = await transaction.get(userRef);
-            const userData = userDoc.data();
-            const inventory = userData.inventory || [];
-
-            // 카드 돌려받기
-            const returnedCard = tradeDoc.data().offeredCard;
-            const newInventory = [...inventory, returnedCard];
-
-            transaction.update(userRef, { inventory: newInventory });
-            transaction.delete(tradeRef); // 혹은 status: 'cancelled'로 변경
-        });
-
-        alert("카드를 회수했습니다.");
-        location.reload();
-    } catch (e) {
-        alert("취소 실패: " + e);
-    }
-}
+    l
 
 	// ▼▼▼ [수정] 도감 그룹 관리 변수 ▼▼▼
 let currentCollectionGroup = '히어로 대 빌런: 각축전'; // 처음에 보여줄 기수
@@ -5546,6 +5225,329 @@ speed4xButton.addEventListener('click', () => setCombatSpeed(4));
         // 드래그 기능 초기화
         initDragEvents();
         // ----------------------------------------
+
+et currentUser = null; // 현재 로그인된 유저 정보
+	
+	// --- 교환소 시스템 변수 ---
+let selectedTradeCardId = null; // 거래 등록 시 선택한 내 카드 ID
+
+// 1. 탭 전환 리스너 연결
+document.getElementById('tab-trade').addEventListener('click', () => {
+    switchTab('trade');
+    loadTradeList(); // 탭 열 때 목록 갱신
+});
+
+document.getElementById('trade-sub-tab-market').addEventListener('click', () => {
+    document.getElementById('trade-market-view').classList.remove('hidden');
+    document.getElementById('trade-register-view').classList.add('hidden');
+    document.getElementById('trade-sub-tab-market').classList.add('active');
+    document.getElementById('trade-sub-tab-register').classList.remove('active');
+    loadTradeList();
+});
+
+document.getElementById('trade-sub-tab-register').addEventListener('click', () => {
+    document.getElementById('trade-market-view').classList.add('hidden');
+    document.getElementById('trade-register-view').classList.remove('hidden');
+    document.getElementById('trade-sub-tab-market').classList.remove('active');
+    document.getElementById('trade-sub-tab-register').classList.add('active');
+    loadTradeInventory();
+    loadMyTrades();
+});
+
+// [수정됨] 거래 등록용 인벤토리 표시 함수
+function loadTradeInventory() {
+    const container = document.getElementById('trade-inventory-container');
+    container.innerHTML = '';
+    
+    // 덱에 없는 카드만 필터링
+    const tradableCards = playerInventory.filter(card => 
+        !playerDeck.some(d => d.id === card.id)
+    );
+
+    if (tradableCards.length === 0) {
+        container.innerHTML = '<p class="col-span-full text-center text-gray-400 py-4">교환할 수 있는 카드가 없습니다.<br>(덱에 있는 카드는 제외됩니다)</p>';
+        return;
+    }
+
+    tradableCards.forEach(cardInstance => {
+        const charData = findCharacter(cardInstance.name);
+        if(!charData) return;
+
+        // 작은 카드 UI 생성
+        const cardEl = document.createElement('div');
+        // 선택된 카드면 노란 테두리, 아니면 투명 테두리
+        const borderClass = (selectedTradeCardId === cardInstance.id) 
+            ? 'border-yellow-400 bg-white/10' 
+            : 'border-transparent bg-black/40 hover:bg-white/5';
+            
+        cardEl.className = `relative cursor-pointer border-2 rounded-lg p-1 transition-colors ${borderClass}`;
+        
+        // ✨ 중요: 클릭 시 식별할 수 있도록 데이터 속성(data-card-id) 추가
+        cardEl.dataset.cardId = cardInstance.id; 
+        
+        cardEl.innerHTML = `
+            <div class="pointer-events-none"> <img src="${charData.imageUrl}" class="w-full h-auto rounded">
+                <p class="text-xs text-center text-white truncate mt-1">${charData.name}</p>
+                <p class="text-[10px] text-center text-gray-400">Lv.${cardInstance.level}</p>
+            </div>
+        `;
+        
+        container.appendChild(cardEl);
+    });
+}
+
+// 3. 거래 등록 함수 (핵심: 트랜잭션)
+document.getElementById('btn-register-trade').addEventListener('click', async () => {
+    if (!currentUser) return alert("로그인이 필요합니다.");
+    if (!selectedTradeCardId) return alert("보낼 카드를 선택해주세요.");
+    
+    const targetName = document.getElementById('trade-target-name').value.trim();
+    if (!targetName) return alert("원하는 등장인물 이름을 입력해주세요.");
+
+    // 수수료 확인
+    if (playerCurrency < 10) return alert("보석이 부족합니다. (수수료 10)");
+
+    if (!confirm(`정말 [${targetName}]을(를) 구하는 거래를 등록하시겠습니까?\n등록 시 카드는 인벤토리에서 사라집니다.`)) return;
+
+    const userRef = db.collection('users').doc(currentUser.uid);
+    const tradesCollection = db.collection('trades');
+
+    try {
+        await db.runTransaction(async (transaction) => {
+            const userDoc = await transaction.get(userRef);
+            if (!userDoc.exists) throw "User not found";
+
+            const userData = userDoc.data();
+            const currentInventory = userData.inventory || [];
+            
+            // 카드 존재 여부 확인
+            const cardIndex = currentInventory.findIndex(c => c.id === selectedTradeCardId);
+            if (cardIndex === -1) throw "카드를 찾을 수 없습니다.";
+
+            const cardToTrade = currentInventory[cardIndex];
+
+            // 1. 유저 인벤토리에서 카드 제거 및 수수료 차감
+            const newInventory = [...currentInventory];
+            newInventory.splice(cardIndex, 1);
+            
+            const newCurrency = (userData.currency || 0) - 10;
+            if (newCurrency < 0) throw "보석 부족";
+
+            transaction.update(userRef, { 
+                inventory: newInventory,
+                currency: newCurrency
+            });
+
+            // 2. 거래 컬렉션에 문서 생성
+            const newTradeRef = tradesCollection.doc();
+            transaction.set(newTradeRef, {
+                senderUid: currentUser.uid,
+                senderName: userData.representative || "익명의 탐정",
+                offeredCard: cardToTrade, // 카드 데이터 통째로 저장
+                targetName: targetName,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                status: 'active'
+            });
+        });
+
+        alert("거래가 등록되었습니다!");
+        
+        // 로컬 데이터 동기화 (새로고침이 가장 안전)
+        location.reload();
+
+    } catch (e) {
+        console.error(e);
+        alert("거래 등록 실패: " + e);
+    }
+});
+
+// 4. 거래 목록 불러오기
+async function loadTradeList() {
+    const container = document.getElementById('trade-list-container');
+    container.innerHTML = '<p class="text-white">불러오는 중...</p>';
+
+    const snapshot = await db.collection('trades')
+        .where('status', '==', 'active')
+        .orderBy('createdAt', 'desc')
+        .limit(20)
+        .get();
+
+    container.innerHTML = '';
+
+    if (snapshot.empty) {
+        container.innerHTML = '<p class="col-span-full text-center text-gray-500">등록된 거래가 없습니다.</p>';
+        return;
+    }
+
+    snapshot.forEach(doc => {
+        const trade = doc.data();
+        // 내가 올린 거래는 여기서 안 보여주거나 표시
+        const isMyTrade = trade.senderUid === currentUser?.uid;
+
+        const el = document.createElement('div');
+        el.className = 'bg-gray-800 p-3 rounded-lg border border-gray-600 flex gap-3 items-center';
+        
+        // 카드 이미지
+        const charData = findCharacter(trade.offeredCard.name);
+        const imgUrl = charData ? charData.imageUrl : '';
+        
+        el.innerHTML = `
+            <div class="w-16 h-16 flex-shrink-0">
+                <img src="${imgUrl}" class="w-full h-full object-cover rounded border border-white/20">
+            </div>
+            <div class="flex-grow">
+                <p class="text-yellow-300 font-bold text-sm">${trade.offeredCard.name} <span class="text-xs text-gray-400">(Lv.${trade.offeredCard.level})</span></p>
+                <p class="text-gray-400 text-xs">From: ${trade.senderName}</p>
+                <div class="mt-1 text-white text-sm bg-black/30 p-1 rounded text-center">
+                    구함: <span class="font-bold text-green-400">${trade.targetName}</span>
+                </div>
+            </div>
+            <div class="flex flex-col gap-1">
+                ${isMyTrade 
+                    ? `<button onclick="cancelTrade('${doc.id}')" class="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-2 rounded">취소</button>`
+                    : `<button onclick="executeTrade('${doc.id}', '${trade.targetName}')" class="bg-blue-500 hover:bg-blue-600 text-white text-xs px-3 py-2 rounded font-bold">교환</button>`
+                }
+            </div>
+        `;
+        container.appendChild(el);
+    });
+}
+
+// 5. 내 거래 목록 (취소용)
+async function loadMyTrades() {
+    if (!currentUser) return;
+    const list = document.getElementById('my-trade-list');
+    list.innerHTML = '로딩 중...';
+    
+    const snapshot = await db.collection('trades')
+        .where('senderUid', '==', currentUser.uid)
+        .where('status', '==', 'active')
+        .get();
+
+    list.innerHTML = '';
+    if(snapshot.empty) {
+        list.innerHTML = '<p class="text-gray-500 text-sm">진행 중인 거래가 없습니다.</p>';
+        return;
+    }
+
+    snapshot.forEach(doc => {
+        const trade = doc.data();
+        const div = document.createElement('div');
+        div.className = 'flex justify-between items-center bg-gray-700 p-2 rounded';
+        div.innerHTML = `
+            <span class="text-white text-sm">[${trade.offeredCard.name}] ↔ [${trade.targetName}]</span>
+            <button onclick="cancelTrade('${doc.id}')" class="text-red-400 text-xs hover:text-white">회수</button>
+        `;
+        list.appendChild(div);
+    });
+}
+
+// 6. 거래 실행 (구매자 입장) - 핵심 트랜잭션
+async function executeTrade(tradeId, targetName) {
+    if (!confirm(`나의 [${targetName}] 카드를 주고 거래를 성사시키겠습니까?`)) return;
+
+    // 내 인벤토리에 해당 카드가 있는지 확인 (이름 일치, 덱 미포함)
+    const myOfferCard = playerInventory.find(c => 
+        c.name === targetName && !playerDeck.some(d => d.id === c.id)
+    );
+
+    if (!myOfferCard) {
+        return alert(`조건에 맞는 카드([${targetName}])가 없거나 덱에 포함되어 있습니다.`);
+    }
+
+    const tradeRef = db.collection('trades').doc(tradeId);
+    const buyerRef = db.collection('users').doc(currentUser.uid); // 나
+    
+    try {
+        await db.runTransaction(async (transaction) => {
+            // 1. 거래 문서 확인
+            const tradeDoc = await transaction.get(tradeRef);
+            if (!tradeDoc.exists || tradeDoc.data().status !== 'active') {
+                throw "이미 완료되었거나 취소된 거래입니다.";
+            }
+            const tradeData = tradeDoc.data();
+            const sellerRef = db.collection('users').doc(tradeData.senderUid);
+
+            // 2. 구매자(나) 데이터 확인
+            const buyerDoc = await transaction.get(buyerRef);
+            const buyerData = buyerDoc.data();
+            const buyerInventory = buyerData.inventory || [];
+            
+            // 구매자 카드 재확인 (DB 기준)
+            const cardIndex = buyerInventory.findIndex(c => c.id === myOfferCard.id);
+            if (cardIndex === -1) throw "카드를 찾을 수 없습니다.";
+
+            // 3. 판매자 데이터 확인 (카드를 넣어줘야 하므로)
+            const sellerDoc = await transaction.get(sellerRef);
+            if (!sellerDoc.exists) throw "판매자 계정을 찾을 수 없습니다.";
+            const sellerData = sellerDoc.data();
+            const sellerInventory = sellerData.inventory || [];
+
+            // --- 교환 로직 실행 ---
+
+            // A. 구매자: 내 카드 제거, 받은 카드 추가
+            const newBuyerInventory = [...buyerInventory];
+            newBuyerInventory.splice(cardIndex, 1); // 내 카드 줌
+            newBuyerInventory.push(tradeData.offeredCard); // 받은 카드 가짐 (새 ID 부여하면 더 좋음)
+
+            // B. 판매자: 받은 카드 추가
+            const newSellerInventory = [...sellerInventory];
+            newSellerInventory.push(myOfferCard); // 내 카드를 판매자에게 줌
+
+            // C. 업데이트 수행
+            transaction.update(buyerRef, { inventory: newBuyerInventory });
+            transaction.update(sellerRef, { inventory: newSellerInventory });
+            
+            // D. 거래 완료 처리
+            transaction.update(tradeRef, { 
+                status: 'completed',
+                buyerUid: currentUser.uid,
+                buyerName: buyerData.representative || "탐정",
+                completedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        });
+
+        alert("거래가 성공적으로 완료되었습니다!");
+        location.reload();
+
+    } catch (e) {
+        console.error(e);
+        alert("거래 실패: " + e);
+    }
+}
+
+// 7. 거래 취소 (판매자 입장)
+async function cancelTrade(tradeId) {
+    if(!confirm("거래를 취소하고 카드를 회수하시겠습니까? (수수료는 반환되지 않습니다)")) return;
+
+    const tradeRef = db.collection('trades').doc(tradeId);
+    const userRef = db.collection('users').doc(currentUser.uid);
+
+    try {
+        await db.runTransaction(async (transaction) => {
+            const tradeDoc = await transaction.get(tradeRef);
+            if (!tradeDoc.exists || tradeDoc.data().status !== 'active') throw "취소할 수 없는 상태입니다.";
+            
+            if (tradeDoc.data().senderUid !== currentUser.uid) throw "권한이 없습니다.";
+
+            const userDoc = await transaction.get(userRef);
+            const userData = userDoc.data();
+            const inventory = userData.inventory || [];
+
+            // 카드 돌려받기
+            const returnedCard = tradeDoc.data().offeredCard;
+            const newInventory = [...inventory, returnedCard];
+
+            transaction.update(userRef, { inventory: newInventory });
+            transaction.delete(tradeRef); // 혹은 status: 'cancelled'로 변경
+        });
+
+        alert("카드를 회수했습니다.");
+        location.reload();
+    } catch (e) {
+        alert("취소 실패: " + e);
+    }
+}
 
     }); // <--- DOMContentLoaded 닫는 괄호
     </script>
