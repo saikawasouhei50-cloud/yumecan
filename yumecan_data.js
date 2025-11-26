@@ -41,12 +41,11 @@ async function loadGameData() {
             return {
                 name: row.name,
                 baseName: calculatedBaseName,
-                
-                // ✨ [추가] 이 줄을 꼭 추가해주세요!
-                // 시트의 'faction' 열을 읽어와서 캐릭터 정보에 넣어줍니다.
                 faction: row.faction, 
-
                 rarity: row.rarity,
+                
+                // ✨ [누락된 부분 추가] 아래 줄을 꼭 넣어주세요! ✨
+                stats: { hp: Number(row.hp), atk: Number(row.atk), def: Number(row.def) },
                 // ... (기존 코드 유지) ...
                 imageUrl: row.imageUrl,
                 cardImageUrl: row.cardImageUrl || row.imageUrl,
@@ -481,4 +480,5 @@ const genericInteractions = [
     ['사건 조사는 잘 돼가나요?', '쉽지 않네요.'],
     ['안녕하세요!', '반갑습니다.']
 ];
+
 
