@@ -659,8 +659,17 @@ body.pointer-events-none {
     <div id="trade-register-view" class="hidden">
         <div class="bg-black/30 p-4 rounded-lg mb-4">
             <h3 class="text-yellow-300 font-bold mb-2">1단계: 보낼 카드 선택</h3>
-            <div id="trade-inventory-container" class="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-60 overflow-y-auto bg-black/20 p-2 rounded mb-4">
-                </div>
+
+<div id="trade-filter-buttons" class="flex flex-wrap gap-2 mb-2">
+    <button data-filter="All" class="trade-filter-button bg-blue-500 text-white font-bold py-1 px-3 rounded-full text-xs hover:bg-blue-600 transition-colors">전체</button>
+    <button data-filter="N" class="trade-filter-button bg-gray-600 text-white font-bold py-1 px-3 rounded-full text-xs hover:bg-gray-700 transition-colors">N</button>
+    <button data-filter="R" class="trade-filter-button bg-gray-600 text-white font-bold py-1 px-3 rounded-full text-xs hover:bg-gray-700 transition-colors">R</button>
+    <button data-filter="SR" class="trade-filter-button bg-gray-600 text-white font-bold py-1 px-3 rounded-full text-xs hover:bg-gray-700 transition-colors">SR</button>
+    <button data-filter="SSR" class="trade-filter-button bg-gray-600 text-white font-bold py-1 px-3 rounded-full text-xs hover:bg-gray-700 transition-colors">SSR</button>
+</div>
+
+<div id="trade-inventory-container" class="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-60 overflow-y-auto bg-black/20 p-2 rounded mb-4">
+</div>
             
             <div id="trade-selected-card-preview" class="hidden text-center mb-4 border border-blue-500 p-2 rounded">
                 <p class="text-gray-300 text-sm">선택된 카드</p>
@@ -1062,6 +1071,7 @@ const RARITY_COST_MULTIPLIER = { // 👈 이 코드를 추가
 const STAT_INCREASE_PER_LEVEL = 0.05; // 레벨당 기본 능력치의 5% 증가
 let currentUser = null; 
             let currentPlayerNickname = "익명의 탐정";
+			let currentTradeRarityFilter = 'All';
             let playerCurrency = 100;
 			let playerChoices = {};
 			let playerFountainPens = 500; // 🖋️
@@ -5292,64 +5302,86 @@ speed4xButton.addEventListener('click', () => setCombatSpeed(4));
             });
         }
 
-        // 3. 거래소 인벤토리 로드 함수 (등급 표시 추가됨)
-        function loadTradeInventory() {
-            const container = document.getElementById('trade-inventory-container');
-            if (!container) return;
-            container.innerHTML = '';
+        // [수정된 loadTradeInventory 함수]
+function loadTradeInventory() {
+    const container = document.getElementById('trade-inventory-container');
+    if (!container) return;
+    container.innerHTML = '';
 
-            // 인벤토리가 없거나 비었을 때
-            if (!playerInventory) {
-                 container.innerHTML = '<p class="col-span-full text-center text-gray-400">데이터 로딩 중...</p>';
-                 return;
-            }
+    if (!playerInventory) {
+            container.innerHTML = '<p class="col-span-full text-center text-gray-400">데이터 로딩 중...</p>';
+            return;
+    }
 
-            const tradableCards = playerInventory.filter(card => 
-                !playerDeck.some(d => d.id === card.id)
-            );
-
-            if (tradableCards.length === 0) {
-                container.innerHTML = '<p class="col-span-full text-center text-gray-400 py-4">거래 가능한 카드가 없습니다.<br>(덱에 있는 카드는 제외)</p>';
-                return;
-            }
-
-            tradableCards.forEach(cardInstance => {
-                const charData = findCharacter(cardInstance.name);
-                const isSelected = (selectedTradeCardId === cardInstance.id);
-                
-                const cardEl = document.createElement('div');
-                cardEl.className = `relative cursor-pointer border-2 rounded-lg p-1 transition-all ${isSelected ? 'border-yellow-400 bg-white/20' : 'border-transparent bg-black/40 hover:bg-white/10'}`;
-                cardEl.dataset.cardId = cardInstance.id;
-
-                const imageUrl = charData ? charData.imageUrl : '';
-                const displayName = charData ? charData.name : cardInstance.name;
-                
-                // ✨ [추가] 등급별 색상 및 텍스트 설정
-                const rarity = charData ? charData.rarity : '?';
-                const rarityColors = {
-                    'N': 'bg-gray-500 text-white',
-                    'R': 'bg-blue-600 text-white',
-                    'SR': 'bg-purple-600 text-white',
-                    'SSR': 'bg-yellow-400 text-black' // SSR은 노란 배경에 검은 글씨
-                };
-                const badgeClass = rarityColors[rarity] || 'bg-gray-600 text-white';
-
-                cardEl.innerHTML = `
-                    <div class="pointer-events-none">
-                        <div class="aspect-[2/3] overflow-hidden rounded mb-1 relative">
-                             <img src="${imageUrl}" class="w-full h-full object-cover">
-                             
-                             <span class="absolute top-0 right-0 ${badgeClass} text-[10px] font-bold px-1.5 py-0.5 rounded-bl shadow-md">
-                                ${rarity}
-                             </span>
-                        </div>
-                        <p class="text-xs text-center text-white truncate mt-1">${displayName}</p>
-                        <p class="text-[10px] text-center text-gray-400">Lv.${cardInstance.level}</p>
-                    </div>
-                `;
-                container.appendChild(cardEl);
-            });
+    // 1. 필터링 (덱 제외 & 등급 필터 적용)
+    let tradableCards = playerInventory.filter(card => {
+        // 덱에 있는 카드는 제외
+        if (playerDeck.some(d => d.id === card.id)) return false;
+        
+        // ✨ 등급 필터 적용
+        if (currentTradeRarityFilter !== 'All') {
+            const charData = findCharacter(card.name);
+            if (!charData || charData.rarity !== currentTradeRarityFilter) return false;
         }
+        return true;
+    });
+
+    // ✨ 2. 정렬 (등급 높은 순 -> 레벨 높은 순 -> 이름순)
+    const rarityOrder = { 'SSR': 4, 'SR': 3, 'R': 2, 'N': 1 };
+    tradableCards.sort((a, b) => {
+        const charA = findCharacter(a.name);
+        const charB = findCharacter(b.name);
+        const rA = charA ? rarityOrder[charA.rarity] : 0;
+        const rB = charB ? rarityOrder[charB.rarity] : 0;
+
+        // 등급 비교 -> 레벨 비교 -> 이름 비교
+        return (rB - rA) || (b.level - a.level) || a.name.localeCompare(b.name);
+    });
+
+    if (tradableCards.length === 0) {
+        const msg = currentTradeRarityFilter === 'All' 
+            ? '거래 가능한 카드가 없습니다.<br>(덱에 있는 카드는 제외)' 
+            : `[${currentTradeRarityFilter}] 등급의 카드가 없습니다.`;
+        container.innerHTML = `<p class="col-span-full text-center text-gray-400 py-4 text-xs">${msg}</p>`;
+        return;
+    }
+
+    // 3. 카드 생성 (기존 로직 + 등급 뱃지 유지)
+    tradableCards.forEach(cardInstance => {
+        const charData = findCharacter(cardInstance.name);
+        const isSelected = (selectedTradeCardId === cardInstance.id);
+        
+        const cardEl = document.createElement('div');
+        cardEl.className = `relative cursor-pointer border-2 rounded-lg p-1 transition-all ${isSelected ? 'border-yellow-400 bg-white/20' : 'border-transparent bg-black/40 hover:bg-white/10'}`;
+        cardEl.dataset.cardId = cardInstance.id;
+
+        const imageUrl = charData ? charData.imageUrl : '';
+        const displayName = charData ? charData.name : cardInstance.name;
+        
+        const rarity = charData ? charData.rarity : '?';
+        const rarityColors = {
+            'N': 'bg-gray-500 text-white',
+            'R': 'bg-blue-600 text-white',
+            'SR': 'bg-purple-600 text-white',
+            'SSR': 'bg-yellow-400 text-black'
+        };
+        const badgeClass = rarityColors[rarity] || 'bg-gray-600 text-white';
+
+        cardEl.innerHTML = `
+            <div class="pointer-events-none">
+                <div class="aspect-[2/3] overflow-hidden rounded mb-1 relative">
+                        <img src="${imageUrl}" class="w-full h-full object-cover">
+                        <span class="absolute top-0 right-0 ${badgeClass} text-[10px] font-bold px-1.5 py-0.5 rounded-bl shadow-md">
+                        ${rarity}
+                        </span>
+                </div>
+                <p class="text-xs text-center text-white truncate mt-1">${displayName}</p>
+                <p class="text-[10px] text-center text-gray-400">Lv.${cardInstance.level}</p>
+            </div>
+        `;
+        container.appendChild(cardEl);
+    });
+}
 
         // 4. 인벤토리 클릭 이벤트 (위임)
         const tradeInvContainer = document.getElementById('trade-inventory-container');
@@ -5371,6 +5403,28 @@ speed4xButton.addEventListener('click', () => setCombatSpeed(4));
                 }
             });
         }
+		
+		const tradeFilterContainer = document.getElementById('trade-filter-buttons');
+if (tradeFilterContainer) {
+    tradeFilterContainer.addEventListener('click', (e) => {
+        const btn = e.target.closest('.trade-filter-button');
+        if (!btn) return;
+        
+        // 1. 필터 상태 업데이트
+        currentTradeRarityFilter = btn.dataset.filter;
+        
+        // 2. 버튼 스타일 변경 (선택된 것만 파란색, 나머지는 회색)
+        document.querySelectorAll('.trade-filter-button').forEach(b => {
+            b.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+            b.classList.add('bg-gray-600', 'hover:bg-gray-700');
+        });
+        btn.classList.remove('bg-gray-600', 'hover:bg-gray-700');
+        btn.classList.add('bg-blue-500', 'hover:bg-blue-600');
+        
+        // 3. 목록 새로고침
+        loadTradeInventory();
+    });
+}
 
         // 5. 거래 등록 버튼 (새로고침 없이 이동 + 내 거래 표시)
         const btnRegister = document.getElementById('btn-register-trade');
@@ -5668,7 +5722,6 @@ speed4xButton.addEventListener('click', () => setCombatSpeed(4));
     </script>
 </body>
 </html>
-
 
 
 
