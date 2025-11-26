@@ -43,6 +43,7 @@ async function loadGameData() {
                 baseName: calculatedBaseName,
                 faction: row.faction, 
                 rarity: row.rarity,
+				publishTarget: row.publish_target,
                 
                 // ✨ [누락된 부분 추가] 아래 줄을 꼭 넣어주세요! ✨
                 stats: { hp: Number(row.hp), atk: Number(row.atk), def: Number(row.def) },
@@ -480,5 +481,6 @@ const genericInteractions = [
     ['사건 조사는 잘 돼가나요?', '쉽지 않네요.'],
     ['안녕하세요!', '반갑습니다.']
 ];
+
 
 
