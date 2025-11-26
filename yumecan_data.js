@@ -29,13 +29,11 @@ async function loadGameData() {
         const data = await response.json(); 
 
         // 1. 캐릭터 데이터 조립
-        chibiImages = {}; // 데이터 로드 시 초기화
+        chibiImages = {}; 
 
         characters = data.characters.map(row => {
-            // baseName을 먼저 계산합니다 (키값으로 쓰기 위해)
             const calculatedBaseName = row.baseName || row.name.split('] ')[1] || row.name;
 
-            // ✨ 시트에 'chibi_image' 값이 있다면 chibiImages 변수에 저장
             if (row.chibi_image && row.chibi_image !== "") {
                 chibiImages[calculatedBaseName] = row.chibi_image;
             }
@@ -43,6 +41,11 @@ async function loadGameData() {
             return {
                 name: row.name,
                 baseName: calculatedBaseName,
+                
+                // ✨ [추가] 이 줄을 꼭 추가해주세요!
+                // 시트의 'faction' 열을 읽어와서 캐릭터 정보에 넣어줍니다.
+                faction: row.faction, 
+
                 rarity: row.rarity,
                 // ... (기존 코드 유지) ...
                 imageUrl: row.imageUrl,
@@ -478,3 +481,4 @@ const genericInteractions = [
     ['사건 조사는 잘 돼가나요?', '쉽지 않네요.'],
     ['안녕하세요!', '반갑습니다.']
 ];
+
