@@ -14,10 +14,11 @@ let characterProfiles = {};
 
 // ✨ [변경] 인연 데이터는 이제 시트에서 불러오므로 초기값은 빈 배열입니다.
 let synergies = []; 
+let chibiImages = {};
 
 // ==========================================
 // 1. 웹 앱 URL (배포 후 바뀐 URL이 있다면 꼭 갱신해주세요!)
-const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbwDRGAfoVHz_-rda_AslvEoSJH2yMwx8ncpLwA2sRAPHmHtksD6cx2OR4sQiaZRUTdmkA/exec";
+const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycby7HNJMLJmBKwBUV2UCryqDi-iy-b1lRYCHXeYmwQJ2AC0_QzaQkWBFUztZVSbXJ5YcbQ/exec";
 // ==========================================
 
 // 2. 데이터를 가져와서 변수에 채워넣는 함수
@@ -28,24 +29,39 @@ async function loadGameData() {
         const data = await response.json(); 
 
         // 1. 캐릭터 데이터 조립
-        characters = data.characters.map(row => ({
-            name: row.name,
-            baseName: row.baseName || row.name.split('] ')[1] || row.name,
-            rarity: row.rarity,
-			publishTarget: row.publish_target,
-            faction: row.faction,
-            stats: { hp: Number(row.hp), atk: Number(row.atk), def: Number(row.def) },
-            imageUrl: row.imageUrl,
-            cardImageUrl: row.cardImageUrl || row.imageUrl,
-            dialogues: row.dialogues ? String(row.dialogues).split('|') : ['...'],
-            skills: [
-                { name: row.skill1_name, dialogue: row.skill1_dialogue, power: Number(row.skill1_power), type: row.skill1_type },
-                ...(row.skill2_name ? [{ name: row.skill2_name, dialogue: row.skill2_dialogue, power: Number(row.skill2_power), type: row.skill2_type }] : [])
-            ],
-            deathDialogue: row.deathDialogue,
-            story: row.story,
-            enhancementSuccessDialogue: row.enhancementSuccessDialogue
-        }));
+        chibiImages = {}; // 데이터 로드 시 초기화
+
+        characters = data.characters.map(row => {
+            // baseName을 먼저 계산합니다 (키값으로 쓰기 위해)
+            const calculatedBaseName = row.baseName || row.name.split('] ')[1] || row.name;
+
+            // ✨ 시트에 'chibi_image' 값이 있다면 chibiImages 변수에 저장
+            if (row.chibi_image && row.chibi_image !== "") {
+                chibiImages[calculatedBaseName] = row.chibi_image;
+            }
+
+            return {
+                name: row.name,
+                baseName: calculatedBaseName,
+                rarity: row.rarity,
+                // ... (기존 코드 유지) ...
+                imageUrl: row.imageUrl,
+                cardImageUrl: row.cardImageUrl || row.imageUrl,
+                
+                // 캐릭터 객체 자체에도 정보를 넣어두면 좋습니다 (선택사항)
+                chibiImageUrl: row.chibi_image || row.cardImageUrl || row.imageUrl, 
+
+                dialogues: row.dialogues ? String(row.dialogues).split('|') : ['...'],
+                // ... (나머지 스킬, 대사 등 기존 코드 유지) ...
+                skills: [
+                    { name: row.skill1_name, dialogue: row.skill1_dialogue, power: Number(row.skill1_power), type: row.skill1_type },
+                    ...(row.skill2_name ? [{ name: row.skill2_name, dialogue: row.skill2_dialogue, power: Number(row.skill2_power), type: row.skill2_type }] : [])
+                ],
+                deathDialogue: row.deathDialogue,
+                story: row.story,
+                enhancementSuccessDialogue: row.enhancementSuccessDialogue
+            };
+        });
 
         // 2. 몬스터 데이터 조립
         monsters = {}; 
@@ -432,13 +448,6 @@ const RARITY_COST_MULTIPLIER = {
 
 const CURRENT_EVENT_ID = "mini_event_202510_dohwa";
 
-const chibiImages = {
-    '서도진': 'https://i.imgur.com/2N9aikK.png',
-    '윤필규': 'https://i.imgur.com/25130ai.png',
-	'한 현': 'https://i.imgur.com/mK2Hbzp.png',
-	'윤서천': 'https://i.imgur.com/G28HUhv.png',
-	'도천영': 'https://i.imgur.com/smQIEQD.png',
-};
 
 const interactionDialogues = [
     {
