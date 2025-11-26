@@ -1737,14 +1737,16 @@ function displayCharacterDetail(baseName) {
 }
 
 // ✅ (신규) 특정 캐릭터의 '카드 모음' 표시 함수
-function displayCharacterCards(baseName, isCollected) { // isCollected 인수는 이제 사용 안 함
-                const cardContainer = document.getElementById('collection-container');
-                cardContainer.innerHTML = '';
-                
-                const characterVersions = characters.filter(c => c.baseName === baseName);
-                // const collectedNames = new Set(playerInventory.map(card => card.name)); // 👈 이 줄 삭제
+function displayCharacterCards(baseName, isCollected) { 
+    const cardContainer = document.getElementById('collection-container');
+    cardContainer.innerHTML = '';
+    
+    // ✨ [수정됨] 이름에 '+' 기호가 포함된 카드는 목록에서 제외합니다.
+    const characterVersions = characters.filter(c => 
+        c.baseName === baseName && !c.name.includes('+')
+    );
 
-                characterVersions.forEach((character, index) => {
+    characterVersions.forEach((character, index) => {
                     // 👇 isCardCollected를 collectedCardNames로 직접 확인
                     const isCardCollected = collectedCardNames.has(character.name); 
                     
@@ -5569,7 +5571,6 @@ speed4xButton.addEventListener('click', () => setCombatSpeed(4));
     </script>
 </body>
 </html>
-
 
 
 
