@@ -1310,19 +1310,39 @@ const closeDismantleResultButton = document.getElementById('close-dismantle-resu
                 }
             }
 
-            async function saveGameToFirebase() {
-    if (!currentUser) return; 
+            // [추가] undefined 값을 찾아서 null로 바꿔주는 안전장치 함수
+function removeUndefined(obj) {
+    // 배열일 경우 내부 요소 재귀 처리
+    if (Array.isArray(obj)) {
+        return obj.map(v => removeUndefined(v));
+    }
+    // 객체일 경우 내부 속성 재귀 처리
+    else if (obj !== null && typeof obj === 'object') {
+        return Object.keys(obj).reduce((acc, key) => {
+            const value = obj[key];
+            // 값이 undefined면 null로 변경, 아니면 재귀 호출
+            acc[key] = (value === undefined) ? null : removeUndefined(value);
+            return acc;
+        }, {});
+    }
+    // 기본 자료형일 경우 undefined 체크
+    return (obj === undefined) ? null : obj;
+}
 
-    // ✨ [안전장치 강화] playerProfile이 없어도 에러나지 않게 빈 객체 {} 처리
-    const currentProfile = playerProfile || {}; 
+// [수정] 기존 saveGameToFirebase 함수 수정
+async function saveGameToFirebase() {
+    if (!currentUser) return;
+
+    const currentProfile = playerProfile || {};
 
     const safeProfile = {
-        repCardId: currentProfile.repCardId || null, 
-        statusMessage: currentProfile.statusMessage || "" 
+        repCardId: currentProfile.repCardId || null,
+        statusMessage: currentProfile.statusMessage || ""
     };
 
-    const saveData = {
-        nickname: currentPlayerNickname || "익명의 탐정", // 닉네임 안전장치
+    // 저장할 데이터 객체 생성
+    const rawSaveData = {
+        nickname: currentPlayerNickname || "익명의 탐정",
         currency: playerCurrency || 0,
         fountainPens: playerFountainPens || 0,
         inkwells: playerInkwells || 0,
@@ -1345,14 +1365,20 @@ const closeDismantleResultButton = document.getElementById('close-dismantle-resu
         myRoom: playerRoom || { furniture: [], characters: [] },
         ownedFurniture: ownedFurniture || [],
         
-        // ✨ 안전하게 변환된 프로필 저장
-        profile: safeProfile 
+        // 프로필 데이터
+        profile: safeProfile
     };
 
-    // undefined 값이 하나라도 있으면 여기서 에러가 납니다.
-    // 위에서 모든 필드에 || 연산자로 기본값을 줬으므로 이제 안전합니다.
-    await db.collection('users').doc(currentUser.uid).set(saveData);
-    console.log("게임 데이터가 Firebase에 저장되었습니다.");
+    // ✨ [핵심 수정] 여기서 undefined를 null로 싹 변환합니다.
+    const finalSaveData = removeUndefined(rawSaveData);
+
+    try {
+        await db.collection('users').doc(currentUser.uid).set(finalSaveData);
+        console.log("게임 데이터가 Firebase에 저장되었습니다.");
+    } catch (error) {
+        console.error("Firebase 저장 중 오류 발생:", error);
+    }
+}
 }
 
             // ✅ 이 코드로 기존 loadGame 함수를 통째로 교체해주세요.
