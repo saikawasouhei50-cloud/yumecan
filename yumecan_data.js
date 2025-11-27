@@ -19,7 +19,7 @@ let chibiImages = {};
 
 // ==========================================
 // 1. 웹 앱 URL (배포 후 바뀐 URL이 있다면 꼭 갱신해주세요!)
-const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbz-CLiFv2lgxMr0ckkKP4uP-CihTYmxkBX2S88MlH0d6sOavXQ6DHrE32b86R9ywDCR0A/exec";
+const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbycUfErCA7x_De0cmzXe533wB86E5esDosyKXibaot5NJnr0hDPpEf5KdBj6SemhKy4MQ/exec";
 // ==========================================
 
 // 2. 데이터를 가져와서 변수에 채워넣는 함수
@@ -490,6 +490,7 @@ const genericInteractions = [
     ['안녕하세요!', '반갑습니다.'],
     ['잠시 쉬었다 갈까요?', '좋은 생각입니다.']
 ];
+
 
 
 
