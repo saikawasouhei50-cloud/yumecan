@@ -4980,6 +4980,7 @@ function saveProfileData() {
 }
 
 // 3. 카드 선택 모달 열기
+// [수정된 openProfileCardSelector 함수]
 function openProfileCardSelector() {
     const modal = document.getElementById('profile-card-selector-modal');
     const list = document.getElementById('profile-card-list');
@@ -4989,14 +4990,27 @@ function openProfileCardSelector() {
     const sortedInv = [...playerInventory].sort((a, b) => {
         const charA = findCharacter(a.name);
         const charB = findCharacter(b.name);
+        
+        // ✨ [안전장치 추가] 데이터가 없는 카드는 순서 비교에서 뒤로 보냄
+        if (!charA) return 1;
+        if (!charB) return -1;
+
         const rarityOrder = { 'SSR': 4, 'SR': 3, 'R': 2, 'N': 1 };
-        return (rarityOrder[charB.rarity] - rarityOrder[charA.rarity]) || (b.level - a.level);
+        
+        // rarity가 없을 경우 대비
+        const rA = rarityOrder[charA.rarity] || 0;
+        const rB = rarityOrder[charB.rarity] || 0;
+
+        return (rB - rA) || (b.level - a.level);
     });
 
     sortedInv.forEach(card => {
         const charData = findCharacter(card.name);
+        
+        // ✨ 데이터가 없는 카드는 목록에 표시하지 않음 (에러 방지)
+        if (!charData) return; 
+
         const el = document.createElement('div');
-        // 선택된 카드는 테두리 강조
         const isSelected = (playerProfile.repCardId === card.id);
         
         el.className = `relative cursor-pointer border-2 rounded overflow-hidden transition-transform hover:scale-105 ${isSelected ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-gray-600'}`;
