@@ -6642,12 +6642,11 @@ async function openOtherUserProfile(userData) {
 }
 		
 
-// 2. 닉네임으로 유저 검색
-// [수정] 닉네임 검색 함수 (결과 클릭 시 프로필 모달 오픈)
+// [수정] 닉네임 검색 함수 (버튼 기능을 새 로직으로 연결)
 async function searchUserByName() {
     const input = document.getElementById('friend-search-input');
     const resultBox = document.getElementById('friend-search-result');
-    const resultAction = document.getElementById('search-result-action'); // 이제 텍스트용으로 씀
+    const resultAction = document.getElementById('search-result-action');
     const msg = document.getElementById('friend-search-msg');
     
     const nickname = input.value.trim();
@@ -6670,36 +6669,35 @@ async function searchUserByName() {
         msg.textContent = "";
         const doc = snapshot.docs[0];
         const userData = doc.data();
-        const uid = doc.id; // 상대방 UID
+        const uid = doc.id;
 
-        // 대표 카드 이미지 확인
         let imgUrl = "https://placehold.co/50x50/333/fff?text=?";
         if (userData.representative) {
             const charData = findCharacter(userData.representative);
             if (charData) imgUrl = charData.imageUrl;
         }
 
-        // 결과 표시
         resultBox.classList.remove('hidden');
         
-        // ✨ [핵심 변경] 박스에 클릭 이벤트 연결 -> 프로필 모달 열기
-        // 데이터에 uid를 포함해서 넘겨야 친구 추가 버튼이 정상 작동함
+        // 박스 클릭 시 프로필 모달 열기
         resultBox.onclick = () => openOtherUserProfile({ ...userData, uid: uid });
-        
-        // 클릭 가능하다는 느낌을 주기 위한 스타일 추가
         resultBox.classList.add('cursor-pointer', 'hover:bg-gray-700', 'transition-colors');
 
         document.getElementById('search-result-img').src = imgUrl;
         document.getElementById('search-result-name').textContent = userData.nickname;
         document.getElementById('search-result-msg').textContent = userData.profile?.statusMessage || "상태 메시지 없음";
 
-        // 우측 안내 텍스트 (버튼 아님)
+        // 버튼 생성 로직
         if (uid === currentUser.uid) {
             resultAction.innerHTML = `<span class="text-yellow-500 text-xs font-bold">나 (본인)</span>`;
-            resultBox.onclick = null; // 본인이면 클릭 안 되게 막기 (선택 사항)
+            resultBox.onclick = null;
             resultBox.classList.remove('cursor-pointer', 'hover:bg-gray-700');
         } else {
-            resultAction.innerHTML = `<span class="text-blue-300 text-xs">상세 보기 ></span>`;
+            // ✨ [핵심 수정] addFriend -> sendFriendRequest로 변경
+            resultAction.innerHTML = `
+                <button onclick="event.stopPropagation(); sendFriendRequest('${uid}', '${userData.nickname}')" class="gacha-button bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-md">
+                    친구 요청
+                </button>`;
         }
 
     } catch (e) {
@@ -7088,13 +7086,13 @@ async function loadRankingPreview() {
             }
         };
 		
-		// ✨ [수정] 친구 시스템 관련 함수 등록
-    window.searchUserByName = searchUserByName;
+		window.searchUserByName = searchUserByName;
     window.loadFriendList = loadFriendList;
     window.visitFriendRoom = visitFriendRoom;
     window.exitVisitMode = exitVisitMode;
-    window.openOtherUserProfile = openOtherUserProfile; // 이것도 등록해야 함!
+    window.openOtherUserProfile = openOtherUserProfile;
     
+    // 👇 새로 만든 상호 작용 함수들 등록
     window.sendFriendRequest = sendFriendRequest;
     window.acceptFriendRequest = acceptFriendRequest;
     window.cancelFriendRequest = cancelFriendRequest;
