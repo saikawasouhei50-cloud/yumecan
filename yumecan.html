@@ -6380,10 +6380,11 @@ async function addFriend(targetUid, targetNickname) {
 }
 
 // 2. 닉네임으로 유저 검색
+// [수정] 닉네임 검색 함수 (결과 클릭 시 프로필 모달 오픈)
 async function searchUserByName() {
     const input = document.getElementById('friend-search-input');
     const resultBox = document.getElementById('friend-search-result');
-    const resultAction = document.getElementById('search-result-action');
+    const resultAction = document.getElementById('search-result-action'); // 이제 텍스트용으로 씀
     const msg = document.getElementById('friend-search-msg');
     
     const nickname = input.value.trim();
@@ -6406,7 +6407,7 @@ async function searchUserByName() {
         msg.textContent = "";
         const doc = snapshot.docs[0];
         const userData = doc.data();
-        const uid = doc.id;
+        const uid = doc.id; // 상대방 UID
 
         // 대표 카드 이미지 확인
         let imgUrl = "https://placehold.co/50x50/333/fff?text=?";
@@ -6417,18 +6418,25 @@ async function searchUserByName() {
 
         // 결과 표시
         resultBox.classList.remove('hidden');
+        
+        // ✨ [핵심 변경] 박스에 클릭 이벤트 연결 -> 프로필 모달 열기
+        // 데이터에 uid를 포함해서 넘겨야 친구 추가 버튼이 정상 작동함
+        resultBox.onclick = () => openOtherUserProfile({ ...userData, uid: uid });
+        
+        // 클릭 가능하다는 느낌을 주기 위한 스타일 추가
+        resultBox.classList.add('cursor-pointer', 'hover:bg-gray-700', 'transition-colors');
+
         document.getElementById('search-result-img').src = imgUrl;
         document.getElementById('search-result-name').textContent = userData.nickname;
-        document.getElementById('search-result-msg').textContent = userData.profile?.statusMessage || "";
+        document.getElementById('search-result-msg').textContent = userData.profile?.statusMessage || "상태 메시지 없음";
 
-        // 버튼 생성
+        // 우측 안내 텍스트 (버튼 아님)
         if (uid === currentUser.uid) {
-            resultAction.innerHTML = `<span class="text-yellow-500 text-sm font-bold">나 (본인)</span>`;
+            resultAction.innerHTML = `<span class="text-yellow-500 text-xs font-bold">나 (본인)</span>`;
+            resultBox.onclick = null; // 본인이면 클릭 안 되게 막기 (선택 사항)
+            resultBox.classList.remove('cursor-pointer', 'hover:bg-gray-700');
         } else {
-            resultAction.innerHTML = `
-                <button onclick="addFriend('${uid}', '${userData.nickname}')" class="gacha-button bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-bold text-sm">
-                    친구 추가
-                </button>`;
+            resultAction.innerHTML = `<span class="text-blue-300 text-xs">상세 보기 ></span>`;
         }
 
     } catch (e) {
@@ -6438,6 +6446,7 @@ async function searchUserByName() {
 }
 
 // 3. 친구 목록 불러오기
+// [수정] 친구 목록 불러오기 (삭제 버튼 추가됨)
 async function loadFriendList() {
     const container = document.getElementById('friend-list-container');
     if (!currentUser) return;
@@ -6464,9 +6473,14 @@ async function loadFriendList() {
                     <div class="w-2 h-2 rounded-full bg-green-500"></div>
                     <span class="font-bold text-white">${friendData.nickname}</span>
                 </div>
-                <button onclick="visitFriendRoom('${friendUid}', '${friendData.nickname}')" class="bg-indigo-500 hover:bg-indigo-600 text-white text-xs px-3 py-2 rounded font-bold shadow">
-                    🏠 방문
-                </button>
+                <div class="flex gap-2">
+                    <button onclick="visitFriendRoom('${friendUid}', '${friendData.nickname}')" class="bg-indigo-500 hover:bg-indigo-600 text-white text-xs px-3 py-2 rounded font-bold shadow">
+                        🏠 방문
+                    </button>
+                    <button onclick="deleteFriend('${friendUid}', '${friendData.nickname}')" class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-2 rounded font-bold shadow">
+                        ✂️ 삭제
+                    </button>
+                </div>
             `;
             container.appendChild(div);
         });
@@ -6474,6 +6488,24 @@ async function loadFriendList() {
     } catch (e) {
         console.error(e);
         container.innerHTML = '<p class="text-red-400 text-center">목록 로드 실패</p>';
+    }
+}
+
+// [신규] 친구 삭제 함수
+async function deleteFriend(targetUid, targetNickname) {
+    if (!confirm(`정말로 [${targetNickname}]님을 친구 목록에서 삭제하시겠습니까?`)) return;
+
+    try {
+        // 내 친구 목록에서 해당 문서 삭제
+        await db.collection('users').doc(currentUser.uid)
+                .collection('friends').doc(targetUid).delete();
+
+        alert(`[${targetNickname}]님을 삭제했습니다.`);
+        loadFriendList(); // 목록 새로고침
+
+    } catch (error) {
+        console.error("친구 삭제 실패:", error);
+        alert("삭제 중 오류가 발생했습니다.");
     }
 }
 
@@ -6862,6 +6894,7 @@ async function loadRankingPreview() {
     window.loadFriendList = loadFriendList;
     window.visitFriendRoom = visitFriendRoom;
     window.exitVisitMode = exitVisitMode;
+	window.deleteFriend = deleteFriend;
 
     }); // <--- DOMContentLoaded 닫는 괄호 (절대 지우지 마세요!)
 	
