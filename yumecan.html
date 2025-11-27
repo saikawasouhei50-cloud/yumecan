@@ -1151,6 +1151,8 @@ const RARITY_COST_MULTIPLIER = { // 👈 이 코드를 추가
 const STAT_INCREASE_PER_LEVEL = 0.05; // 레벨당 기본 능력치의 5% 증가
 let currentUser = null; 
             let currentPlayerNickname = "익명의 탐정";
+			// 전역 변수 선언부 (스크립트 맨 위쪽)
+let playerProfile = { repCardId: null, statusMessage: "" }; // 반드시 초기값을 줘야 합니다!
 			let currentTradeRarityFilter = 'All';
             let playerCurrency = 100;
 			let playerChoices = {};
@@ -1314,40 +1316,44 @@ const closeDismantleResultButton = document.getElementById('close-dismantle-resu
             async function saveGameToFirebase() {
     if (!currentUser) return; 
 
-    // 1. 프로필 안전 변환 (이 부분은 잘 작성하셨습니다)
+    // ✨ [안전장치 강화] playerProfile이 없어도 에러나지 않게 빈 객체 {} 처리
+    const currentProfile = playerProfile || {}; 
+
     const safeProfile = {
-        repCardId: playerProfile?.repCardId || null, 
-        statusMessage: playerProfile?.statusMessage || "" 
+        repCardId: currentProfile.repCardId || null, 
+        statusMessage: currentProfile.statusMessage || "" 
     };
 
-    // 2. ✨ 여기가 빠져 있었습니다! 데이터를 담을 객체 선언 시작 ✨
     const saveData = {
-        nickname: currentPlayerNickname, // 닉네임 저장
-        currency: playerCurrency,
-        fountainPens: playerFountainPens,
-        inkwells: playerInkwells,
-        inventory: playerInventory,
+        nickname: currentPlayerNickname || "익명의 탐정", // 닉네임 안전장치
+        currency: playerCurrency || 0,
+        fountainPens: playerFountainPens || 0,
+        inkwells: playerInkwells || 0,
+        inventory: playerInventory || [],
         deck: playerDeck.map(card => card.id),
-        capacity: inventoryCapacity,
-        profile: safeProfile, // 위에서 만든 프로필 객체 넣기
+        capacity: inventoryCapacity || 100,
         representative: representativeCharacter ? representativeCharacter.name : null,
-        clearedStages: clearedStages,
-        currentEventId: CURRENT_EVENT_ID, 
-        eventPoints: playerEventPoints,
-        clearedEventDungeons: clearedEventDungeons,
-        purchasedEventItems: purchasedEventItems,
-        bookmarks: playerBookmarks,
-        lastBookmarkUpdate: lastBookmarkUpdateTime,
-        achievements: playerAchievements,
-        stats: playerStats,
-        clearedStageStories: clearedStageStories,
-        playerChoices: playerChoices,
-        collectedCardNames: Array.from(collectedCardNames),
-        myRoom: playerRoom,        
-        ownedFurniture: ownedFurniture 
-    }; // ✨ 객체 닫기
+        clearedStages: clearedStages || [],
+        currentEventId: (typeof CURRENT_EVENT_ID !== 'undefined') ? CURRENT_EVENT_ID : null,
+        eventPoints: playerEventPoints || 0,
+        clearedEventDungeons: clearedEventDungeons || [],
+        purchasedEventItems: purchasedEventItems || {},
+        bookmarks: playerBookmarks || 0,
+        lastBookmarkUpdate: lastBookmarkUpdateTime || Date.now(),
+        achievements: playerAchievements || {},
+        stats: playerStats || { totalPulls: 0 },
+        clearedStageStories: clearedStageStories || [],
+        playerChoices: playerChoices || {},
+        collectedCardNames: Array.from(collectedCardNames || []),
+        myRoom: playerRoom || { furniture: [], characters: [] },
+        ownedFurniture: ownedFurniture || [],
+        
+        // ✨ 안전하게 변환된 프로필 저장
+        profile: safeProfile 
+    };
 
-    // 3. Firebase에 저장 실행
+    // undefined 값이 하나라도 있으면 여기서 에러가 납니다.
+    // 위에서 모든 필드에 || 연산자로 기본값을 줬으므로 이제 안전합니다.
     await db.collection('users').doc(currentUser.uid).set(saveData);
     console.log("게임 데이터가 Firebase에 저장되었습니다.");
 }
