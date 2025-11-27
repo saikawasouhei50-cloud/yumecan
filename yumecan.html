@@ -832,10 +832,8 @@ body.pointer-events-none {
 </div>
 
 <div id="visit-mode-overlay" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center animate-bounce">
-    <div class="bg-indigo-600 text-white px-6 py-2 rounded-full shadow-lg font-bold mb-2 border-2 border-white">
-        ✈️ <span id="visit-target-name">???</span>님의 사무소 방문 중
-    </div>
-    <button onclick="exitVisitMode()" class="gacha-button bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-full font-bold shadow-lg">
+    
+    <button onclick="exitVisitMode()" class="gacha-button bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-full font-bold shadow-lg border-2 border-white">
         내 사무소로 돌아가기
     </button>
 </div>
@@ -2979,7 +2977,6 @@ const isBlocked = playerRoom.furniture.some(f => {
 
 // ================== ✨ 수정된 initDragEvents (배치 모드) ✨ ==================
 function initDragEvents() {
-if (document.getElementById('visit-mode-overlay').classList.contains('hidden') === false) return;
     const container = document.getElementById('room-container');
 
     const handleStart = (e) => {
@@ -3286,6 +3283,9 @@ let dragOffsetY = 0;
 
 // 1. 배치 모드 토글 함수
 function toggleEditMode() {
+if (!document.getElementById('visit-mode-overlay').classList.contains('hidden')) {
+        return;
+    }
     isEditMode = !isEditMode;
     const btn = document.getElementById('myroom-edit-mode');
     const container = document.getElementById('room-container');
@@ -6641,7 +6641,7 @@ async function openOtherUserProfile(userData) {
 }
 		
 
-// [수정] 닉네임 검색 함수 (버튼 기능을 새 로직으로 연결)
+// [수정] 닉네임 검색 함수 (관계 상태에 따라 버튼 자동 변경)
 async function searchUserByName() {
     const input = document.getElementById('friend-search-input');
     const resultBox = document.getElementById('friend-search-result');
@@ -6670,6 +6670,16 @@ async function searchUserByName() {
         const userData = doc.data();
         const uid = doc.id;
 
+        // --- ✨ [추가] 관계 상태 확인 로직 ---
+        let relationStatus = 'none';
+        if (currentUser && uid !== currentUser.uid) {
+            const relDoc = await db.collection('users').doc(currentUser.uid).collection('friends').doc(uid).get();
+            if (relDoc.exists) {
+                relationStatus = relDoc.data().status || 'accepted';
+            }
+        }
+        // -------------------------------------
+
         let imgUrl = "https://placehold.co/50x50/333/fff?text=?";
         if (userData.representative) {
             const charData = findCharacter(userData.representative);
@@ -6686,13 +6696,32 @@ async function searchUserByName() {
         document.getElementById('search-result-name').textContent = userData.nickname;
         document.getElementById('search-result-msg').textContent = userData.profile?.statusMessage || "상태 메시지 없음";
 
-        // 버튼 생성 로직
+        // 버튼 상태 분기 처리
         if (uid === currentUser.uid) {
             resultAction.innerHTML = `<span class="text-yellow-500 text-xs font-bold">나 (본인)</span>`;
             resultBox.onclick = null;
             resultBox.classList.remove('cursor-pointer', 'hover:bg-gray-700');
-        } else {
-            // ✨ [핵심 수정] addFriend -> sendFriendRequest로 변경
+        } 
+        else if (relationStatus === 'accepted') {
+            // 이미 친구일 때 -> 방문 버튼 표시
+            resultAction.innerHTML = `
+                <button onclick="event.stopPropagation(); visitFriendRoom('${uid}', '${userData.nickname}')" class="gacha-button bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-md">
+                    🏠 방문
+                </button>`;
+        }
+        else if (relationStatus === 'sent') {
+            // 요청 보냄
+            resultAction.innerHTML = `<span class="text-gray-400 text-xs font-bold">✉️ 요청함</span>`;
+        }
+        else if (relationStatus === 'received') {
+            // 요청 받음 -> 수락 버튼
+            resultAction.innerHTML = `
+                <button onclick="event.stopPropagation(); acceptFriendRequest('${uid}', '${userData.nickname}')" class="gacha-button bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-md animate-pulse">
+                    ✅ 수락
+                </button>`;
+        }
+        else {
+            // 남남 -> 친구 추가 버튼
             resultAction.innerHTML = `
                 <button onclick="event.stopPropagation(); sendFriendRequest('${uid}', '${userData.nickname}')" class="gacha-button bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-md">
                     친구 요청
@@ -6710,6 +6739,9 @@ async function searchUserByName() {
 let originalMyRoomData = null; // 내 방 데이터를 임시 저장할 변수
 
 async function visitFriendRoom(targetUid, targetNickname) {
+if (typeof isEditMode !== 'undefined' && isEditMode) {
+        toggleEditMode();
+    }
     try {
         // 1. 친구 데이터 가져오기
         const doc = await db.collection('users').doc(targetUid).get();
@@ -6731,7 +6763,7 @@ async function visitFriendRoom(targetUid, targetNickname) {
         
         // 방문 모드 UI 표시
         document.getElementById('visit-mode-overlay').classList.remove('hidden');
-        document.getElementById('visit-target-name').textContent = targetNickname;
+      
         
         // 수정/상점 버튼 숨기기
         document.getElementById('myroom-edit-mode').classList.add('hidden');
