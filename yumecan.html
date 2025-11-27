@@ -1011,7 +1011,7 @@ body.pointer-events-none {
     
 
 	// ▼▼▼ [수정] 도감 그룹 관리 변수 ▼▼▼
-let currentCollectionGroup = '히어로 대 빌런: 각축전'; // 처음에 보여줄 기수
+let currentCollectionSelection = null;
 // 탭으로 만들 그룹 목록 (순서대로 나옵니다)
 const COLLECTION_GROUPS = ['히어로 대 빌런: 각축전', '히어로 대 빌런: 점령전', 'NPC'];
 
@@ -1805,13 +1805,12 @@ function saveGame() {
 
 
 // ✅ '도감' 탭의 메인 함수 (캐릭터 목록 생성)
+// ✅ '도감' 탭의 메인 함수 (캐릭터 목록 생성)
 function displayCollectionView() {
     const charListContainer = document.getElementById('collection-character-list');
-    
-    // 1. 화면 초기화
     charListContainer.innerHTML = '';
 
-    // 2. [탭 버튼 영역] 생성
+    // 1. [탭 버튼 영역] (기존 코드 유지)
     const tabContainer = document.createElement('div');
     tabContainer.className = 'flex flex-wrap gap-2 mb-4 justify-center';
 
@@ -1822,7 +1821,6 @@ function displayCollectionView() {
             isActive ? 'bg-yellow-400 text-black shadow-lg scale-105' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
         }`;
         tabBtn.textContent = groupName;
-        
         tabBtn.onclick = (e) => {
             e.stopPropagation();
             currentCollectionGroup = groupName;
@@ -1832,9 +1830,7 @@ function displayCollectionView() {
     });
     charListContainer.appendChild(tabContainer);
 
-    // 3. [캐릭터 목록] 필터링 및 생성
-    
-    // ✨ [수정됨] 현재 인벤토리가 아닌, '영구 수집 기록(collectedCardNames)'을 기준으로 확인합니다.
+    // 2. [캐릭터 목록] 생성
     const collectedBaseNames = new Set();
     if (typeof collectedCardNames !== 'undefined') {
         collectedCardNames.forEach(cardName => {
@@ -1844,8 +1840,6 @@ function displayCollectionView() {
     }
 
     const allBaseNames = Object.keys(characterProfiles);
-
-    // 현재 선택된 그룹에 해당하는 캐릭터만 필터링
     const filteredNames = allBaseNames.filter(baseName => {
         const profile = characterProfiles[baseName];
         return profile.group === currentCollectionGroup;
@@ -1856,19 +1850,31 @@ function displayCollectionView() {
     } else {
         filteredNames.forEach(baseName => {
             const profile = characterProfiles[baseName];
-            
-            // ✨ 수집 기록에 있는지 확인 (파쇄해도 true 유지됨)
             const isCollected = collectedBaseNames.has(baseName);
             
-            const button = document.createElement('button');
-            const isActiveChar = document.getElementById('collection-profile-name')?.textContent === profile.name;
+            // ✨ [핵심 수정] 변수와 비교하여 현재 선택된 캐릭터인지 확인
+            const isActiveChar = (baseName === currentCollectionSelection);
             
-            button.className = `w-full text-left font-bold py-2 px-3 rounded-lg transition-colors duration-200 mb-1 ${
-                isActiveChar ? 'bg-blue-600 text-white' : 
-                (isCollected ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-black/30 text-gray-500')
-            }`;
+            const button = document.createElement('button');
+            
+            // ✨ 스타일 결정 로직 간소화 (클래스 섞임 방지)
+            // focus:outline-none 추가로 클릭 시 테두리 제거
+            let bgClass = '';
+            if (isActiveChar) {
+                bgClass = 'bg-blue-600 text-white shadow-md ring-2 ring-blue-400'; // 선택됨
+            } else if (isCollected) {
+                bgClass = 'bg-white/10 hover:bg-white/20 text-white'; // 수집함 (미선택)
+            } else {
+                bgClass = 'bg-black/30 text-gray-500'; // 미수집
+            }
+
+            button.className = `w-full text-left font-bold py-3 px-4 rounded-lg transition-all duration-200 mb-2 focus:outline-none ${bgClass}`;
             button.textContent = isCollected ? profile.name : '?????';
             button.dataset.baseName = baseName;
+            
+            // 클릭 이벤트는 아래 addEventListener에서 위임 처리하므로 여기서는 생략 가능
+            // 하지만 확실한 동작을 위해 여기서 직접 연결해도 됩니다.
+            button.onclick = () => displayCharacterDetail(baseName);
             
             charListContainer.appendChild(button);
         });
@@ -1880,16 +1886,16 @@ function displayCharacterDetail(baseName) {
     const profile = characterProfiles[baseName];
     if (!profile) return;
     
+    // ✨ [핵심 수정] 현재 선택된 캐릭터 이름을 변수에 저장
+    currentCollectionSelection = baseName;
+
     // 1. 상세 뷰 보이기
     document.getElementById('collection-character-detail-view').classList.remove('hidden');
     document.getElementById('collection-default-message').classList.add('hidden');
     
-    // 2. 프로필 정보 채우기
-    // ✨ [핵심 수정] 인벤토리가 아니라 '수집 기록(collectedCardNames)'을 확인합니다.
+    // 2. 프로필 정보 채우기 (기존 코드 유지)
     let isCollected = false;
-    
     if (typeof collectedCardNames !== 'undefined') {
-        // Set을 배열로 바꿔서 하나씩 확인 (내 수집 목록 중에 이 캐릭터(baseName)가 있는가?)
         isCollected = Array.from(collectedCardNames).some(cardName => {
             const charData = findCharacter(cardName);
             return charData && charData.baseName === baseName;
@@ -1903,35 +1909,23 @@ function displayCharacterDetail(baseName) {
         document.getElementById('collection-profile-job').textContent = profile.job;
         document.getElementById('collection-profile-description').textContent = profile.description;
     } else {
-        // 미수집 시 ? 로 표시
         document.getElementById('collection-profile-image').src = 'https://placehold.co/300x500/000000/ffffff?text=???';
         document.getElementById('collection-profile-name').textContent = '?????';
         document.getElementById('collection-profile-age').textContent = '??';
         document.getElementById('collection-profile-job').textContent = '?????';
-        document.getElementById('collection-profile-description').textContent = '아직 이 등장인물에 대한 정보가 없습니다. "누군가의 서고"에서 획득하여 잠금 해제하세요.';
+        document.getElementById('collection-profile-description').textContent = '아직 이 등장인물에 대한 정보가 없습니다.';
     }
     
-    // 3. 활성화된 탭 버튼 스타일 업데이트
-    document.querySelectorAll('#collection-character-list button').forEach(btn => {
-        const match = btn.dataset.baseName === baseName;
-        btn.classList.toggle('active', match);
-        // 활성화된 버튼은 파란색, 아니면 (수집 여부에 따라) 투명/회색 유지
-        if (match) {
-            btn.classList.add('bg-blue-500');
-            btn.classList.remove('bg-white/10', 'bg-black/30');
-        } else {
-            btn.classList.remove('bg-blue-500');
-            // 원래 클래스로 복구하는 로직은 displayCollectionView에서 처리하므로 여기선 색만 뺍니다.
-        }
-    });
+    // ✨ [핵심 수정] 버튼 스타일을 일일이 조작하는 대신, 목록 전체를 새로고침하여 깔끔하게 적용
+    displayCollectionView();
 
-    // 4. 서브 탭을 '카드 모음'으로 초기화
+    // 4. 서브 탭 초기화 (기존 코드 유지)
     document.getElementById('collection-sub-tab-cards').classList.add('active');
     document.getElementById('collection-sub-tab-dialogues').classList.remove('active');
     document.getElementById('collection-cards-view').classList.remove('hidden');
     document.getElementById('collection-dialogues-view').classList.add('hidden');
     
-    // 5. 카드 모음 탭 내용 표시
+    // 5. 카드 모음 표시
     displayCharacterCards(baseName, isCollected);
 }
 
