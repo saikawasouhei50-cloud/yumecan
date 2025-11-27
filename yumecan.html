@@ -6531,6 +6531,7 @@ async function loadFriendList() {
 }
 
 // 5. 프로필 모달 열기 (친구 상태에 따라 버튼 바뀜)
+// 5. 프로필 모달 열기 (친구 상태에 따라 버튼 바뀜)
 async function openOtherUserProfile(userData) {
     const oldModal = document.getElementById('other-user-profile-modal');
     if (oldModal) oldModal.remove();
@@ -6540,14 +6541,12 @@ async function openOtherUserProfile(userData) {
 
     // ✨ 현재 이 유저와의 친구 상태 확인 (실시간 체크)
     let relationStatus = 'none'; // none, sent, received, accepted
-    let relationDoc = null;
-
+    
     if (currentUser && targetUid !== currentUser.uid) {
         try {
             const doc = await db.collection('users').doc(currentUser.uid).collection('friends').doc(targetUid).get();
             if (doc.exists) {
                 relationStatus = doc.data().status;
-                relationDoc = doc.data();
             }
         } catch(e) { console.error(e); }
     }
@@ -6579,7 +6578,7 @@ async function openOtherUserProfile(userData) {
             </button>
         `;
     } else {
-        // 친구 아님 (none)
+        // ✨ [핵심 수정] 친구 아님 (none) -> 여기서 addFriend 대신 sendFriendRequest를 써야 합니다!
         actionBtnHTML = `
             <button onclick="sendFriendRequest('${targetUid}', '${targetNick}');" class="flex-1 gacha-button bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold text-lg shadow-lg">
                 🤝 친구 요청 보내기
