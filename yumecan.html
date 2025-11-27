@@ -404,13 +404,22 @@ body.pointer-events-none {
         <div class="md:w-1/2 flex flex-col gap-4">
 
     <div class="bg-black/20 p-4 rounded-lg shadow-lg">
-        <h3 class="text-xl font-bold text-yellow-300 mb-3">이벤트 Pt</h3>
-        <div class="flex justify-between items-center bg-black/30 p-4 rounded-lg">
-            <span class="text-lg text-gray-300">총 획득 포인트</span>
-            <div id="event-home-point-display" class="text-3xl font-bold text-pink-300">
-                <span id="event-home-points">0</span> P
-            </div>
-        </div>
+    <h3 class="text-xl font-bold text-yellow-300 mb-3">이벤트 Pt 현황</h3>
+    
+    <div class="flex justify-between items-center mb-2 px-2">
+        <span class="text-gray-300 font-bold">💎 현재 보유</span>
+        <span class="text-2xl font-bold text-white">
+            <span id="display-holding-points">0</span> P
+        </span>
+    </div>
+
+    <div class="flex justify-between items-center bg-black/30 p-3 rounded-lg border border-white/10">
+        <span class="text-sm text-gray-400">🏆 누적 획득</span>
+        <span class="text-lg font-bold text-yellow-300">
+            <span id="display-cumulative-points">0</span> P
+        </span>
+    </div>
+</div>
     </div>
 
     <button onclick="openRankingModal()" class="w-full gacha-button bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg flex items-center justify-center gap-2">
@@ -2010,8 +2019,15 @@ function displayEventHomeView() {
     document.getElementById('event-home-duration').textContent = `${startDateStr} ~ ${endDateStr}`;
     document.getElementById('event-home-banner-image').src = currentEventInfo.bannerImageUrl;
     document.getElementById('event-home-description').textContent = currentEventInfo.description;
-    document.getElementById('event-home-points').textContent = playerEventPoints; // 이벤트 포인트 표시
-    document.getElementById('event-home-point-display').classList.remove('hidden'); // 포인트 표시 보이게
+	
+    // ✨ [수정된 부분] 포인트 표시 연결
+    // 현재 보유 포인트 (상점에서 쓰면 줄어듦)
+    const holdingEl = document.getElementById('display-holding-points');
+    if (holdingEl) holdingEl.textContent = (playerEventPoints || 0).toLocaleString();
+
+    // 누적 획득 포인트 (랭킹용, 줄어들지 않음)
+    const cumulativeEl = document.getElementById('display-cumulative-points');
+    if (cumulativeEl) cumulativeEl.textContent = (playerCumulativeEventPoints || 0).toLocaleString();
 	loadRankingPreview();
 }
 			
@@ -4005,7 +4021,7 @@ function endCombat(isVictory, combatInfo) { // dungeon, type 대신 combatInfo �
             const reward = dungeon.eventPointReward;
 			playerEventPoints += reward;            // 지갑에 추가 (상점에서 씀)
     playerCumulativeEventPoints += reward;  // ✨ 점수판에 추가 (랭킹용, 절대 안 깎임)
-            playerEventPoints += reward;
+            
             if (!clearedEventDungeons.includes(dungeon.name)) {
                 clearedEventDungeons.push(dungeon.name);
             }
