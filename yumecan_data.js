@@ -74,25 +74,25 @@ async function loadGameData() {
                 dialogues: row.dialogues ? String(row.dialogues).split('|') : ['...'],
                 
                 skills: [
-    // [0] 첫 번째 스킬 (액티브)
+    // [0] 첫 번째 스킬
     {
         name: row.active_skill_name || row.skill1_name,
         desc: row.active_skill_desc || row.skill1_dialogue,
-        dialogue: row.active_skill_desc || row.skill1_dialogue, // 대사 출력용
+        dialogue: row.active_skill_desc || row.skill1_dialogue,
         cooldown: parseInt(row.active_skill_cooldown) || 3,
         value: parseFloat(row.active_skill_value) || 1.0,
         target: row.active_skill_target,
-        type: row.active_skill_type || 'damage' // 타입이 없으면 기본 공격으로 처리
+        type: row.active_skill_type || 'damage'
     },
-    // [1] 두 번째 스킬 (패시브/궁극기)
+    // [1] 두 번째 스킬
     {
         name: row.passive_skill_name || row.skill2_name,
         desc: row.passive_skill_desc || row.skill2_dialogue,
-        dialogue: row.passive_skill_desc || row.skill2_dialogue, // 대사 출력용
+        dialogue: row.passive_skill_desc || row.skill2_dialogue,
         value: parseFloat(row.passive_skill_value) || 0.0,
         type: row.passive_skill_type || row.skill2_type
     }
-],
+].filter(skill => skill.name), 
                 deathDialogue: row.deathDialogue,
                 story: row.story,
                 enhancementSuccessDialogue: row.enhancementSuccessDialogue
