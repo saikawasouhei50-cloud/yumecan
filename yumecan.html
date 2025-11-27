@@ -2583,69 +2583,86 @@ function initInteractionSystem() {
     }, 1000);
 }
 
-function triggerInteraction(charA, charB) {
+funfunction triggerInteraction(charA, charB) {
     // 1. 상태를 '대화 중'으로 변경 (이동 멈춤)
     charA.dataset.isInteracting = 'true';
     charB.dataset.isInteracting = 'true';
 
-    // 2. 서로 마주 보게 하기
-    const ax = parseFloat(charA.style.left);
-    const bx = parseFloat(charB.style.left);
-    const imgA = charA.querySelector('img');
-    const imgB = charB.querySelector('img');
+    try {
+        // 2. 서로 마주 보게 하기
+        const ax = parseFloat(charA.style.left);
+        const bx = parseFloat(charB.style.left);
+        const imgA = charA.querySelector('img');
+        const imgB = charB.querySelector('img');
 
-    if (ax < bx) { // A가 왼쪽, B가 오른쪽
-        imgA.style.transform = 'scaleX(-1)'; // A는 오른쪽 봄
-        imgB.style.transform = 'scaleX(1)';  // B는 왼쪽 봄
-    } else {
-        imgA.style.transform = 'scaleX(1)';  // A는 왼쪽 봄
-        imgB.style.transform = 'scaleX(-1)'; // B는 오른쪽 봄
-    }
-
-    // 3. 대사 찾기
-    // id가 'chibi-0' 형태이므로 인덱스를 추출하여 원본 데이터 이름 찾기
-    const indexA = parseInt(charA.id.split('-')[1]);
-    const indexB = parseInt(charB.id.split('-')[1]);
-    
-    // 현재 덱/인벤토리에 표시된 리스트 기준
-    const list = playerDeck.length > 0 ? playerDeck : playerInventory.slice(0, 5);
-    const nameA = findCharacter(list[indexA].name).baseName;
-    const nameB = findCharacter(list[indexB].name).baseName;
-
-    // 매칭되는 대사 찾기
-    let dialoguePair = null;
-    
-    // 정방향 검색
-    let match = interactionDialogues.find(d => d.pair[0] === nameA && d.pair[1] === nameB);
-    if (match) {
-        const randomPick = match.dialogues[Math.floor(Math.random() * match.dialogues.length)];
-        dialoguePair = { a: randomPick[0], b: randomPick[1] };
-    } else {
-        // 역방향 검색
-        match = interactionDialogues.find(d => d.pair[0] === nameB && d.pair[1] === nameA);
-        if (match) {
-            const randomPick = match.dialogues[Math.floor(Math.random() * match.dialogues.length)];
-            dialoguePair = { a: randomPick[1], b: randomPick[0] }; // 순서 반대로
+        if (ax < bx) { 
+            imgA.style.transform = 'scaleX(-1)'; 
+            imgB.style.transform = 'scaleX(1)';  
+        } else {
+            imgA.style.transform = 'scaleX(1)'; 
+            imgB.style.transform = 'scaleX(-1)'; 
         }
+
+        // 3. 대사 찾기 (안전장치 추가)
+        const indexA = parseInt(charA.id.split('-')[1]);
+        const indexB = parseInt(charB.id.split('-')[1]);
+        
+        const list = playerDeck.length > 0 ? playerDeck : playerInventory.slice(0, 5);
+        
+        // ★ 데이터가 없으면 안전하게 종료
+        const charDataA = findCharacter(list[indexA].name);
+        const charDataB = findCharacter(list[indexB].name);
+
+        if (!charDataA || !charDataB) {
+            throw new Error("캐릭터 데이터를 찾을 수 없습니다.");
+        }
+
+        const nameA = charDataA.baseName;
+        const nameB = charDataB.baseName;
+
+        // 매칭되는 대사 찾기
+        let dialoguePair = null;
+        
+        // interactionDialogues가 비어있을 경우를 대비
+        if (interactionDialogues && interactionDialogues.length > 0) {
+            let match = interactionDialogues.find(d => d.pair[0] === nameA && d.pair[1] === nameB);
+            if (match) {
+                const randomPick = match.dialogues[Math.floor(Math.random() * match.dialogues.length)];
+                dialoguePair = { a: randomPick[0], b: randomPick[1] };
+            } else {
+                match = interactionDialogues.find(d => d.pair[0] === nameB && d.pair[1] === nameA);
+                if (match) {
+                    const randomPick = match.dialogues[Math.floor(Math.random() * match.dialogues.length)];
+                    dialoguePair = { a: randomPick[1], b: randomPick[0] };
+                }
+            }
+        }
+
+        // 매칭되는 게 없으면 범용 대사 사용
+        if (!dialoguePair) {
+            const randomPick = genericInteractions[Math.floor(Math.random() * genericInteractions.length)];
+            dialoguePair = { a: randomPick[0], b: randomPick[1] };
+        }
+
+        // 4. 말풍선 띄우기
+        showBubble(charA, dialoguePair.a);
+        setTimeout(() => showBubble(charB, dialoguePair.b), 1000);
+
+    } catch (error) {
+        console.warn("상호작용 중 오류 발생:", error);
+        // 에러가 나도 말풍선은 띄워줌 (버그난 거 티 안 나게)
+        showBubble(charA, "...");
+        showBubble(charB, "?");
+    } finally {
+        // 5. ★ 무조건 대화 종료 후 해제 (4초 뒤)
+        // 에러가 나든 안 나든 4초 뒤에는 다시 움직이게 함
+        setTimeout(() => {
+            charA.dataset.isInteracting = 'false';
+            charB.dataset.isInteracting = 'false';
+            charA.dataset.lastInteraction = Date.now();
+            charB.dataset.lastInteraction = Date.now();
+        }, 4000);
     }
-
-    // 매칭되는 게 없으면 범용 대사 사용
-    if (!dialoguePair) {
-        const randomPick = genericInteractions[Math.floor(Math.random() * genericInteractions.length)];
-        dialoguePair = { a: randomPick[0], b: randomPick[1] };
-    }
-
-    // 4. 말풍선 띄우기
-    showBubble(charA, dialoguePair.a);
-    setTimeout(() => showBubble(charB, dialoguePair.b), 1000); // 1초 뒤 상대방 대답
-
-    // 5. 대화 종료 후 해제 (4초 뒤)
-    setTimeout(() => {
-        charA.dataset.isInteracting = 'false';
-        charB.dataset.isInteracting = 'false';
-        charA.dataset.lastInteraction = Date.now();
-        charB.dataset.lastInteraction = Date.now();
-    }, 4000);
 }
 
 function showBubble(charEl, text) {
@@ -6055,7 +6072,6 @@ if(marketTabBtn) marketTabBtn.click();
     </script>
 </body>
 </html>
-
 
 
 
