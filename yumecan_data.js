@@ -33,16 +33,26 @@ async function loadGameData() {
         chibiImages = {}; 
 
         characters = data.characters.map(row => {
-            const calculatedBaseName = row.baseName || row.name.split('] ')[1] || row.name;
+    // 1. 시트에서 가져온 baseName 확인 (대소문자 실수 방지 차원에서 여러 케이스 확인)
+    // row.baseName이 없으면 row.basename도 찾아보고, 그래도 없으면 undefined
+    let rawBase = row.baseName || row.basename || row['baseName ']; 
 
-            if (row.chibi_image && row.chibi_image !== "") {
-                chibiImages[calculatedBaseName] = row.chibi_image;
-            }
+    // 2. 만약 baseName이 비어있다면? -> 이름(name)에서 대괄호 [ ] 부분을 강제로 삭제하여 추출
+    if (!rawBase || String(rawBase).trim() === "") {
+        // 예: "[탐정] 서도진" -> "서도진" (정규식으로 [ ]와 뒤의 공백 제거)
+        rawBase = row.name.replace(/\[.*?\]\s*/g, '');
+    }
 
-            return {
-                name: row.name,
-                baseName: calculatedBaseName,
-                faction: row.faction, 
+    // 3. 앞뒤 공백 제거하여 최종 이름 확정
+    const calculatedBaseName = String(rawBase).trim();
+
+    // (확인용 로그: F12 콘솔에서 이 로그가 잘 뜨는지 확인하세요)
+    // console.log(`[이름 변환] ${row.name} -> ${calculatedBaseName}`);
+
+    return {
+        name: row.name,
+        baseName: calculatedBaseName, // ✨ 여기서 확정된 이름을 넣습니다.
+        faction: row.faction,
                 rarity: row.rarity,
 				publishTarget: row.publish_target,
                 
@@ -488,6 +498,7 @@ const genericInteractions = [
     ['안녕하세요!', '반갑습니다.'],
     ['잠시 쉬었다 갈까요?', '좋은 생각입니다.']
 ];
+
 
 
 
