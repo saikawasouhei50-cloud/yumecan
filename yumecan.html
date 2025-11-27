@@ -1313,74 +1313,46 @@ const closeDismantleResultButton = document.getElementById('close-dismantle-resu
             async function saveGameToFirebase() {
     if (!currentUser) return; 
 
-    // 1. 프로필 데이터 안전장치 (변수가 아예 없어도 에러 안 나게 처리)
-    let safeProfileObj = {};
-    if (typeof playerProfile !== 'undefined' && playerProfile) {
-        safeProfileObj = playerProfile;
-    }
+    // ✨ [안전장치 강화] playerProfile이 없어도 에러나지 않게 빈 객체 {} 처리
+    const currentProfile = playerProfile || {}; 
 
     const safeProfile = {
-        repCardId: safeProfileObj.repCardId || null, 
-        statusMessage: safeProfileObj.statusMessage || "" 
+        repCardId: currentProfile.repCardId || null, 
+        statusMessage: currentProfile.statusMessage || "" 
     };
 
-    // 2. 이벤트 ID 안전장치 (가장 자주 에러나는 부분)
-    // CURRENT_EVENT_ID 변수 자체가 선언되지 않았을 때를 대비합니다.
-    let safeEventId = null;
-    if (typeof CURRENT_EVENT_ID !== 'undefined') {
-        safeEventId = CURRENT_EVENT_ID;
-    }
-
-    // 3. 저장 데이터 구성 (모든 필드에 || 연산자로 기본값 부여)
     const saveData = {
-        nickname: currentPlayerNickname || "익명의 탐정", 
-        currency: (typeof playerCurrency === 'number') ? playerCurrency : 0,
-        fountainPens: (typeof playerFountainPens === 'number') ? playerFountainPens : 0,
-        inkwells: (typeof playerInkwells === 'number') ? playerInkwells : 0,
+        nickname: currentPlayerNickname || "익명의 탐정", // 닉네임 안전장치
+        currency: playerCurrency || 0,
+        fountainPens: playerFountainPens || 0,
+        inkwells: playerInkwells || 0,
         inventory: playerInventory || [],
-        deck: (playerDeck || []).map(card => card.id),
+        deck: playerDeck.map(card => card.id),
         capacity: inventoryCapacity || 100,
-        
-        // 대표 캐릭터가 설정 안 되어 있으면 null
-        representative: (typeof representativeCharacter !== 'undefined' && representativeCharacter) ? representativeCharacter.name : null,
-        
+        representative: representativeCharacter ? representativeCharacter.name : null,
         clearedStages: clearedStages || [],
-        
-        // 위에서 만든 안전한 이벤트 ID 사용
-        currentEventId: safeEventId, 
-        
-        eventPoints: (typeof playerEventPoints === 'number') ? playerEventPoints : 0,
+        currentEventId: (typeof CURRENT_EVENT_ID !== 'undefined') ? CURRENT_EVENT_ID : null,
+        eventPoints: playerEventPoints || 0,
         clearedEventDungeons: clearedEventDungeons || [],
         purchasedEventItems: purchasedEventItems || {},
-        bookmarks: (typeof playerBookmarks === 'number') ? playerBookmarks : 0,
+        bookmarks: playerBookmarks || 0,
         lastBookmarkUpdate: lastBookmarkUpdateTime || Date.now(),
         achievements: playerAchievements || {},
         stats: playerStats || { totalPulls: 0 },
         clearedStageStories: clearedStageStories || [],
         playerChoices: playerChoices || {},
-        
-        // Set을 Array로 변환 (Set은 저장 불가)
-        collectedCardNames: Array.from(typeof collectedCardNames !== 'undefined' ? collectedCardNames : []),
-        
+        collectedCardNames: Array.from(collectedCardNames || []),
         myRoom: playerRoom || { furniture: [], characters: [] },
         ownedFurniture: ownedFurniture || [],
         
-        // 위에서 만든 안전한 프로필 사용
+        // ✨ 안전하게 변환된 프로필 저장
         profile: safeProfile 
     };
 
-    // 4. 데이터 검증용 로그 (개발자 도구 콘솔에서 확인 가능)
-    // 만약 또 에러가 난다면, 콘솔에 찍힌 이 객체 중 값이 'undefined'인 것을 찾아야 합니다.
-    console.log("저장 시도 데이터:", saveData);
-
-    try {
-        await db.collection('users').doc(currentUser.uid).set(saveData);
-        console.log("게임 데이터가 Firebase에 성공적으로 저장되었습니다.");
-    } catch (error) {
-        console.error("데이터 저장 중 치명적 오류 발생:", error);
-        // 어떤 필드가 문제인지 찾기 위해 하나씩 출력해볼 수 있습니다.
-        alert("데이터 저장 실패! 콘솔(F12)을 확인해주세요.");
-    }
+    // undefined 값이 하나라도 있으면 여기서 에러가 납니다.
+    // 위에서 모든 필드에 || 연산자로 기본값을 줬으므로 이제 안전합니다.
+    await db.collection('users').doc(currentUser.uid).set(saveData);
+    console.log("게임 데이터가 Firebase에 저장되었습니다.");
 }
 
             // ✅ 이 코드로 기존 loadGame 함수를 통째로 교체해주세요.
@@ -6308,7 +6280,6 @@ if(marketTabBtn) marketTabBtn.click();
     </script>
 </body>
 </html>
-
 
 
 
