@@ -2611,40 +2611,53 @@ function triggerInteraction(charA, charB) {
 
         if (!charDataA || !charDataB) throw new Error("데이터 없음");
 
-        // ✨ [핵심 수정] 이름을 정렬해서 Key를 만듭니다.
-        // 구글 시트의 'char1', 'char2'에 적은 이름(baseName)과 정확히 일치해야 합니다.
         const nameA = charDataA.baseName.trim();
         const nameB = charDataB.baseName.trim();
         const searchKey = [nameA, nameB].sort().join('_');
 
-        console.log(`[상호작용 시도] Key: ${searchKey}`); // 디버깅용 로그
+        console.log(`[상호작용 시도] Key: ${searchKey}`);
 
-        let dialoguePair = null;
+        // ✨ 수정된 변수: 화자 순서와 대사를 명확히 구분
+        let speaker1, speaker2;
+        let dialogue1, dialogue2;
 
-        // ✨ 맵에서 키로 바로 조회 (반복문 X)
+        // 고유 대사가 있는지 확인
         if (interactionDialogues && interactionDialogues[searchKey]) {
             const match = interactionDialogues[searchKey];
-            console.log("✅ 고유 대사 발견!");
+            console.log("✅ 고유 대사 발견! 순서 고정 적용");
 
             const randomPick = match.dialogues[Math.floor(Math.random() * match.dialogues.length)];
             
-            // 데이터에 저장된 첫 번째 이름이 누구인지 확인하여 대사 순서 결정
+            // ✨ 핵심: 누가 char1인지 확인하여 화자 순서를 고정합니다.
+            // match.pair[0]은 시트의 char1, match.pair[1]은 시트의 char2입니다.
             if (match.pair[0] === nameA) {
-                dialoguePair = { a: randomPick[0], b: randomPick[1] };
+                // A가 char1인 경우: A가 먼저 말하고, B가 나중에 말함
+                speaker1 = charA;
+                speaker2 = charB;
             } else {
-                dialoguePair = { a: randomPick[1], b: randomPick[0] };
+                // B가 char1인 경우: B가 먼저 말하고, A가 나중에 말함
+                speaker1 = charB;
+                speaker2 = charA;
             }
-        }
 
-        // 고유 대사가 없으면 범용 대사 사용
-        if (!dialoguePair) {
+            dialogue1 = randomPick[0]; // 시트의 dialogue1
+            dialogue2 = randomPick[1]; // 시트의 dialogue2
+
+        } else {
+            // 범용 대사일 경우 (기존대로 A -> B 순서)
             console.log("⚠️ 고유 대사 없음 -> 범용 대사 사용");
             const randomPick = genericInteractions[Math.floor(Math.random() * genericInteractions.length)];
-            dialoguePair = { a: randomPick[0], b: randomPick[1] };
+            speaker1 = charA;
+            speaker2 = charB;
+            dialogue1 = randomPick[0];
+            dialogue2 = randomPick[1];
         }
 
-        showBubble(charA, dialoguePair.a);
-        setTimeout(() => showBubble(charB, dialoguePair.b), 1000);
+        // 1. 첫 번째 화자(char1)가 대사 출력
+        showBubble(speaker1, dialogue1);
+        
+        // 2. 1초 뒤 두 번째 화자(char2)가 대사 출력
+        setTimeout(() => showBubble(speaker2, dialogue2), 1000);
 
     } catch (error) {
         console.warn("상호작용 에러:", error);
@@ -6067,7 +6080,6 @@ if(marketTabBtn) marketTabBtn.click();
     </script>
 </body>
 </html>
-
 
 
 
