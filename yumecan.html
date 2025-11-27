@@ -403,27 +403,23 @@ body.pointer-events-none {
 
         <div class="md:w-1/2 flex flex-col gap-4">
 
-    <div class="bg-black/20 p-4 rounded-lg shadow-lg">
-        <h3 class="text-xl font-bold text-yellow-300 mb-3">이벤트 Pt</h3>
-        <div class="flex justify-between items-center bg-black/30 p-4 rounded-lg">
-            <span class="text-lg text-gray-300">총 획득 포인트</span>
-            <div id="event-home-point-display" class="text-3xl font-bold text-pink-300">
-                <span id="event-home-points">0</span> P
+            <div class="bg-black/20 p-4 rounded-lg shadow-lg">
+                <h3 class="text-xl font-bold text-yellow-300 mb-3">이벤트 Pt</h3>
+                <div class="flex justify-between items-center bg-black/30 p-4 rounded-lg">
+                    <span class="text-lg text-gray-300">총 획득 포인트</span>
+                    <div id="event-home-point-display" class="text-3xl font-bold text-pink-300">
+                        <span id="event-home-points">0</span> P
+                    </div>
+                </div>
             </div>
+
+            <button onclick="openRankingModal()" class="w-full gacha-button bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg flex items-center justify-center gap-2">
+                🏆 실시간 랭킹 확인
+            </button>
+
         </div>
+
     </div>
-
-    <button onclick="openRankingModal()" class="w-full gacha-button bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg flex items-center justify-center gap-2">
-        🏆 실시간 랭킹 확인
-    </button>
-
-    <div class="bg-black/20 p-4 rounded-lg shadow-lg">
-        <h3 class="text-lg font-bold text-gray-200 mb-3 ml-1">🎖️ 명예의 전당 (Top 3)</h3>
-        <div id="ranking-preview-container" class="space-y-2">
-            <p class="text-center text-gray-500 text-sm py-2">랭킹 불러오는 중...</p>
-        </div>
-    </div>
-
 </div>
 
     </div>
@@ -1999,14 +1995,7 @@ const isCardCollected = collectedCardNames.has(character.name);
 function displayEventHomeView() {
     // game_data.js에서 이벤트 정보 가져오기
     // document.getElementById('event-home-title').textContent = currentEventInfo.title;
-    const options = { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric', 
-        hour: '2-digit', 
-        minute: '2-digit',
-        hour12: false // 👈 이 줄이 핵심입니다! (24시간제로 변경 & 오전/오후 제거)
-    };
+    const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
     const startDateStr = currentEventInfo.startDate.toLocaleDateString('ko-KR', options);
     const endDateStr = currentEventInfo.endDate.toLocaleDateString('ko-KR', options);
     document.getElementById('event-home-duration').textContent = `${startDateStr} ~ ${endDateStr}`;
@@ -2014,7 +2003,6 @@ function displayEventHomeView() {
     document.getElementById('event-home-description').textContent = currentEventInfo.description;
     document.getElementById('event-home-points').textContent = playerEventPoints; // 이벤트 포인트 표시
     document.getElementById('event-home-point-display').classList.remove('hidden'); // 포인트 표시 보이게
-	loadRankingPreview();
 }
 			
             function displayEventView() {
@@ -5264,7 +5252,49 @@ dismantleCardButton.addEventListener('click', () => {
     dismantleCard(currentDetailCardId);
 });
 
+// ================ 👇 이벤트 홈 관련 리스너 (신규) 👇 ================
 
+// 1. '홈' 화면의 이벤트 배너 클릭 시 -> 이벤트 홈으로 이동
+console.log('Checking eventBanner:', eventBanner); // 디버깅용 로그 추가
+eventBanner.addEventListener('click', () => {
+    switchTab('event'); // event-home-view를 보여줌
+});
+
+// 2. '이벤트 홈'의 '이벤트 전투' 버튼 클릭 시
+document.getElementById('goto-event-battle').addEventListener('click', () => {
+    // 기존 event-view를 보여주고, '전투' 서브 탭을 활성화
+    document.getElementById('event-home-view').classList.add('hidden');
+    document.getElementById('event-view').classList.remove('hidden');
+    displayEventView(); // 전투/스토리/상점 목록을 그림
+    switchSubTab(document.getElementById('event-view'), eventSubTabBattle); // 전투 탭 활성화
+});
+
+// 3. '이벤트 홈'의 '이벤트 스토리' 버튼 클릭 시
+document.getElementById('goto-event-story').addEventListener('click', () => {
+    document.getElementById('event-home-view').classList.add('hidden');
+    document.getElementById('event-view').classList.remove('hidden');
+    displayEventView(); 
+    switchSubTab(document.getElementById('event-view'), eventSubTabStory); // 스토리 탭 활성화
+});
+
+// 4. '이벤트 홈'의 '이벤트 서가' 버튼 클릭 시
+document.getElementById('goto-event-gacha').addEventListener('click', () => {
+    switchTab('gacha'); // 뽑기 탭으로 이동
+    switchGachaTab('event'); // 이벤트 뽑기 서브 탭 활성화
+});
+
+// 5. '이벤트 홈'의 '이벤트 상점' 버튼 클릭 시 (신규 추가)
+            document.getElementById('goto-event-shop').addEventListener('click', () => {
+                // 기존 event-view를 보여주고, '상점' 서브 탭을 활성화
+                document.getElementById('event-home-view').classList.add('hidden');
+                document.getElementById('event-view').classList.remove('hidden');
+                displayEventView(); // 전투/스토리/상점 목록을 그림
+                
+                // '상점' 탭을 활성화하기 위해 eventSubTabShop 변수(DOM 요소)를 전달
+                switchSubTab(document.getElementById('event-view'), eventSubTabShop); 
+            });
+
+// ======================================================================
 
 
 // =================== 👇 '도감' 탭 전용 리스너 👇 ===================
@@ -6372,73 +6402,6 @@ async function loadEventRankingData() {
         }
     }
 }
-
-// [추가] 이벤트 홈 화면에 TOP 3를 보여주는 함수
-async function loadRankingPreview() {
-    const container = document.getElementById('ranking-preview-container');
-    if (!container) return;
-
-    try {
-        // Top 3 데이터 가져오기
-        const snapshot = await db.collection('users')
-            .where('currentEventId', '==', CURRENT_EVENT_ID)
-            .orderBy('cumulativeEventPoints', 'desc')
-            .limit(3)
-            .get();
-
-        container.innerHTML = '';
-
-        if (snapshot.empty) {
-            container.innerHTML = '<p class="text-center text-gray-500 text-sm py-2">아직 랭킹 데이터가 없습니다.</p>';
-            return;
-        }
-
-        // 메달 및 스타일 설정 (금, 은, 동)
-        const medals = ['🥇', '🥈', '🥉'];
-        const borderColors = ['border-yellow-500', 'border-gray-400', 'border-orange-500'];
-        const bgColors = ['bg-yellow-900/40', 'bg-gray-700/40', 'bg-orange-900/40'];
-        const textColors = ['text-yellow-300', 'text-gray-300', 'text-orange-300'];
-
-        let rank = 0;
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            const nickname = data.nickname || "익명의 탐정";
-            const score = (data.cumulativeEventPoints || 0).toLocaleString();
-
-            const el = document.createElement('div');
-            el.className = `flex items-center justify-between p-2 rounded border ${borderColors[rank] || 'border-gray-700'} ${bgColors[rank] || 'bg-gray-800'}`;
-            
-            el.innerHTML = `
-                <div class="flex items-center gap-2 overflow-hidden">
-                    <span class="text-xl">${medals[rank]}</span>
-                    <span class="font-bold text-white text-sm truncate max-w-[120px]">${nickname}</span>
-                </div>
-                <span class="font-bold ${textColors[rank] || 'text-white'} text-sm">${score} P</span>
-            `;
-            container.appendChild(el);
-            rank++;
-        });
-
-        // 3명 미만일 경우 빈 칸 채우기 (선택사항)
-        for (let i = rank; i < 3; i++) {
-            const el = document.createElement('div');
-            el.className = `flex items-center justify-between p-2 rounded border border-dashed border-gray-600 bg-white/5 opacity-50`;
-            el.innerHTML = `
-                <div class="flex items-center gap-2">
-                    <span class="text-xl grayscale">${medals[i]}</span>
-                    <span class="text-gray-400 text-sm">-</span>
-                </div>
-                <span class="text-gray-500 text-sm">0 P</span>
-            `;
-            container.appendChild(el);
-        }
-
-    } catch (e) {
-        console.error("Top 3 로드 실패:", e);
-        // 인덱스 에러 방지를 위해 조용히 실패 처리
-        container.innerHTML = '<p class="text-center text-red-400 text-xs py-2">로딩 실패</p>';
-    }
-}
 		
 		// ✨ [신규] 판매자가 맡겨진 카드를 수령하는 함수
         window.receiveTradeItem = async function(tradeId) {
@@ -6479,66 +6442,9 @@ async function loadRankingPreview() {
                 alert("수령 실패: " + e);
             }
         };
-		// ===============================================================
-    // ✨ [위치 이동] 이벤트 홈 버튼 연결 (스크립트 맨 끝에서 실행)
-    // ===============================================================
-
-    // 1. '이벤트 홈' -> '이벤트 전투' 버튼
-    const btnEventBattle = document.getElementById('goto-event-battle');
-    if (btnEventBattle) {
-        btnEventBattle.addEventListener('click', () => {
-            console.log("이벤트 전투 버튼 클릭됨");
-            document.getElementById('event-home-view').classList.add('hidden'); // 홈 숨기기
-            document.getElementById('event-view').classList.remove('hidden');   // 전투 탭 보이기
-            displayEventView(); 
-            switchSubTab(document.getElementById('event-view'), eventSubTabBattle); 
-        });
-    }
-
-    // 2. '이벤트 홈' -> '이벤트 스토리' 버튼
-    const btnEventStory = document.getElementById('goto-event-story');
-    if (btnEventStory) {
-        btnEventStory.addEventListener('click', () => {
-            console.log("이벤트 스토리 버튼 클릭됨");
-            document.getElementById('event-home-view').classList.add('hidden');
-            document.getElementById('event-view').classList.remove('hidden');
-            displayEventView(); 
-            switchSubTab(document.getElementById('event-view'), eventSubTabStory); 
-        });
-    }
-
-    // 3. '이벤트 홈' -> '이벤트 상점' 버튼
-    const btnEventShop = document.getElementById('goto-event-shop');
-    if (btnEventShop) {
-        btnEventShop.addEventListener('click', () => {
-            console.log("이벤트 상점 버튼 클릭됨");
-            document.getElementById('event-home-view').classList.add('hidden');
-            document.getElementById('event-view').classList.remove('hidden');
-            displayEventView(); 
-            switchSubTab(document.getElementById('event-view'), eventSubTabShop); 
-        });
-    }
-
-    // 4. '이벤트 홈' -> '이벤트 서가(가챠)' 버튼
-    const btnEventGacha = document.getElementById('goto-event-gacha');
-    if (btnEventGacha) {
-        btnEventGacha.addEventListener('click', () => {
-            console.log("이벤트 서가 버튼 클릭됨");
-            document.getElementById('event-home-view').classList.add('hidden');
-            switchTab('gacha'); 
-            switchGachaTab('event'); 
-        });
-    }
-
-// ⬇️ 아래 괄호들은 절대 지우면 안 됩니다! (파일 맨 끝에 원래 있던 것들)
-}); 
-</script>
-</body>
-</html>
 
     }); // <--- DOMContentLoaded 닫는 괄호 (절대 지우지 마세요!)
     </script>
 </body>
 </html>
-
 
