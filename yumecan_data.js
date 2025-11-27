@@ -86,7 +86,7 @@ async function loadGameData() {
     // [1] 두 번째 스킬 (Passive / Ultimate)
     {
         name: row.skill2_name,
-        desc: row.skill2_dialogue,               // 설명 컬럼이 없어서 대사로 대체
+        desc: row.skill2_desc,               // 설명 컬럼이 없어서 대사로 대체
         dialogue: row.skill2_dialogue,
         value: parseFloat(row.skill2_power) || 0.0,
         type: row.skill2_type
