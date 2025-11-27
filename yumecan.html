@@ -5264,49 +5264,44 @@ dismantleCardButton.addEventListener('click', () => {
     dismantleCard(currentDetailCardId);
 });
 
-// ================ 👇 이벤트 홈 관련 리스너 (신규) 👇 ================
+// ================ 👇 이벤트 홈 버튼 연결 수정 (이 코드로 교체!) 👇 ================
 
-// 1. '홈' 화면의 이벤트 배너 클릭 시 -> 이벤트 홈으로 이동
-console.log('Checking eventBanner:', eventBanner); // 디버깅용 로그 추가
-eventBanner.addEventListener('click', () => {
-    switchTab('event'); // event-home-view를 보여줌
-});
-
-// 2. '이벤트 홈'의 '이벤트 전투' 버튼 클릭 시
+// 1. '이벤트 홈' -> '이벤트 전투' 버튼
 document.getElementById('goto-event-battle').addEventListener('click', () => {
-    // 기존 event-view를 보여주고, '전투' 서브 탭을 활성화
-    document.getElementById('event-home-view').classList.add('hidden');
-    document.getElementById('event-view').classList.remove('hidden');
-    displayEventView(); // 전투/스토리/상점 목록을 그림
-    switchSubTab(document.getElementById('event-view'), eventSubTabBattle); // 전투 탭 활성화
-});
-
-// 3. '이벤트 홈'의 '이벤트 스토리' 버튼 클릭 시
-document.getElementById('goto-event-story').addEventListener('click', () => {
-    document.getElementById('event-home-view').classList.add('hidden');
+    // ✨ 핵심: 홈 화면을 확실하게 숨깁니다
+    document.getElementById('event-home-view').classList.add('hidden'); 
+    
+    // 전투 화면 보이기
     document.getElementById('event-view').classList.remove('hidden');
     displayEventView(); 
-    switchSubTab(document.getElementById('event-view'), eventSubTabStory); // 스토리 탭 활성화
+    switchSubTab(document.getElementById('event-view'), eventSubTabBattle); 
 });
 
-// 4. '이벤트 홈'의 '이벤트 서가' 버튼 클릭 시
+// 2. '이벤트 홈' -> '이벤트 스토리' 버튼
+document.getElementById('goto-event-story').addEventListener('click', () => {
+    document.getElementById('event-home-view').classList.add('hidden'); // ✨ 숨김 처리
+    
+    document.getElementById('event-view').classList.remove('hidden');
+    displayEventView(); 
+    switchSubTab(document.getElementById('event-view'), eventSubTabStory); 
+});
+
+// 3. '이벤트 홈' -> '이벤트 상점' 버튼
+document.getElementById('goto-event-shop').addEventListener('click', () => {
+    document.getElementById('event-home-view').classList.add('hidden'); // ✨ 숨김 처리
+    
+    document.getElementById('event-view').classList.remove('hidden');
+    displayEventView(); 
+    switchSubTab(document.getElementById('event-view'), eventSubTabShop); 
+});
+
+// 4. '이벤트 홈' -> '이벤트 서가(가챠)' 버튼
 document.getElementById('goto-event-gacha').addEventListener('click', () => {
-    switchTab('gacha'); // 뽑기 탭으로 이동
-    switchGachaTab('event'); // 이벤트 뽑기 서브 탭 활성화
+    document.getElementById('event-home-view').classList.add('hidden'); // ✨ 숨김 처리
+    
+    switchTab('gacha'); // 가챠 탭으로 이동
+    switchGachaTab('event'); // 이벤트 뽑기 탭 활성화
 });
-
-// 5. '이벤트 홈'의 '이벤트 상점' 버튼 클릭 시 (신규 추가)
-            document.getElementById('goto-event-shop').addEventListener('click', () => {
-                // 기존 event-view를 보여주고, '상점' 서브 탭을 활성화
-                document.getElementById('event-home-view').classList.add('hidden');
-                document.getElementById('event-view').classList.remove('hidden');
-                displayEventView(); // 전투/스토리/상점 목록을 그림
-                
-                // '상점' 탭을 활성화하기 위해 eventSubTabShop 변수(DOM 요소)를 전달
-                switchSubTab(document.getElementById('event-view'), eventSubTabShop); 
-            });
-
-// ======================================================================
 
 
 // =================== 👇 '도감' 탭 전용 리스너 👇 ===================
