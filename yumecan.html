@@ -371,9 +371,12 @@ body.pointer-events-none {
 			<div id="event-home-view" class="hidden">
     <div class="flex flex-col md:flex-row gap-6">
 
-        <div class="md:w-5/12 flex flex-col items-center">
-            <img id="event-home-banner-image" src="https://placehold.co/600x200/ff6347/ffffff?text=Event+Banner" alt="Event Banner" class="w-full rounded-lg shadow-lg mb-3">
-            <p id="event-home-duration" class="text-sm text-gray-400 mb-4"></p>
+        <div class="md:w-1/2 flex flex-col gap-4">
+            
+            <div class="flex flex-col items-center">
+                <img id="event-home-banner-image" src="https://placehold.co/600x200/ff6347/ffffff?text=Event+Banner" alt="Event Banner" class="w-full rounded-lg shadow-lg mb-3">
+                <p id="event-home-duration" class="text-sm text-gray-400"></p>
+            </div>
             
             <div class="grid grid-cols-2 gap-4 w-full">
                 <button id="goto-event-story" class="gacha-button bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg text-base">
@@ -383,27 +386,11 @@ body.pointer-events-none {
                     이벤트 서가
                 </button>
             </div>
-        </div>
 
-        <div class="md:w-7/12 flex flex-col gap-4">
-
-            <div class="bg-black/20 p-4 rounded-lg shadow-lg">
-                <h3 class="text-xl font-bold text-yellow-300 mb-3">이벤트 Pt</h3>
-                <div class="flex justify-between items-center bg-black/30 p-4 rounded-lg">
-                    <span class="text-lg text-gray-300">총 획득 포인트</span>
-                    <div id="event-home-point-display" class="text-3xl font-bold text-pink-300">
-                        <span id="event-home-points">0</span> P
-                    </div>
-                </div>
-            </div>
-			<button onclick="openRankingModal()" class="w-full mt-2 gacha-button bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg flex items-center justify-center gap-2">
-    🏆 실시간 랭킹 확인
-</button>
-
-            <div class="bg-black/20 p-4 rounded-lg shadow-lg flex-grow flex flex-col">
-                <p id="event-home-description" class="text-gray-200 mb-4 text-center flex-shrink-0"></p>
+            <div class="bg-black/20 p-4 rounded-lg shadow-lg flex-col">
+                <p id="event-home-description" class="text-gray-200 mb-4 text-center"></p>
                 
-                <div class="flex-grow"></div> <button id="goto-event-shop" class="gacha-button bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg text-lg w-full mb-3">
+                <button id="goto-event-shop" class="gacha-button bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg text-lg w-full mb-3">
                     이벤트 상점
                 </button>
                 
@@ -411,12 +398,35 @@ body.pointer-events-none {
                     이벤트 전투
                 </button>
             </div>
-       
 
+        </div>
+
+        <div class="md:w-1/2 flex flex-col gap-4">
+
+    <div class="bg-black/20 p-4 rounded-lg shadow-lg">
+        <h3 class="text-xl font-bold text-yellow-300 mb-3">이벤트 Pt</h3>
+        <div class="flex justify-between items-center bg-black/30 p-4 rounded-lg">
+            <span class="text-lg text-gray-300">총 획득 포인트</span>
+            <div id="event-home-point-display" class="text-3xl font-bold text-pink-300">
+                <span id="event-home-points">0</span> P
+            </div>
+        </div>
     </div>
+
+    <button onclick="openRankingModal()" class="w-full gacha-button bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg flex items-center justify-center gap-2">
+        🏆 실시간 랭킹 확인
+    </button>
+
+    <div class="bg-black/20 p-4 rounded-lg shadow-lg">
+        <h3 class="text-lg font-bold text-gray-200 mb-3 ml-1">🎖️ 명예의 전당 (Top 3)</h3>
+        <div id="ranking-preview-container" class="space-y-2">
+            <p class="text-center text-gray-500 text-sm py-2">랭킹 불러오는 중...</p>
+        </div>
+    </div>
+
 </div>
 
-    </div>
+   
 			
             <div id="event-view" class="hidden">
 				
@@ -1997,6 +2007,7 @@ function displayEventHomeView() {
     document.getElementById('event-home-description').textContent = currentEventInfo.description;
     document.getElementById('event-home-points').textContent = playerEventPoints; // 이벤트 포인트 표시
     document.getElementById('event-home-point-display').classList.remove('hidden'); // 포인트 표시 보이게
+	loadRankingPreview();
 }
 			
             function displayEventView() {
@@ -6394,6 +6405,73 @@ async function loadEventRankingData() {
         } else {
             listContainer.innerHTML = '<p class="text-center text-red-500">랭킹을 불러오지 못했습니다.</p>';
         }
+    }
+}
+
+// [추가] 이벤트 홈 화면에 TOP 3를 보여주는 함수
+async function loadRankingPreview() {
+    const container = document.getElementById('ranking-preview-container');
+    if (!container) return;
+
+    try {
+        // Top 3 데이터 가져오기
+        const snapshot = await db.collection('users')
+            .where('currentEventId', '==', CURRENT_EVENT_ID)
+            .orderBy('cumulativeEventPoints', 'desc')
+            .limit(3)
+            .get();
+
+        container.innerHTML = '';
+
+        if (snapshot.empty) {
+            container.innerHTML = '<p class="text-center text-gray-500 text-sm py-2">아직 랭킹 데이터가 없습니다.</p>';
+            return;
+        }
+
+        // 메달 및 스타일 설정 (금, 은, 동)
+        const medals = ['🥇', '🥈', '🥉'];
+        const borderColors = ['border-yellow-500', 'border-gray-400', 'border-orange-500'];
+        const bgColors = ['bg-yellow-900/40', 'bg-gray-700/40', 'bg-orange-900/40'];
+        const textColors = ['text-yellow-300', 'text-gray-300', 'text-orange-300'];
+
+        let rank = 0;
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const nickname = data.nickname || "익명의 탐정";
+            const score = (data.cumulativeEventPoints || 0).toLocaleString();
+
+            const el = document.createElement('div');
+            el.className = `flex items-center justify-between p-2 rounded border ${borderColors[rank] || 'border-gray-700'} ${bgColors[rank] || 'bg-gray-800'}`;
+            
+            el.innerHTML = `
+                <div class="flex items-center gap-2 overflow-hidden">
+                    <span class="text-xl">${medals[rank]}</span>
+                    <span class="font-bold text-white text-sm truncate max-w-[120px]">${nickname}</span>
+                </div>
+                <span class="font-bold ${textColors[rank] || 'text-white'} text-sm">${score} P</span>
+            `;
+            container.appendChild(el);
+            rank++;
+        });
+
+        // 3명 미만일 경우 빈 칸 채우기 (선택사항)
+        for (let i = rank; i < 3; i++) {
+            const el = document.createElement('div');
+            el.className = `flex items-center justify-between p-2 rounded border border-dashed border-gray-600 bg-white/5 opacity-50`;
+            el.innerHTML = `
+                <div class="flex items-center gap-2">
+                    <span class="text-xl grayscale">${medals[i]}</span>
+                    <span class="text-gray-400 text-sm">-</span>
+                </div>
+                <span class="text-gray-500 text-sm">0 P</span>
+            `;
+            container.appendChild(el);
+        }
+
+    } catch (e) {
+        console.error("Top 3 로드 실패:", e);
+        // 인덱스 에러 방지를 위해 조용히 실패 처리
+        container.innerHTML = '<p class="text-center text-red-400 text-xs py-2">로딩 실패</p>';
     }
 }
 		
