@@ -972,28 +972,49 @@ body.pointer-events-none {
     </div>
 </div>
 
-<div id="other-user-profile-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-[60]">
-    <div class="bg-gray-800 p-6 rounded-lg max-w-sm w-full relative border border-gray-600 shadow-2xl">
+<div id="other-user-profile-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-[70]">
+    <div class="bg-gray-800 p-6 rounded-lg max-w-2xl w-full relative border border-gray-600 shadow-2xl mx-4">
         <button onclick="document.getElementById('other-user-profile-modal').classList.add('hidden')" class="absolute top-3 right-4 text-gray-400 hover:text-white text-2xl">&times;</button>
         
-        <div class="text-center">
-            <h3 class="text-xl font-bold text-yellow-300 mb-4">탐정 프로필</h3>
+        <h3 class="text-2xl font-bold text-yellow-300 mb-8 text-center">탐정 프로필</h3>
+        
+        <div class="flex flex-col md:flex-row gap-8 items-start">
             
-            <div class="relative w-48 aspect-[2/3] mx-auto bg-black/30 rounded-lg overflow-hidden border-2 border-gray-500 shadow-lg mb-4">
-                <img id="other-profile-image" src="" class="w-full h-full object-cover">
+            <div class="w-full md:w-1/2 flex flex-col items-center">
+                <div class="relative w-full max-w-[240px] aspect-[2/3] bg-black/30 rounded-lg overflow-hidden border-4 border-gray-700 shadow-xl mb-4 group">
+                    <img id="other-profile-image" src="" class="w-full h-full object-cover transition-transform group-hover:scale-105">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none"></div>
+                </div>
+                <div class="bg-black/60 px-4 py-2 rounded-full border border-gray-500">
+                    <p id="other-profile-cardname" class="text-sm text-yellow-100 text-center font-bold"></p>
+                </div>
             </div>
 
-            <p id="other-profile-nickname" class="text-white font-bold text-xl mb-1"></p>
-            <p id="other-profile-cardname" class="text-xs text-gray-400 mb-4"></p>
-
-            <div class="bg-black/40 p-3 rounded-lg text-sm text-gray-300 min-h-[60px] flex items-center justify-center">
-                <p id="other-profile-message" class="italic">"등록된 한마디가 없습니다."</p>
+            <div class="w-full md:w-1/2 flex flex-col justify-center space-y-8 py-4">
+                <div>
+                    <p class="text-gray-400 text-sm mb-2 font-bold flex items-center gap-2">
+                        <span class="bg-indigo-500 w-2 h-2 rounded-full"></span> 닉네임
+                    </p>
+                    <p id="other-profile-nickname" class="text-white font-bold text-3xl tracking-tight pl-4 border-l-4 border-indigo-500"></p>
+                </div>
+                
+                <div>
+                    <p class="text-gray-400 text-sm mb-3 font-bold flex items-center gap-2">
+                        <span class="bg-green-500 w-2 h-2 rounded-full"></span> 한마디
+                    </p>
+                    <div class="bg-black/30 p-6 rounded-xl text-gray-200 min-h-[100px] flex items-center relative border border-gray-700/50 shadow-inner">
+                        <span class="text-5xl text-gray-600 absolute top-2 left-3 font-serif select-none">“</span>
+                        <p id="other-profile-message" class="italic px-6 break-words w-full text-center text-lg font-serif leading-relaxed"></p>
+                        <span class="text-5xl text-gray-600 absolute bottom-0 right-3 font-serif select-none">”</span>
+                    </div>
+                </div>
             </div>
             
-            <button onclick="document.getElementById('other-user-profile-modal').classList.add('hidden')" class="mt-5 w-full gacha-button bg-gray-600 hover:bg-gray-700 text-white py-2 rounded-lg font-bold">
-                닫기
-            </button>
         </div>
+
+        <button onclick="document.getElementById('other-user-profile-modal').classList.add('hidden')" class="mt-10 w-full gacha-button bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white py-3 rounded-lg font-bold text-lg shadow-md transition-all">
+            닫기
+        </button>
     </div>
 </div>
 
@@ -6386,7 +6407,7 @@ function openOtherUserProfile(userData) {
                       ? userData.profile.statusMessage 
                       : "등록된 한마디가 없습니다.";
     
-    msgEl.textContent = `"${statusMsg}"`;
+    msgEl.textContent = statusMsg;
 
     // 4. 모달 표시
     modal.classList.remove('hidden');
