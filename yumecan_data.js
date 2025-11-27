@@ -26,6 +26,10 @@ const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbycUfErCA7x_De
 async function loadGameData() {
     try {
         console.log("데이터 로딩 시작...");
+        
+        // 여기에 본인의 구글 앱스 스크립트 URL을 넣습니다.
+        const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbz1qC8O-aEqT_vTneF7XeCg83RKr7w3z7vD5p5i6T4n-u43Xefz7uM9QxQRP-QO9O9J/exec"; 
+
         const response = await fetch(GOOGLE_SHEET_URL);
         const data = await response.json(); 
 
@@ -33,44 +37,55 @@ async function loadGameData() {
         chibiImages = {}; 
 
         characters = data.characters.map(row => {
-    // 1. 시트에서 가져온 baseName 확인 (대소문자 실수 방지 차원에서 여러 케이스 확인)
-    // row.baseName이 없으면 row.basename도 찾아보고, 그래도 없으면 undefined
-    let rawBase = row.baseName || row.basename || row['baseName ']; 
+            // [수정] baseName 처리: 시트에 값이 없으면 이름에서 [ ]를 떼고 생성
+            let rawBase = row.baseName || row.basename || row['baseName ']; 
 
-    // 2. 만약 baseName이 비어있다면? -> 이름(name)에서 대괄호 [ ] 부분을 강제로 삭제하여 추출
-    if (!rawBase || String(rawBase).trim() === "") {
-        // 예: "[탐정] 서도진" -> "서도진" (정규식으로 [ ]와 뒤의 공백 제거)
-        rawBase = row.name.replace(/\[.*?\]\s*/g, '');
-    }
+            if (!rawBase || String(rawBase).trim() === "") {
+                rawBase = row.name.replace(/\[.*?\]\s*/g, '');
+            }
 
-    // 3. 앞뒤 공백 제거하여 최종 이름 확정
-    const calculatedBaseName = String(rawBase).trim();
+            const calculatedBaseName = String(rawBase).trim();
 
-    // (확인용 로그: F12 콘솔에서 이 로그가 잘 뜨는지 확인하세요)
-    // console.log(`[이름 변환] ${row.name} -> ${calculatedBaseName}`);
+            // [수정] 치비 이미지 전역 변수에 저장 (이게 없어서 이미지가 안 떴음)
+            if (row.chibi_image || row.cardImageUrl || row.imageUrl) {
+                 chibiImages[row.name] = row.chibi_image || row.cardImageUrl || row.imageUrl;
+            }
 
-    return {
-        name: row.name,
-        baseName: calculatedBaseName, // ✨ 여기서 확정된 이름을 넣습니다.
-        faction: row.faction,
+            return {
+                name: row.name,
+                baseName: calculatedBaseName,
+                faction: row.faction,
+                grade: row.grade, // 혹은 row.rarity
                 rarity: row.rarity,
-				publishTarget: row.publish_target,
+                publishTarget: row.publish_target,
                 
-                // ✨ [누락된 부분 추가] 아래 줄을 꼭 넣어주세요! ✨
-                stats: { hp: Number(row.hp), atk: Number(row.atk), def: Number(row.def) },
-                // ... (기존 코드 유지) ...
+                stats: { 
+                    hp: Number(row.hp) || 100, 
+                    atk: Number(row.atk) || 10, 
+                    def: Number(row.def) || 5
+                },
+                
                 imageUrl: row.imageUrl,
                 cardImageUrl: row.cardImageUrl || row.imageUrl,
+                chibi_image: row.chibi_image || row.cardImageUrl, // 객체 내부에도 저장
                 
-                // 캐릭터 객체 자체에도 정보를 넣어두면 좋습니다 (선택사항)
-                chibiImageUrl: row.chibi_image || row.cardImageUrl || row.imageUrl, 
-
                 dialogues: row.dialogues ? String(row.dialogues).split('|') : ['...'],
-                // ... (나머지 스킬, 대사 등 기존 코드 유지) ...
-                skills: [
-                    { name: row.skill1_name, dialogue: row.skill1_dialogue, power: Number(row.skill1_power), type: row.skill1_type },
-                    ...(row.skill2_name ? [{ name: row.skill2_name, dialogue: row.skill2_dialogue, power: Number(row.skill2_power), type: row.skill2_type }] : [])
-                ],
+                
+                skills: {
+                    active: {
+                        name: row.active_skill_name || row.skill1_name,
+                        desc: row.active_skill_desc || row.skill1_dialogue,
+                        cooldown: parseInt(row.active_skill_cooldown) || 3,
+                        value: parseFloat(row.active_skill_value) || 1.0,
+                        target: row.active_skill_target
+                    },
+                    passive: {
+                        name: row.passive_skill_name || row.skill2_name,
+                        desc: row.passive_skill_desc || row.skill2_dialogue,
+                        value: parseFloat(row.passive_skill_value) || 0.0,
+                        type: row.passive_skill_type || row.skill2_type
+                    }
+                },
                 deathDialogue: row.deathDialogue,
                 story: row.story,
                 enhancementSuccessDialogue: row.enhancementSuccessDialogue
@@ -78,103 +93,117 @@ async function loadGameData() {
         });
 
         // 2. 몬스터 데이터 조립
-        monsters = {}; 
-        data.monsters.forEach(row => {
-            monsters[row.key] = {
-                name: row.name,
-                stats: { hp: Number(row.hp), atk: Number(row.atk), def: Number(row.def) },
-                imageUrl: row.imageUrl
-            };
-        });
+        if (data.monsters) {
+            monsters = {}; 
+            data.monsters.forEach(row => {
+                // key가 없으면 name을 키로 사용
+                const mKey = row.key || row.name;
+                monsters[mKey] = {
+                    name: row.name,
+                    stats: { hp: Number(row.hp), atk: Number(row.atk), def: Number(row.def) },
+                    imageUrl: row.imageUrl
+                };
+            });
+        }
 
         // 3. 가구 데이터 조립
-        furnitureItems = data.furniture.map(row => ({
-            id: row.id,
-            name: row.name,
-            type: row.type,
-            size: { w: Number(row.w), h: Number(row.h) }, 
-            cost: Number(row.cost),
-            scale: row.scale ? Number(row.scale) : undefined, 
-            imageUrl: row.imageUrl
-        }));
-
-        // 4. 이벤트 던전 조립
-        eventDungeons = data.eventDungeons.map(row => ({
-            name: row.name,
-            monsterName: row.monsterName,
-            eventPointReward: Number(row.eventPointReward)
-        }));
-
-        // 5. 이벤트 상점 조립
-        eventShopItems = data.eventShop.map(row => {
-            let itemData = row.itemData;
-            if (row.type === 'card') {
-                const foundChar = characters.find(c => c.name === row.itemData);
-                itemData = foundChar || row.itemData; 
-            } else {
-                itemData = Number(row.itemData); 
-            }
-
-            return {
+        if (data.furniture) {
+            furnitureItems = data.furniture.map(row => ({
                 id: row.id,
                 name: row.name,
                 type: row.type,
+                size: { w: Number(row.w), h: Number(row.h) }, 
                 cost: Number(row.cost),
-                limit: Number(row.limit),
-                itemData: itemData
-            };
-        });
+                scale: row.scale ? Number(row.scale) : undefined, 
+                imageUrl: row.imageUrl
+            }));
+        }
 
-		// 6. 메인 스토리 조립
-        const rawMainStories = data.mainStories;
-        mainStories = [];
-        let currentMainChapter = null;
-        let currentMainChapterId = -1;
+        // 4. 이벤트 던전 조립
+        if (data.eventDungeons) {
+            eventDungeons = data.eventDungeons.map(row => ({
+                name: row.name,
+                monsterName: row.monsterName,
+                eventPointReward: Number(row.eventPointReward)
+            }));
+        }
 
-        rawMainStories.forEach(row => {
-            const chapterId = Number(row.chapter_id);
-            if (chapterId !== currentMainChapterId) {
-                currentMainChapterId = chapterId;
-                currentMainChapter = {
-                    title: row.title,
-                    dungeonToUnlock: (row.dungeonToUnlock && row.dungeonToUnlock !== "") ? row.dungeonToUnlock : null,
-                    content: []
+        // 5. 이벤트 상점 조립
+        if (data.eventShop) {
+            eventShopItems = data.eventShop.map(row => {
+                let itemData = row.itemData;
+                if (row.type === 'card') {
+                    const foundChar = characters.find(c => c.name === row.itemData);
+                    itemData = foundChar || row.itemData; 
+                } else {
+                    itemData = Number(row.itemData); 
+                }
+
+                return {
+                    id: row.id,
+                    name: row.name,
+                    type: row.type,
+                    cost: Number(row.cost),
+                    limit: Number(row.limit),
+                    itemData: itemData
                 };
-                mainStories.push(currentMainChapter);
-            }
-            currentMainChapter.content.push({
-                character: (row.character && row.character !== "") ? row.character : null,
-                expression: row.expression,
-                position: row.position,
-                dialogue: row.dialogue
             });
-        });
+        }
+
+        // 6. 메인 스토리 조립
+        if (data.mainStories) {
+            const rawMainStories = data.mainStories;
+            mainStories = [];
+            let currentMainChapter = null;
+            let currentMainChapterId = -1;
+
+            rawMainStories.forEach(row => {
+                const chapterId = Number(row.chapter_id);
+                if (chapterId !== currentMainChapterId) {
+                    currentMainChapterId = chapterId;
+                    currentMainChapter = {
+                        title: row.title,
+                        dungeonToUnlock: (row.dungeonToUnlock && row.dungeonToUnlock !== "") ? row.dungeonToUnlock : null,
+                        content: []
+                    };
+                    mainStories.push(currentMainChapter);
+                }
+                currentMainChapter.content.push({
+                    character: (row.character && row.character !== "") ? row.character : null,
+                    expression: row.expression,
+                    position: row.position,
+                    dialogue: row.dialogue
+                });
+            });
+        }
 
         // 7. 이벤트 스토리 조립
-        const rawEventStories = data.eventStories;
-        eventStories = [];
-        let currentEventChapter = null;
-        let currentEventChapterId = -1;
+        if (data.eventStories) {
+            const rawEventStories = data.eventStories;
+            eventStories = [];
+            let currentEventChapter = null;
+            let currentEventChapterId = -1;
 
-        rawEventStories.forEach(row => {
-            const chapterId = Number(row.chapter_id);
-            if (chapterId !== currentEventChapterId) {
-                currentEventChapterId = chapterId;
-                currentEventChapter = {
-                    title: row.title,
-                    content: []
-                };
-                eventStories.push(currentEventChapter);
-            }
-            currentEventChapter.content.push({
-                character: (row.character && row.character !== "") ? row.character : null,
-                expression: row.expression,
-                position: row.position,
-                dialogue: row.dialogue
+            rawEventStories.forEach(row => {
+                const chapterId = Number(row.chapter_id);
+                if (chapterId !== currentEventChapterId) {
+                    currentEventChapterId = chapterId;
+                    currentEventChapter = {
+                        title: row.title,
+                        content: []
+                    };
+                    eventStories.push(currentEventChapter);
+                }
+                currentEventChapter.content.push({
+                    character: (row.character && row.character !== "") ? row.character : null,
+                    expression: row.expression,
+                    position: row.position,
+                    dialogue: row.dialogue
+                });
             });
-        });
+        }
 
-		// 8. 이벤트 정보 설정
+        // 8. 이벤트 정보 설정
         if (data.eventInfo && data.eventInfo.length > 0) {
             const info = data.eventInfo[0]; 
             currentEventInfo = {
@@ -185,10 +214,13 @@ async function loadGameData() {
                 description: info.description,
                 gachaCharacterName: info.gachaCharacterName
             };
-            EVENT_CHARACTER_NAME = info.gachaCharacterName;
+            // 전역 변수가 있다면 설정
+            if (typeof EVENT_CHARACTER_NAME !== 'undefined') {
+                EVENT_CHARACTER_NAME = info.gachaCharacterName;
+            }
         }
 
-		// 10. 가챠 등장 목록(Pool) 설정
+        // 10. 가챠 등장 목록(Pool) 설정
         if (data.gachaPool) {
             gachaPool = {};
             data.gachaPool.forEach(row => {
@@ -239,12 +271,15 @@ async function loadGameData() {
             const sortedChapterKeys = Object.keys(tempChapters).sort((a, b) => a - b);
             sortedChapterKeys.forEach(key => {
                 const chapterObj = tempChapters[key];
+                // 빈 스테이지 제거
                 chapterObj.stages = chapterObj.stages.filter(s => s !== undefined);
                 mainChapters.push(chapterObj);
             });
+            // 전역 변수 stages에도 할당
+            stages = mainChapters; 
         }
-		
-		// 12. 캐릭터 프로필(도감용) 로드
+        
+        // 12. 캐릭터 프로필(도감용) 로드
         if (data.profiles) {
             characterProfiles = {}; 
             data.profiles.forEach(row => {
@@ -259,24 +294,19 @@ async function loadGameData() {
             });
         }
 
-        // ✨✨✨ 13. [신규] 인연(Synergy) 데이터 조립 ✨✨✨
-        // 구글 시트의 텍스트 데이터를 실제 게임 로직(함수)으로 변환합니다.
+        // 13. 인연(Synergy) 데이터 조립
         if (data.synergies) {
             synergies = data.synergies.map(row => {
                 return {
                     name: row.name,
                     description: row.description,
                     
-                    // (A) 조건 검사 함수 생성 (condition)
-                    // 시트의 'req1', 'req2' 컬럼에 적힌 진영이나 캐릭터 이름이 덱에 있는지 검사합니다.
                     condition: (deck) => {
                         if (row.type === 'faction') {
-                            // 진영 조건: req1 진영과 req2 진영을 가진 카드가 모두 있는지 확인
                             const hasReq1 = deck.some(c => c.faction === row.req1);
                             const hasReq2 = deck.some(c => c.faction === row.req2);
                             return hasReq1 && hasReq2;
                         } else if (row.type === 'character') {
-                            // 캐릭터 이름 조건: req1 캐릭터와 req2 캐릭터가 모두 있는지 확인
                             const hasReq1 = deck.some(c => c.baseName === row.req1);
                             const hasReq2 = deck.some(c => c.baseName === row.req2);
                             return hasReq1 && hasReq2;
@@ -284,15 +314,11 @@ async function loadGameData() {
                         return false;
                     },
 
-                    // (B) 보너스 적용 함수 생성 (applyBonus)
-                    // 시트의 'target', 'stat', 'value', 'method' 컬럼에 따라 능력치를 올려줍니다.
                     applyBonus: (card) => {
-                        // 1. 이 카드가 보너스 적용 대상인지 확인
                         let isTarget = false;
                         if (row.target === 'all') {
-                            isTarget = true; // 덱 전체 적용
+                            isTarget = true;
                         } else if (row.target === 'self') {
-                            // 조건에 부합하는 당사자들만 적용
                             if (row.type === 'character') {
                                 isTarget = (card.baseName === row.req1 || card.baseName === row.req2);
                             } else if (row.type === 'faction') {
@@ -300,56 +326,53 @@ async function loadGameData() {
                             }
                         }
 
-                        // 2. 대상이라면 능력치 증가
                         if (isTarget) {
-                            const val = Number(row.value); // 증가량
-                            const statKey = row.stat;      // 'hp', 'atk', 'def' 중 하나
+                            const val = Number(row.value);
+                            const statKey = row.stat;     
 
                             if (row.method === 'multiply') {
-                                // 퍼센트 증가 (예: 1.1 = 10% 증가) -> 곱하기
                                 card.stats[statKey] = Math.floor(card.stats[statKey] * val);
                             } else if (row.method === 'add') {
-                                // 고정값 증가 (예: 15) -> 더하기
                                 card.stats[statKey] += val;
                             }
                         }
                     }
                 };
             });
-            console.log("인연 데이터 로드 완료:", synergies.length, "개");
+            console.log("인연 데이터 로드 완료:", synergies.length);
         } else {
-            console.log("인연 데이터가 시트에 없습니다. (빈 배열)");
             synergies = [];
         }
 
-		// 13. 마이룸 상호작용 대사 조립
+        // 14. 마이룸 상호작용 대사 조립 (수정됨: Map 구조 유지)
         if (data.interactions) {
-    // interactionDialogues = []; // ❌ 이 줄 삭제 또는 주석 처리
-    
-    const tempMap = {}; 
+            const tempMap = {}; 
 
-    data.interactions.forEach(row => {
-        // 이름 앞뒤 공백 제거 후 정렬하여 키 생성
-        const c1 = String(row.char1).trim();
-        const c2 = String(row.char2).trim();
-        const pairKey = [c1, c2].sort().join('_');
-        
-        if (!tempMap[pairKey]) {
-            tempMap[pairKey] = {
-                pair: [c1, c2], 
-                dialogues: []
-            };
+            data.interactions.forEach(row => {
+                const c1 = String(row.char1).trim();
+                const c2 = String(row.char2).trim();
+                const pairKey = [c1, c2].sort().join('_');
+                
+                if (!tempMap[pairKey]) {
+                    tempMap[pairKey] = {
+                        pair: [c1, c2], 
+                        dialogues: []
+                    };
+                }
+                tempMap[pairKey].dialogues.push([row.dialogue1, row.dialogue2]);
+            });
+
+            // [핵심] 배열로 변환 안 함! tempMap 그대로 사용
+            interactionDialogues = tempMap; 
+            console.log("상호작용 대사 로드 완료 (Map 구조 유지됨)");
         }
         
-        tempMap[pairKey].dialogues.push([row.dialogue1, row.dialogue2]);
-    });
-
-    // ✨ 배열로 변환하지 않고 맵(객체) 상태 그대로 저장합니다.
-    interactionDialogues = tempMap; 
-    console.log("상호작용 대사 로드 완료 (Map 구조)");
-}
-		
         console.log("모든 데이터 로딩 완료!");
+        
+        // 게임 초기화 함수 호출
+        if (typeof initGame === "function") {
+            initGame();
+        }
 
     } catch (error) {
         console.error("데이터 로딩 실패:", error);
@@ -498,7 +521,6 @@ const genericInteractions = [
     ['안녕하세요!', '반갑습니다.'],
     ['잠시 쉬었다 갈까요?', '좋은 생각입니다.']
 ];
-
 
 
 
