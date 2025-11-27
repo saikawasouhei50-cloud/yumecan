@@ -18,20 +18,22 @@ let synergies = [];
 let chibiImages = {};
 
 // ==========================================
-// 1. 웹 앱 URL (배포 후 바뀐 URL이 있다면 꼭 갱신해주세요!)
-const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbxdHdMuQzijKmEg0N62kNAYhI7OGN45k34BZczqMBnFVZ-WMSPSwihJNMmSO6PeQ1Oh1A/exec";
+// 1. 웹 앱 URL (여기에만 최신 주소를 적으세요!)
 // ==========================================
+const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbxdHdMuQzijKmEg0N62kNAYhI7OGN45k34BZczqMBnFVZ-WMSPSwihJNMmSO6PeQ1Oh1A/exec"; 
+
 
 // 2. 데이터를 가져와서 변수에 채워넣는 함수
 async function loadGameData() {
     try {
         console.log("데이터 로딩 시작...");
         
-        // 여기에 본인의 구글 앱스 스크립트 URL을 넣습니다.
-        const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbz1qC8O-aEqT_vTneF7XeCg83RKr7w3z7vD5p5i6T4n-u43Xefz7uM9QxQRP-QO9O9J/exec"; 
+        // ❌ [삭제] 아래 줄을 지우세요! (이제 맨 위의 주소를 자동으로 씁니다)
+        // const GOOGLE_SHEET_URL = "..."; 
 
-        const response = await fetch(GOOGLE_SHEET_URL);
-        const data = await response.json(); 
+        // 자동으로 맨 위에 적은 GOOGLE_SHEET_URL을 가져옵니다.
+        const response = await fetch(GOOGLE_SHEET_URL); 
+        const data = await response.json();
 
         // 1. 캐릭터 데이터 조립
         chibiImages = {}; 
@@ -520,6 +522,7 @@ const genericInteractions = [
     ['안녕하세요!', '반갑습니다.'],
     ['잠시 쉬었다 갈까요?', '좋은 생각입니다.']
 ];
+
 
 
 
