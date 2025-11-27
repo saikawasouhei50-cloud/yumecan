@@ -2506,7 +2506,7 @@ function displayMyRoom() {
 
         const img = document.createElement('img');
 // ▼ baseName을 name으로 변경하세요 (두 군데 모두)
-img.src = (typeof chibiImages !== 'undefined' && chibiImages[charData.name]) ?  charData.cardImageUrl;
+img.src = (typeof chibiImages !== 'undefined' && chibiImages[charData.name]) ? chibiImages[charData.name] : charData.cardImageUrl;
         img.className = 'w-full h-full object-contain drop-shadow-lg';
         el.appendChild(img);
 
@@ -6067,6 +6067,7 @@ if(marketTabBtn) marketTabBtn.click();
     </script>
 </body>
 </html>
+
 
 
 
