@@ -5005,53 +5005,54 @@ function saveProfileData() {
 }
 
 // 3. 카드 선택 모달 열기
-// [수정된 openProfileCardSelector 함수]
 function openProfileCardSelector() {
     const modal = document.getElementById('profile-card-selector-modal');
     const list = document.getElementById('profile-card-list');
     list.innerHTML = '';
 
-    // 인벤토리를 등급순 정렬하여 표시
+    // 인벤토리 정렬 (등급 높은 순 -> 레벨 높은 순)
     const sortedInv = [...playerInventory].sort((a, b) => {
         const charA = findCharacter(a.name);
         const charB = findCharacter(b.name);
         
-        // ✨ [안전장치 추가] 데이터가 없는 카드는 순서 비교에서 뒤로 보냄
         if (!charA) return 1;
         if (!charB) return -1;
 
         const rarityOrder = { 'SSR': 4, 'SR': 3, 'R': 2, 'N': 1 };
-        
-        // rarity가 없을 경우 대비
         const rA = rarityOrder[charA.rarity] || 0;
         const rB = rarityOrder[charB.rarity] || 0;
 
         return (rB - rA) || (b.level - a.level);
     });
 
-    sortedInv.forEach(card => {
-        const charData = findCharacter(card.name);
-        
-        // ✨ 데이터가 없는 카드는 목록에 표시하지 않음 (에러 방지)
+    sortedInv.forEach(cardInstance => {
+        const charData = findCharacter(cardInstance.name);
         if (!charData) return; 
 
-        const el = document.createElement('div');
-        const isSelected = (playerProfile.repCardId === card.id);
-        
-        el.className = `relative cursor-pointer border-2 rounded overflow-hidden transition-transform hover:scale-105 aspect-[2/3] ${isSelected ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-gray-600'}`;
-        
-        el.onclick = () => {
-            selectProfileCard(card.id);
+        // ✨ 핵심 변경: 직접 HTML을 짜지 않고 'createCard' 함수를 사용합니다.
+        // mode: 'default'로 설정하면 버튼 없이 카드 모양만 예쁘게 나옵니다.
+        const cardEl = createCard(charData, { 
+            instance: cardInstance, 
+            mode: 'default' 
+        });
+
+        // 클릭 이벤트 연결 (클릭 시 해당 카드로 선택)
+        cardEl.onclick = () => {
+            selectProfileCard(cardInstance.id);
         };
 
-        el.innerHTML = `
-            <img src="${charData.imageUrl}" class="w-full h-full object-cover">
-            <div class="absolute bottom-0 w-full bg-black/70 text-white text-[10px] text-center py-1 truncate">
-                Lv.${card.level} ${card.name}
-            </div>
-            ${isSelected ? '<div class="absolute top-0 right-0 bg-yellow-400 text-black text-xs font-bold px-1">V</div>' : ''}
-        `;
-        list.appendChild(el);
+        // ✨ 현재 선택된 카드라면 노란색 테두리와 뱃지로 표시
+        if (playerProfile.repCardId === cardInstance.id) {
+            cardEl.classList.add('ring-4', 'ring-yellow-400', 'z-10'); // 강조 테두리
+            
+            // '선택됨' 뱃지 추가
+            const badge = document.createElement('div');
+            badge.className = 'absolute top-0 right-0 bg-yellow-400 text-black font-bold px-2 py-1 rounded-bl-lg shadow-md z-20 text-xs';
+            badge.innerText = 'V';
+            cardEl.appendChild(badge);
+        }
+
+        list.appendChild(cardEl);
     });
 
     modal.classList.remove('hidden');
