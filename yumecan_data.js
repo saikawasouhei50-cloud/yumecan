@@ -11,6 +11,7 @@ let EVENT_CHARACTER_NAME = "";
 let mainChapters = [];
 let gachaPool = {}; 
 let characterProfiles = {};
+let interactionDialogues = [];
 
 // ✨ [변경] 인연 데이터는 이제 시트에서 불러오므로 초기값은 빈 배열입니다.
 let synergies = []; 
@@ -18,7 +19,7 @@ let chibiImages = {};
 
 // ==========================================
 // 1. 웹 앱 URL (배포 후 바뀐 URL이 있다면 꼭 갱신해주세요!)
-const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycby7HNJMLJmBKwBUV2UCryqDi-iy-b1lRYCHXeYmwQJ2AC0_QzaQkWBFUztZVSbXJ5YcbQ/exec";
+const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbz-CLiFv2lgxMr0ckkKP4uP-CihTYmxkBX2S88MlH0d6sOavXQ6DHrE32b86R9ywDCR0A/exec";
 // ==========================================
 
 // 2. 데이터를 가져와서 변수에 채워넣는 함수
@@ -310,6 +311,35 @@ async function loadGameData() {
             console.log("인연 데이터가 시트에 없습니다. (빈 배열)");
             synergies = [];
         }
+
+		// 13. 마이룸 상호작용 대사 조립
+        if (data.interactions) {
+            interactionDialogues = [];
+            
+            // 시트의 각 줄을 읽어서 게임 데이터 구조로 변환
+            // 구조: { pair: ['A', 'B'], dialogues: [['대사1', '대사2'], ['대사3', '대사4']] }
+            
+            const tempMap = {}; // 정리를 위한 임시 저장소
+
+            data.interactions.forEach(row => {
+                // 키 생성 (이름 순서 상관없이 묶기 위해 정렬 사용)
+                const pairKey = [row.char1, row.char2].sort().join('_');
+                
+                if (!tempMap[pairKey]) {
+                    tempMap[pairKey] = {
+                        pair: [row.char1, row.char2], // 원본 이름 저장
+                        dialogues: []
+                    };
+                }
+                
+                // 대사 쌍 추가
+                tempMap[pairKey].dialogues.push([row.dialogue1, row.dialogue2]);
+            });
+
+            // 객체를 배열로 변환하여 최종 저장
+            interactionDialogues = Object.values(tempMap);
+            console.log("상호작용 대사 로드 완료");
+        }
 		
         console.log("모든 데이터 로딩 완료!");
 
@@ -452,35 +482,7 @@ const RARITY_COST_MULTIPLIER = {
 const CURRENT_EVENT_ID = "mini_event_202510_dohwa";
 
 
-const interactionDialogues = [
-    {
-        pair: ['서도진', '윤필규'],
-        dialogues: [
-            ['마감은... 지키고 계시죠?', '아, 지금 하러 가려던 참이야...'],
-            ['작가님, 식사는 하셨나요?', '아니, 원고 쓰느라...']
-        ]
-    },
-    {
-        pair: ['서도진', '한 현'],
-        dialogues: [
-            ['그 사건, 좀 이상하지 않아?', '네, 저도 그렇게 생각해요.'],
-            ['현아, 서점에 신간 들어왔어?', '작가님 책은 제일 잘 보이는 곳에 뒀어요.']
-        ]
-    },
-    {
-        pair: ['윤서천', '도천영'],
-        dialogues: [
-            ['흥미로운 데이터가 나왔네요.', '그래? 보여줘 봐.'],
-            ['이 시약은 위험하지 않아요?', '통제만 잘하면 완벽한 도구지.']
-        ]
-    },
-];
 
-const genericInteractions = [
-    ['오늘 날씨가 좋네요.', '그러게 말입니다.'],
-    ['사건 조사는 잘 돼가나요?', '쉽지 않네요.'],
-    ['안녕하세요!', '반갑습니다.']
-];
 
 
 
