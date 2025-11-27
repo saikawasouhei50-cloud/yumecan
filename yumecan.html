@@ -396,6 +396,9 @@ body.pointer-events-none {
                     </div>
                 </div>
             </div>
+			<button onclick="openRankingModal()" class="w-full mt-2 gacha-button bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg flex items-center justify-center gap-2">
+    🏆 실시간 랭킹 확인
+</button>
 
             <div class="bg-black/20 p-4 rounded-lg shadow-lg flex-grow flex flex-col">
                 <p id="event-home-description" class="text-gray-200 mb-4 text-center flex-shrink-0"></p>
@@ -1190,6 +1193,8 @@ let ownedFurniture = []; // 보유한 가구 목록
 			let currentSortOrder = 'rarity';
 			let currentRarityFilter = 'All'; // 👈 이 줄을 추가하세요.
 			let clearedStageStories = []; 
+			// [기존 변수들 아래에 추가]
+let playerCumulativeEventPoints = 0; // 🏆 랭킹용 누적 포인트
 			
 
             const DECK_CAPACITY = 5;
@@ -1353,6 +1358,7 @@ async function saveGameToFirebase() {
         clearedStages: clearedStages || [],
         currentEventId: (typeof CURRENT_EVENT_ID !== 'undefined') ? CURRENT_EVENT_ID : null,
         eventPoints: playerEventPoints || 0,
+		cumulativeEventPoints: playerCumulativeEventPoints || 0,
         clearedEventDungeons: clearedEventDungeons || [],
         purchasedEventItems: purchasedEventItems || {},
         bookmarks: playerBookmarks || 0,
@@ -1434,12 +1440,14 @@ async function saveGameToFirebase() {
         if (savedData.currentEventId === CURRENT_EVENT_ID) {
             console.log("이전 이벤트를 이어서 진행합니다:", CURRENT_EVENT_ID);
             playerEventPoints = savedData.eventPoints ?? 0; 
+			playerCumulativeEventPoints = savedData.cumulativeEventPoints ?? playerEventPoints;
             clearedEventDungeons = savedData.clearedEventDungeons || []; 
             purchasedEventItems = savedData.purchasedEventItems || {}; 
             playerChoices = savedData.playerChoices || {}; 
         } else {
             console.log("새 이벤트가 시작되어 이전 이벤트 기록을 초기화합니다.");
             playerEventPoints = 0;
+			playerCumulativeEventPoints = 0;
             clearedEventDungeons = [];
             purchasedEventItems = {};
             playerChoices = {}; 
@@ -3979,6 +3987,8 @@ function endCombat(isVictory, combatInfo) { // dungeon, type 대신 combatInfo �
         if (combatInfo.type === 'event') {
             const dungeon = eventDungeons[combatInfo.indices];
             const reward = dungeon.eventPointReward;
+			playerEventPoints += reward;            // 지갑에 추가 (상점에서 씀)
+    playerCumulativeEventPoints += reward;  // ✨ 점수판에 추가 (랭킹용, 절대 안 깎임)
             playerEventPoints += reward;
             if (!clearedEventDungeons.includes(dungeon.name)) {
                 clearedEventDungeons.push(dungeon.name);
@@ -6261,6 +6271,128 @@ if(marketTabBtn) marketTabBtn.click();
                 alert("회수 실패: " + e);
             }
         };
+		// ================== 🏆 이벤트 랭킹 시스템 ==================
+
+// 1. 랭킹 모달 열기 함수
+async function openRankingModal() {
+    // 모달 HTML 동적 생성 (없으면 만들기)
+    let modal = document.getElementById('ranking-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'ranking-modal';
+        modal.className = 'fixed inset-0 bg-black/80 flex items-center justify-center z-50 hidden';
+        modal.innerHTML = `
+            <div class="bg-gray-800 p-6 rounded-lg max-w-md w-full relative border border-yellow-500">
+                <button onclick="document.getElementById('ranking-modal').classList.add('hidden')" class="absolute top-3 right-4 text-white text-2xl">&times;</button>
+                <h3 class="text-2xl font-bold text-yellow-300 mb-2 text-center">🏆 이벤트 랭킹</h3>
+                <p class="text-center text-gray-400 text-xs mb-4">순위는 '누적 획득 포인트' 기준입니다.</p>
+                
+                <div class="flex justify-between items-center bg-indigo-900/50 p-3 rounded-lg mb-4 border border-indigo-500">
+                    <span class="text-white font-bold">내 누적 점수</span>
+                    <span class="text-yellow-300 font-bold text-xl" id="my-ranking-score">0 P</span>
+                </div>
+
+                <div id="ranking-list" class="space-y-2 max-h-[60vh] overflow-y-auto bg-black/20 p-2 rounded-lg">
+                    <p class="text-center text-gray-500 py-4">랭킹 데이터를 불러오는 중...</p>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+    
+    modal.classList.remove('hidden');
+    document.getElementById('my-ranking-score').textContent = `${playerCumulativeEventPoints.toLocaleString()} P`;
+    
+    // 랭킹 데이터 로드 시작
+    loadEventRankingData();
+}
+
+// 2. Firestore에서 랭킹 데이터 가져오기
+async function loadEventRankingData() {
+    const listContainer = document.getElementById('ranking-list');
+    
+    try {
+        // ✨ [핵심] Firestore 쿼리
+        // users 컬렉션에서 'currentEventId'가 현재 이벤트랑 같고
+        // 'cumulativeEventPoints'가 높은 순서대로 20명만 가져옴
+        const snapshot = await db.collection('users')
+            .where('currentEventId', '==', CURRENT_EVENT_ID) // 현재 이벤트 참가자만
+            .orderBy('cumulativeEventPoints', 'desc')        // 점수 높은 순
+            .limit(20)                                       // 상위 20명
+            .get();
+
+        listContainer.innerHTML = '';
+        
+        if (snapshot.empty) {
+            listContainer.innerHTML = '<p class="text-center text-gray-500">아직 랭킹 데이터가 없습니다.</p>';
+            return;
+        }
+
+        let rank = 1;
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const isMe = (currentUser && doc.id === currentUser.uid);
+            
+            const div = document.createElement('div');
+            // 1, 2, 3위는 특별한 색상 적용
+            let rankStyle = 'bg-gray-700 border-gray-600';
+            let rankBadge = `<span class="font-bold w-6 text-center text-gray-400">${rank}</span>`;
+            
+            if (rank === 1) {
+                rankStyle = 'bg-yellow-900/40 border-yellow-500';
+                rankBadge = '🥇';
+            } else if (rank === 2) {
+                rankStyle = 'bg-gray-400/20 border-gray-400';
+                rankBadge = '🥈';
+            } else if (rank === 3) {
+                rankStyle = 'bg-orange-900/40 border-orange-500';
+                rankBadge = '🥉';
+            }
+
+            // 내 순위 강조
+            if (isMe) rankStyle += ' ring-2 ring-blue-500';
+
+            // 대표 캐릭터 이미지 (없으면 기본값)
+            let repImg = "https://placehold.co/50x50/333/fff?text=?";
+            if (data.representative) {
+                const charData = findCharacter(data.representative);
+                if (charData) repImg = charData.imageUrl;
+            }
+
+            div.className = `flex items-center gap-3 p-2 rounded border ${rankStyle}`;
+            div.innerHTML = `
+                <div class="text-xl">${rankBadge}</div>
+                <img src="${repImg}" class="w-10 h-10 rounded object-cover bg-black">
+                <div class="flex-grow">
+                    <p class="text-sm font-bold text-white truncate max-w-[120px]">
+                        ${data.nickname || '익명의 탐정'}
+                    </p>
+                    ${isMe ? '<span class="text-[10px] bg-blue-600 text-white px-1 rounded">ME</span>' : ''}
+                </div>
+                <div class="text-right">
+                    <p class="text-yellow-300 font-bold text-sm">${(data.cumulativeEventPoints || 0).toLocaleString()} P</p>
+                </div>
+            `;
+            listContainer.appendChild(div);
+            rank++;
+        });
+
+    } catch (error) {
+        console.error("랭킹 로드 실패:", error);
+        
+        // ⚠️ Firestore 인덱스 에러 처리 안내
+        if (error.message.includes('The query requires an index')) {
+            listContainer.innerHTML = `
+                <div class="text-red-400 text-center text-sm p-2">
+                    <p class="font-bold">⚠️ 시스템 설정 필요</p>
+                    <p>개발자 콘솔(F12)을 열어 Firestore 인덱스 생성 링크를 클릭해주세요.</p>
+                </div>
+            `;
+        } else {
+            listContainer.innerHTML = '<p class="text-center text-red-500">랭킹을 불러오지 못했습니다.</p>';
+        }
+    }
+}
 		
 		// ✨ [신규] 판매자가 맡겨진 카드를 수령하는 함수
         window.receiveTradeItem = async function(tradeId) {
@@ -6306,136 +6438,5 @@ if(marketTabBtn) marketTabBtn.click();
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
