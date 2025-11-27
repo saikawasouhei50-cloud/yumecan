@@ -322,32 +322,35 @@ async function loadGameData() {
             synergies = [];
         }
 
-		// 13. 마이룸 상호작용 대사 조립
-        if (data.interactions) {
-    // interactionDialogues = []; // ❌ 이 줄 삭제 또는 주석 처리
-    
-    const tempMap = {}; 
+		// 13. 마이룸 상호작용 대사 조립 (이 부분을 아래 코드로 교체)
+    if (data.interactions) {
+        const tempMap = {}; // 데이터를 담을 빈 그릇 (객체)
 
-    data.interactions.forEach(row => {
-        // 이름 앞뒤 공백 제거 후 정렬하여 키 생성
-        const c1 = String(row.char1).trim();
-        const c2 = String(row.char2).trim();
-        const pairKey = [c1, c2].sort().join('_');
-        
-        if (!tempMap[pairKey]) {
-            tempMap[pairKey] = {
-                pair: [c1, c2], 
-                dialogues: []
-            };
-        }
-        
-        tempMap[pairKey].dialogues.push([row.dialogue1, row.dialogue2]);
-    });
+        data.interactions.forEach(row => {
+            // 1. 이름 가져오기 및 공백 제거
+            const c1 = String(row.char1).trim();
+            const c2 = String(row.char2).trim();
+            
+            // 2. 가나다순 정렬하여 키 생성 (순서 상관없게 만들기 위함)
+            const pairKey = [c1, c2].sort().join('_');
 
-    // ✨ 배열로 변환하지 않고 맵(객체) 상태 그대로 저장합니다.
-    interactionDialogues = tempMap; 
-    console.log("상호작용 대사 로드 완료 (Map 구조)");
-}
+            // 3. 데이터 저장
+            if (!tempMap[pairKey]) {
+                tempMap[pairKey] = {
+                    pair: [c1, c2], // 원본 이름 저장
+                    dialogues: []
+                };
+            }
+            tempMap[pairKey].dialogues.push([row.dialogue1, row.dialogue2]);
+        });
+
+        // ✨ [핵심] 배열([])이 아니라 객체(tempMap)를 그대로 할당합니다!
+        interactionDialogues = tempMap; 
+
+        console.log("===== [디버깅] 생성된 상호작용 키 목록 =====");
+        console.log(Object.keys(interactionDialogues)); // 여기에 '김기철_오태준'이 보여야 합니다.
+        console.log("===========================================");
+    }
 		
         console.log("모든 데이터 로딩 완료!");
 
@@ -498,6 +501,7 @@ const genericInteractions = [
     ['안녕하세요!', '반갑습니다.'],
     ['잠시 쉬었다 갈까요?', '좋은 생각입니다.']
 ];
+
 
 
 
