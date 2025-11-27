@@ -74,24 +74,26 @@ async function loadGameData() {
                 dialogues: row.dialogues ? String(row.dialogues).split('|') : ['...'],
                 
                 skills: [
-    // [0] 첫 번째 스킬 (Active)
+    // [0] 첫 번째 스킬
     {
-        name: row.skill1_name,                   // 스킬 이름
-        desc: row.skill1_desc,                   // 스킬 설명 (컬럼이 있으므로 그대로 연결)
-        dialogue: row.skill1_dialogue,           // 스킬 대사
-        value: parseFloat(row.skill1_power) || 1.0, // 스킬 위력 (power -> value)
-        type: row.skill1_type || 'damage',       // 스킬 타입
-        cooldown: 3                              // 쿨타임 (컬럼이 없어서 기본값 3 고정)
+        name: row.skill1_name,
+        desc: row.skill1_desc,
+        dialogue: row.skill1_dialogue,
+        // ✨ value를 power로 변경
+        power: parseFloat(row.skill1_power) || 1.0, 
+        type: row.skill1_type || 'damage',
+        cooldown: 3
     },
-    // [1] 두 번째 스킬 (Passive / Ultimate)
+    // [1] 두 번째 스킬
     {
         name: row.skill2_name,
-        desc: row.skill2_desc,               // 설명 컬럼이 없어서 대사로 대체
+        desc: row.skill2_dialogue,
         dialogue: row.skill2_dialogue,
-        value: parseFloat(row.skill2_power) || 0.0,
+        // ✨ value를 power로 변경
+        power: parseFloat(row.skill2_power) || 0.0, 
         type: row.skill2_type
     }
-].filter(skill => skill.name), // 이름 없는 스킬은 자동 삭제
+].filter(skill => skill.name),
                 deathDialogue: row.deathDialogue,
                 story: row.story,
                 enhancementSuccessDialogue: row.enhancementSuccessDialogue
