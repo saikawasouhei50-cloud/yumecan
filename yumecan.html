@@ -972,6 +972,31 @@ body.pointer-events-none {
     </div>
 </div>
 
+<div id="other-user-profile-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-[60]">
+    <div class="bg-gray-800 p-6 rounded-lg max-w-sm w-full relative border border-gray-600 shadow-2xl">
+        <button onclick="document.getElementById('other-user-profile-modal').classList.add('hidden')" class="absolute top-3 right-4 text-gray-400 hover:text-white text-2xl">&times;</button>
+        
+        <div class="text-center">
+            <h3 class="text-xl font-bold text-yellow-300 mb-4">탐정 프로필</h3>
+            
+            <div class="relative w-48 aspect-[2/3] mx-auto bg-black/30 rounded-lg overflow-hidden border-2 border-gray-500 shadow-lg mb-4">
+                <img id="other-profile-image" src="" class="w-full h-full object-cover">
+            </div>
+
+            <p id="other-profile-nickname" class="text-white font-bold text-xl mb-1"></p>
+            <p id="other-profile-cardname" class="text-xs text-gray-400 mb-4"></p>
+
+            <div class="bg-black/40 p-3 rounded-lg text-sm text-gray-300 min-h-[60px] flex items-center justify-center">
+                <p id="other-profile-message" class="italic">"등록된 한마디가 없습니다."</p>
+            </div>
+            
+            <button onclick="document.getElementById('other-user-profile-modal').classList.add('hidden')" class="mt-5 w-full gacha-button bg-gray-600 hover:bg-gray-700 text-white py-2 rounded-lg font-bold">
+                닫기
+            </button>
+        </div>
+    </div>
+</div>
+
         </main>
 
 
@@ -6289,6 +6314,8 @@ if(marketTabBtn) marketTabBtn.click();
             }
         };
 		// ================== 🏆 이벤트 랭킹 시스템 ==================
+		
+		
 
 // 1. 랭킹 모달 열기 함수
 async function openRankingModal() {
@@ -6322,6 +6349,47 @@ async function openRankingModal() {
     
     // 랭킹 데이터 로드 시작
     loadEventRankingData();
+}
+
+// [추가] 다른 유저 프로필 모달 열기 함수
+function openOtherUserProfile(userData) {
+    const modal = document.getElementById('other-user-profile-modal');
+    const imgEl = document.getElementById('other-profile-image');
+    const nickEl = document.getElementById('other-profile-nickname');
+    const cardNameEl = document.getElementById('other-profile-cardname');
+    const msgEl = document.getElementById('other-profile-message');
+
+    // 1. 닉네임 설정
+    nickEl.textContent = userData.nickname || "익명의 탐정";
+
+    // 2. 대표 카드 이미지 및 이름 설정
+    let cardName = "카드 정보 없음";
+    let imgUrl = "https://placehold.co/400x600/000000/ffffff?text=No+Card";
+    
+    // userData.representative (이름 문자열) 또는 userData.profile.repCardId 확인
+    const repName = userData.representative; 
+    
+    if (repName) {
+        const charData = findCharacter(repName);
+        if (charData) {
+            imgUrl = charData.imageUrl;
+            cardName = `[${charData.rarity}] ${charData.name}`;
+        }
+    }
+    
+    imgEl.src = imgUrl;
+    cardNameEl.textContent = cardName;
+
+    // 3. 상태 메시지 설정
+    // (profile 객체 안에 statusMessage가 있을 수도 있고 없을 수도 있음)
+    const statusMsg = (userData.profile && userData.profile.statusMessage) 
+                      ? userData.profile.statusMessage 
+                      : "등록된 한마디가 없습니다.";
+    
+    msgEl.textContent = `"${statusMsg}"`;
+
+    // 4. 모달 표시
+    modal.classList.remove('hidden');
 }
 
 // 2. Firestore에서 랭킹 데이터 가져오기
@@ -6376,7 +6444,11 @@ async function loadEventRankingData() {
                 if (charData) repImg = charData.imageUrl;
             }
 
-            div.className = `flex items-center gap-3 p-2 rounded border ${rankStyle}`;
+            // ✨ [수정 1] 클릭 가능하도록 스타일(cursor-pointer)과 호버 효과 추가
+    div.className = `flex items-center gap-3 p-2 rounded border ${rankStyle} cursor-pointer hover:bg-white/10 transition-colors relative group`;
+    
+    // ✨ [수정 2] 클릭 시 프로필 모달 열기 연결 (data 객체 전체를 넘김)
+    div.onclick = () => openOtherUserProfile(data);
             div.innerHTML = `
                 <div class="text-xl">${rankBadge}</div>
                 <img src="${repImg}" class="w-10 h-10 rounded object-cover bg-black">
@@ -6522,5 +6594,4 @@ async function loadRankingPreview() {
     </script>
 </body>
 </html>
-
 
