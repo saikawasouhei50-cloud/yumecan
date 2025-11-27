@@ -11,7 +11,7 @@ let EVENT_CHARACTER_NAME = "";
 let mainChapters = [];
 let gachaPool = {}; 
 let characterProfiles = {};
-let interactionDialogues = [];
+let interactionDialogues = {};
 
 // ✨ [변경] 인연 데이터는 이제 시트에서 불러오므로 초기값은 빈 배열입니다.
 let synergies = []; 
@@ -314,32 +314,30 @@ async function loadGameData() {
 
 		// 13. 마이룸 상호작용 대사 조립
         if (data.interactions) {
-            interactionDialogues = [];
-            
-            // 시트의 각 줄을 읽어서 게임 데이터 구조로 변환
-            // 구조: { pair: ['A', 'B'], dialogues: [['대사1', '대사2'], ['대사3', '대사4']] }
-            
-            const tempMap = {}; // 정리를 위한 임시 저장소
+    // interactionDialogues = []; // ❌ 이 줄 삭제 또는 주석 처리
+    
+    const tempMap = {}; 
 
-            data.interactions.forEach(row => {
-                // 키 생성 (이름 순서 상관없이 묶기 위해 정렬 사용)
-                const pairKey = [row.char1, row.char2].sort().join('_');
-                
-                if (!tempMap[pairKey]) {
-                    tempMap[pairKey] = {
-                        pair: [row.char1, row.char2], // 원본 이름 저장
-                        dialogues: []
-                    };
-                }
-                
-                // 대사 쌍 추가
-                tempMap[pairKey].dialogues.push([row.dialogue1, row.dialogue2]);
-            });
-
-            // 객체를 배열로 변환하여 최종 저장
-            interactionDialogues = Object.values(tempMap);
-            console.log("상호작용 대사 로드 완료");
+    data.interactions.forEach(row => {
+        // 이름 앞뒤 공백 제거 후 정렬하여 키 생성
+        const c1 = String(row.char1).trim();
+        const c2 = String(row.char2).trim();
+        const pairKey = [c1, c2].sort().join('_');
+        
+        if (!tempMap[pairKey]) {
+            tempMap[pairKey] = {
+                pair: [c1, c2], 
+                dialogues: []
+            };
         }
+        
+        tempMap[pairKey].dialogues.push([row.dialogue1, row.dialogue2]);
+    });
+
+    // ✨ 배열로 변환하지 않고 맵(객체) 상태 그대로 저장합니다.
+    interactionDialogues = tempMap; 
+    console.log("상호작용 대사 로드 완료 (Map 구조)");
+}
 		
         console.log("모든 데이터 로딩 완료!");
 
@@ -490,7 +488,6 @@ const genericInteractions = [
     ['안녕하세요!', '반갑습니다.'],
     ['잠시 쉬었다 갈까요?', '좋은 생각입니다.']
 ];
-
 
 
 
