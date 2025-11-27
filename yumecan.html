@@ -371,9 +371,12 @@ body.pointer-events-none {
 			<div id="event-home-view" class="hidden">
     <div class="flex flex-col md:flex-row gap-6">
 
-        <div class="md:w-5/12 flex flex-col items-center">
-            <img id="event-home-banner-image" src="https://placehold.co/600x200/ff6347/ffffff?text=Event+Banner" alt="Event Banner" class="w-full rounded-lg shadow-lg mb-3">
-            <p id="event-home-duration" class="text-sm text-gray-400 mb-4"></p>
+        <div class="md:w-1/2 flex flex-col gap-4">
+            
+            <div class="flex flex-col items-center">
+                <img id="event-home-banner-image" src="https://placehold.co/600x200/ff6347/ffffff?text=Event+Banner" alt="Event Banner" class="w-full rounded-lg shadow-lg mb-3">
+                <p id="event-home-duration" class="text-sm text-gray-400"></p>
+            </div>
             
             <div class="grid grid-cols-2 gap-4 w-full">
                 <button id="goto-event-story" class="gacha-button bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg text-base">
@@ -383,9 +386,22 @@ body.pointer-events-none {
                     이벤트 서가
                 </button>
             </div>
+
+            <div class="bg-black/20 p-4 rounded-lg shadow-lg flex-col">
+                <p id="event-home-description" class="text-gray-200 mb-4 text-center"></p>
+                
+                <button id="goto-event-shop" class="gacha-button bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg text-lg w-full mb-3">
+                    이벤트 상점
+                </button>
+                
+                <button id="goto-event-battle" class="gacha-button bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-black font-bold py-5 px-6 rounded-lg shadow-lg text-xl w-full animate-pulse">
+                    이벤트 전투
+                </button>
+            </div>
+
         </div>
 
-        <div class="md:w-7/12 flex flex-col gap-4">
+        <div class="md:w-1/2 flex flex-col gap-4">
 
             <div class="bg-black/20 p-4 rounded-lg shadow-lg">
                 <h3 class="text-xl font-bold text-yellow-300 mb-3">이벤트 Pt</h3>
@@ -396,22 +412,12 @@ body.pointer-events-none {
                     </div>
                 </div>
             </div>
-			<button onclick="openRankingModal()" class="w-full mt-2 gacha-button bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg flex items-center justify-center gap-2">
-    🏆 실시간 랭킹 확인
-</button>
 
-            <div class="bg-black/20 p-4 rounded-lg shadow-lg flex-grow flex flex-col">
-                <p id="event-home-description" class="text-gray-200 mb-4 text-center flex-shrink-0"></p>
-                
-                <div class="flex-grow"></div> <button id="goto-event-shop" class="gacha-button bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg text-lg w-full mb-3">
-                    이벤트 상점
-                </button>
-                
-                <button id="goto-event-battle" class="gacha-button bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-black font-bold py-5 px-6 rounded-lg shadow-lg text-xl w-full animate-pulse">
-                    이벤트 전투
-                </button>
-            </div>
-       
+            <button onclick="openRankingModal()" class="w-full gacha-button bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg flex items-center justify-center gap-2">
+                🏆 실시간 랭킹 확인
+            </button>
+
+        </div>
 
     </div>
 </div>
