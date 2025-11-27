@@ -336,6 +336,7 @@ body.pointer-events-none {
 				<button id="tab-myroom" class="tab-button font-bold py-2 px-4 rounded-full text-sm">탐정 사무소</button>
                 <button id="tab-collection" class="tab-button font-bold py-2 px-4 rounded-full text-sm">도감</button>
                 <button id="tab-achievements" class="tab-button font-bold py-2 px-4 rounded-full text-sm">업적</button>
+				<button id="tab-friends" class="tab-button font-bold py-2 px-4 rounded-full text-sm">친구</button>
 				<button id="tab-profile" class="tab-button font-bold py-2 px-4 rounded-full text-sm">프로필</button>
             </div>
         </div>
@@ -784,6 +785,49 @@ body.pointer-events-none {
         <div id="profile-card-list" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 overflow-y-auto p-2 bg-black/20 rounded-lg">
             </div>
     </div>
+</div>
+<div id="friends-view" class="hidden">
+    <div class="text-center mb-6">
+        <p class="text-gray-200">동료 탐정을 찾아 서고를 구경해보세요.</p>
+    </div>
+
+    <div class="flex flex-col md:flex-row gap-6 h-[70vh]">
+        <div class="md:w-1/3 bg-black/20 p-4 rounded-xl flex flex-col">
+            <h3 class="text-xl font-bold text-yellow-300 mb-4">내 친구 목록</h3>
+            <div id="friend-list-container" class="flex-1 overflow-y-auto space-y-2 pr-2">
+                <p class="text-center text-gray-500 mt-10">친구가 없습니다.</p>
+            </div>
+        </div>
+
+        <div class="md:w-2/3 bg-black/20 p-4 rounded-xl">
+            <h3 class="text-xl font-bold text-blue-300 mb-4">탐정 검색</h3>
+            <div class="flex gap-2 mb-6">
+                <input type="text" id="friend-search-input" placeholder="닉네임 정확히 입력" class="flex-1 bg-gray-700 text-white px-4 py-3 rounded-lg border border-gray-600 focus:border-blue-500 outline-none">
+                <button onclick="searchUserByName()" class="gacha-button bg-blue-600 hover:bg-blue-700 text-white px-6 rounded-lg font-bold">검색</button>
+            </div>
+            
+            <div id="friend-search-result" class="hidden bg-gray-800 p-4 rounded-lg border border-gray-600 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <img id="search-result-img" src="" class="w-12 h-12 rounded bg-black object-cover">
+                    <div>
+                        <p id="search-result-name" class="font-bold text-white text-lg"></p>
+                        <p id="search-result-msg" class="text-xs text-gray-400 italic"></p>
+                    </div>
+                </div>
+                <div id="search-result-action"></div>
+            </div>
+            <p id="friend-search-msg" class="text-center text-gray-400 mt-4"></p>
+        </div>
+    </div>
+</div>
+
+<div id="visit-mode-overlay" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center animate-bounce">
+    <div class="bg-indigo-600 text-white px-6 py-2 rounded-full shadow-lg font-bold mb-2 border-2 border-white">
+        ✈️ <span id="visit-target-name">???</span>님의 사무소 방문 중
+    </div>
+    <button onclick="exitVisitMode()" class="gacha-button bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-full font-bold shadow-lg">
+        내 사무소로 돌아가기
+    </button>
 </div>
             
             <div id="myroom-view" class="hidden">
@@ -2925,6 +2969,7 @@ const isBlocked = playerRoom.furniture.some(f => {
 
 // ================== ✨ 수정된 initDragEvents (배치 모드) ✨ ==================
 function initDragEvents() {
+if (document.getElementById('visit-mode-overlay').classList.contains('hidden') === false) return;
     const container = document.getElementById('room-container');
 
     const handleStart = (e) => {
@@ -6301,6 +6346,206 @@ if(marketTabBtn) marketTabBtn.click();
                 alert("회수 실패: " + e);
             }
         };
+		
+		// ================== 🤝 친구 시스템 ==================
+
+// 1. 친구 추가 함수 (Firestore sub-collection 사용)
+async function addFriend(targetUid, targetNickname) {
+    if (!currentUser) return alert("로그인이 필요합니다.");
+    if (targetUid === currentUser.uid) return alert("자기 자신은 친구로 추가할 수 없습니다.");
+
+    try {
+        // 내 친구 목록(users/{myUid}/friends/{targetUid})에 저장
+        await db.collection('users').doc(currentUser.uid)
+                .collection('friends').doc(targetUid).set({
+                    nickname: targetNickname,
+                    addedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+        alert(`[${targetNickname}]님을 친구로 추가했습니다!`);
+        
+        // 검색창 초기화 및 친구 목록 갱신
+        document.getElementById('friend-search-result').classList.add('hidden');
+        document.getElementById('friend-search-input').value = '';
+        if (document.getElementById('other-user-profile-modal')) {
+            document.getElementById('other-user-profile-modal').remove();
+        }
+        
+        loadFriendList(); // 목록 새로고침
+
+    } catch (error) {
+        console.error("친구 추가 실패:", error);
+        alert("친구 추가 중 오류가 발생했습니다.");
+    }
+}
+
+// 2. 닉네임으로 유저 검색
+async function searchUserByName() {
+    const input = document.getElementById('friend-search-input');
+    const resultBox = document.getElementById('friend-search-result');
+    const resultAction = document.getElementById('search-result-action');
+    const msg = document.getElementById('friend-search-msg');
+    
+    const nickname = input.value.trim();
+    if (!nickname) return;
+
+    msg.textContent = "검색 중...";
+    resultBox.classList.add('hidden');
+
+    try {
+        const snapshot = await db.collection('users')
+            .where('nickname', '==', nickname)
+            .limit(1)
+            .get();
+
+        if (snapshot.empty) {
+            msg.textContent = "해당 닉네임의 탐정을 찾을 수 없습니다.";
+            return;
+        }
+
+        msg.textContent = "";
+        const doc = snapshot.docs[0];
+        const userData = doc.data();
+        const uid = doc.id;
+
+        // 대표 카드 이미지 확인
+        let imgUrl = "https://placehold.co/50x50/333/fff?text=?";
+        if (userData.representative) {
+            const charData = findCharacter(userData.representative);
+            if (charData) imgUrl = charData.imageUrl;
+        }
+
+        // 결과 표시
+        resultBox.classList.remove('hidden');
+        document.getElementById('search-result-img').src = imgUrl;
+        document.getElementById('search-result-name').textContent = userData.nickname;
+        document.getElementById('search-result-msg').textContent = userData.profile?.statusMessage || "";
+
+        // 버튼 생성
+        if (uid === currentUser.uid) {
+            resultAction.innerHTML = `<span class="text-yellow-500 text-sm font-bold">나 (본인)</span>`;
+        } else {
+            resultAction.innerHTML = `
+                <button onclick="addFriend('${uid}', '${userData.nickname}')" class="gacha-button bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-bold text-sm">
+                    친구 추가
+                </button>`;
+        }
+
+    } catch (e) {
+        console.error(e);
+        msg.textContent = "검색 중 오류가 발생했습니다.";
+    }
+}
+
+// 3. 친구 목록 불러오기
+async function loadFriendList() {
+    const container = document.getElementById('friend-list-container');
+    if (!currentUser) return;
+    
+    container.innerHTML = '<p class="text-gray-500 text-center">로딩 중...</p>';
+
+    try {
+        const snapshot = await db.collection('users').doc(currentUser.uid).collection('friends').get();
+        
+        container.innerHTML = '';
+        if (snapshot.empty) {
+            container.innerHTML = '<p class="text-gray-500 text-center mt-4">친구가 없습니다.<br>닉네임을 검색해보세요!</p>';
+            return;
+        }
+
+        snapshot.forEach(doc => {
+            const friendData = doc.data();
+            const friendUid = doc.id;
+
+            const div = document.createElement('div');
+            div.className = 'flex justify-between items-center bg-gray-700 p-3 rounded-lg hover:bg-gray-600 transition-colors';
+            div.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <div class="w-2 h-2 rounded-full bg-green-500"></div>
+                    <span class="font-bold text-white">${friendData.nickname}</span>
+                </div>
+                <button onclick="visitFriendRoom('${friendUid}', '${friendData.nickname}')" class="bg-indigo-500 hover:bg-indigo-600 text-white text-xs px-3 py-2 rounded font-bold shadow">
+                    🏠 방문
+                </button>
+            `;
+            container.appendChild(div);
+        });
+
+    } catch (e) {
+        console.error(e);
+        container.innerHTML = '<p class="text-red-400 text-center">목록 로드 실패</p>';
+    }
+}
+
+// 4. 친구 마이룸 방문 (읽기 전용 모드)
+let originalMyRoomData = null; // 내 방 데이터를 임시 저장할 변수
+
+async function visitFriendRoom(targetUid, targetNickname) {
+    try {
+        // 1. 친구 데이터 가져오기
+        const doc = await db.collection('users').doc(targetUid).get();
+        if (!doc.exists) return alert("존재하지 않는 유저입니다.");
+
+        const friendData = doc.data();
+        const friendRoom = friendData.myRoom || { furniture: [], characters: [] };
+
+        // 2. 내 방 데이터 백업 (돌아오기 위해)
+        if (!originalMyRoomData) {
+            originalMyRoomData = JSON.parse(JSON.stringify(playerRoom));
+        }
+
+        // 3. 현재 방 데이터를 친구 데이터로 덮어쓰기 (메모리 상에서만)
+        playerRoom = friendRoom;
+
+        // 4. 화면 전환 및 UI 설정
+        switchTab('myroom');
+        
+        // 방문 모드 UI 표시
+        document.getElementById('visit-mode-overlay').classList.remove('hidden');
+        document.getElementById('visit-target-name').textContent = targetNickname;
+        
+        // 수정/상점 버튼 숨기기
+        document.getElementById('myroom-edit-mode').classList.add('hidden');
+        document.getElementById('open-furniture-shop').classList.add('hidden');
+        document.getElementById('open-furniture-storage').classList.add('hidden');
+
+        // 방 렌더링
+        displayMyRoom();
+        
+        // 안내 메시지
+        showMessage(`${targetNickname}님의 사무소에 방문했습니다.`, 'text-indigo-300', messageArea);
+
+    } catch (e) {
+        console.error(e);
+        alert("방문에 실패했습니다.");
+    }
+}
+
+// 5. 방문 종료 (내 방으로 돌아오기)
+function exitVisitMode() {
+    if (originalMyRoomData) {
+        playerRoom = originalMyRoomData; // 내 데이터 복구
+        originalMyRoomData = null;
+    }
+    
+    // UI 복구
+    document.getElementById('visit-mode-overlay').classList.add('hidden');
+    document.getElementById('myroom-edit-mode').classList.remove('hidden');
+    document.getElementById('open-furniture-shop').classList.remove('hidden');
+    document.getElementById('open-furniture-storage').classList.add('hidden'); // 이건 원래 꺼져있음
+
+    // 내 방 다시 그리기
+    displayMyRoom();
+    showMessage("나의 탐정 사무소로 돌아왔습니다.", 'text-green-300', messageArea);
+}
+
+// ✨ 탭 연결 (기존 탭 리스너 근처에 추가하거나 여기에 둬도 됨)
+document.getElementById('tab-friends').addEventListener('click', () => {
+    switchTab('friends'); // friends-view 보여주기
+    loadFriendList();     // 목록 로드
+});
+		
+		
 		// ================== 🏆 이벤트 랭킹 시스템 ==================
 		
 		
@@ -6342,25 +6587,18 @@ async function openRankingModal() {
 // [추가] 다른 유저 프로필 모달 열기 함수
 // [수정] 타 유저 프로필 모달 열기 (동적 생성 방식으로 변경하여 무조건 맨 위에 표시)
 function openOtherUserProfile(userData) {
-    // 1. 기존에 떠 있는 모달이 혹시 있다면 제거 (중복 방지)
     const oldModal = document.getElementById('other-user-profile-modal');
     if (oldModal) oldModal.remove();
 
-    // 2. 모달 HTML 요소를 직접 생성
     const modal = document.createElement('div');
     modal.id = 'other-user-profile-modal';
-    // z-[100]으로 설정하여 랭킹창(z-50)보다 확실하게 위에 오게 함
     modal.className = 'fixed inset-0 bg-black/80 flex items-center justify-center z-[100]';
     
-    // 데이터 준비
     const nickname = userData.nickname || "익명의 탐정";
-    // 상태 메시지 안전하게 가져오기
     const statusMsg = (userData.profile && userData.profile.statusMessage) ? userData.profile.statusMessage : "등록된 한마디가 없습니다.";
-    
     let cardName = "카드 정보 없음";
     let imgUrl = "https://placehold.co/400x600/000000/ffffff?text=No+Card";
     
-    // 대표 카드 정보 찾기
     if (userData.representative) {
         const charData = findCharacter(userData.representative);
         if (charData) {
@@ -6369,23 +6607,26 @@ function openOtherUserProfile(userData) {
         }
     }
 
-    // 3. 모달 내부 HTML 구성 (요청하신 대로 대표 카드를 왼쪽, 정보를 오른쪽으로 배치)
+    // ✨ [추가] 내 프로필이 아닐 때만 '친구 추가' 버튼 표시
+    const isMe = (currentUser && userData.uid === currentUser.uid);
+    const friendBtnHTML = isMe ? '' : `
+        <button onclick="addFriend('${userData.uid}', '${nickname}')" class="flex-1 gacha-button bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold text-lg shadow-lg transition-all border border-green-500">
+            🤝 친구 추가
+        </button>
+    `;
+
     modal.innerHTML = `
         <div class="bg-gray-800 p-6 rounded-lg max-w-2xl w-full relative border border-gray-600 shadow-2xl mx-4 animate-fadeIn">
             <button onclick="document.getElementById('other-user-profile-modal').remove()" class="absolute top-3 right-4 text-gray-400 hover:text-white text-2xl">&times;</button>
-            
             <h3 class="text-2xl font-bold text-yellow-300 mb-8 text-center">탐정 프로필</h3>
             
             <div class="flex flex-col md:flex-row gap-8 items-start">
-                
                 <div class="w-full md:w-1/2 flex flex-col items-center">
                     <div class="relative w-full max-w-[240px] aspect-[2/3] bg-black/30 rounded-lg overflow-hidden border-4 border-gray-700 shadow-xl mb-4 group">
-                        <img src="${imgUrl}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                        <img src="${imgUrl}" class="w-full h-full object-cover">
                         <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none"></div>
                         <div class="absolute bottom-2 left-0 right-0 text-center">
-                            <span class="inline-block bg-black/60 text-yellow-300 text-xs font-bold px-3 py-1 rounded-full border border-yellow-500/30">
-                                ${cardName}
-                            </span>
+                            <span class="inline-block bg-black/60 text-yellow-300 text-xs font-bold px-3 py-1 rounded-full border border-yellow-500/30">${cardName}</span>
                         </div>
                     </div>
                 </div>
@@ -6395,7 +6636,6 @@ function openOtherUserProfile(userData) {
                         <p class="text-gray-400 text-xs font-bold mb-1 uppercase tracking-wider">Nickname</p>
                         <p class="text-white font-bold text-2xl tracking-tight">${nickname}</p>
                     </div>
-                    
                     <div>
                         <p class="text-gray-400 text-xs font-bold mb-2 uppercase tracking-wider ml-1">Status Message</p>
                         <div class="bg-black/30 p-6 rounded-xl text-gray-200 min-h-[120px] flex items-center justify-center relative border border-gray-700 shadow-inner">
@@ -6407,13 +6647,14 @@ function openOtherUserProfile(userData) {
                 </div>
             </div>
 
-            <button onclick="document.getElementById('other-user-profile-modal').remove()" class="mt-8 w-full gacha-button bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-lg font-bold text-lg shadow-lg transition-all border border-gray-600">
-                닫기
-            </button>
+            <div class="mt-8 flex gap-3">
+                ${friendBtnHTML}
+                <button onclick="document.getElementById('other-user-profile-modal').remove()" class="flex-1 gacha-button bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-lg font-bold text-lg shadow-lg transition-all border border-gray-600">
+                    닫기
+                </button>
+            </div>
         </div>
     `;
-
-    // 4. body에 직접 추가하여 최상단 표시 보장
     document.body.appendChild(modal);
 }
 
@@ -6473,7 +6714,7 @@ async function loadEventRankingData() {
     div.className = `flex items-center gap-3 p-2 rounded border ${rankStyle} cursor-pointer hover:bg-white/10 transition-colors relative group`;
     
     // ✨ [수정 2] 클릭 시 프로필 모달 열기 연결 (data 객체 전체를 넘김)
-    div.onclick = () => openOtherUserProfile(data);
+    div.onclick = () => openOtherUserProfile({ ...data, uid: doc.id });
             div.innerHTML = `
                 <div class="text-xl">${rankBadge}</div>
                 <img src="${repImg}" class="w-10 h-10 rounded object-cover bg-black">
