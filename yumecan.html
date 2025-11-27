@@ -2540,6 +2540,7 @@ function displayMyRoom() {
 
 let interactionCheckInterval = null;
 
+f// 1. 상호작용 체크 시스템 (기존 함수)
 function initInteractionSystem() {
     if (interactionCheckInterval) clearInterval(interactionCheckInterval);
 
@@ -2560,12 +2561,12 @@ function initInteractionSystem() {
                 // 이미 대화 중이면 패스
                 if (charA.dataset.isInteracting === 'true' || charB.dataset.isInteracting === 'true') continue;
 
-                // 쿨타임 체크 (대화가 끝난지 얼마 안 됐으면 패스)
+                // 쿨타임 체크
                 const now = Date.now();
                 if (charA.dataset.lastInteraction && now - charA.dataset.lastInteraction < 10000) continue;
                 if (charB.dataset.lastInteraction && now - charB.dataset.lastInteraction < 10000) continue;
 
-                // 거리 계산 (Grid 좌표 기준)
+                // 거리 계산
                 const x1 = parseFloat(charA.dataset.gridX);
                 const y1 = parseFloat(charA.dataset.gridY);
                 const x2 = parseFloat(charB.dataset.gridX);
@@ -2573,17 +2574,18 @@ function initInteractionSystem() {
 
                 const dist = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
 
-                // 거리가 15 이내이면 상호작용 시작!
+                // 거리가 15 이내이면 상호작용 시작
                 if (dist < 15) {
                     triggerInteraction(charA, charB);
-                    return; // 한 번에 한 쌍만 대화 시작 (너무 시끄럽지 않게)
+                    return; 
                 }
             }
         }
     }, 1000);
 }
 
-funfunction triggerInteraction(charA, charB) {
+// 2. 대화 발생 및 안전장치 (수정된 함수)
+function triggerInteraction(charA, charB) {
     // 1. 상태를 '대화 중'으로 변경 (이동 멈춤)
     charA.dataset.isInteracting = 'true';
     charB.dataset.isInteracting = 'true';
@@ -2607,15 +2609,20 @@ funfunction triggerInteraction(charA, charB) {
         const indexA = parseInt(charA.id.split('-')[1]);
         const indexB = parseInt(charB.id.split('-')[1]);
         
+        // 현재 화면에 표시된 리스트(덱 또는 인벤토리)를 기준으로 찾음
         const list = playerDeck.length > 0 ? playerDeck : playerInventory.slice(0, 5);
         
         // ★ 데이터가 없으면 안전하게 종료
-        const charDataA = findCharacter(list[indexA].name);
-        const charDataB = findCharacter(list[indexB].name);
+        // (list[indexA]가 존재하는지도 먼저 확인)
+        const charObjA = list[indexA];
+        const charObjB = list[indexB];
 
-        if (!charDataA || !charDataB) {
-            throw new Error("캐릭터 데이터를 찾을 수 없습니다.");
-        }
+        if (!charObjA || !charObjB) throw new Error("캐릭터 인스턴스를 찾을 수 없습니다.");
+
+        const charDataA = findCharacter(charObjA.name);
+        const charDataB = findCharacter(charObjB.name);
+
+        if (!charDataA || !charDataB) throw new Error("캐릭터 데이터를 찾을 수 없습니다.");
 
         const nameA = charDataA.baseName;
         const nameB = charDataB.baseName;
@@ -2623,7 +2630,6 @@ funfunction triggerInteraction(charA, charB) {
         // 매칭되는 대사 찾기
         let dialoguePair = null;
         
-        // interactionDialogues가 비어있을 경우를 대비
         if (interactionDialogues && interactionDialogues.length > 0) {
             let match = interactionDialogues.find(d => d.pair[0] === nameA && d.pair[1] === nameB);
             if (match) {
@@ -2655,7 +2661,6 @@ funfunction triggerInteraction(charA, charB) {
         showBubble(charB, "?");
     } finally {
         // 5. ★ 무조건 대화 종료 후 해제 (4초 뒤)
-        // 에러가 나든 안 나든 4초 뒤에는 다시 움직이게 함
         setTimeout(() => {
             charA.dataset.isInteracting = 'false';
             charB.dataset.isInteracting = 'false';
