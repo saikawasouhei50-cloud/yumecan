@@ -5264,44 +5264,7 @@ dismantleCardButton.addEventListener('click', () => {
     dismantleCard(currentDetailCardId);
 });
 
-// ================ 👇 이벤트 홈 버튼 연결 수정 (이 코드로 교체!) 👇 ================
 
-// 1. '이벤트 홈' -> '이벤트 전투' 버튼
-document.getElementById('goto-event-battle').addEventListener('click', () => {
-    // ✨ 핵심: 홈 화면을 확실하게 숨깁니다
-    document.getElementById('event-home-view').classList.add('hidden'); 
-    
-    // 전투 화면 보이기
-    document.getElementById('event-view').classList.remove('hidden');
-    displayEventView(); 
-    switchSubTab(document.getElementById('event-view'), eventSubTabBattle); 
-});
-
-// 2. '이벤트 홈' -> '이벤트 스토리' 버튼
-document.getElementById('goto-event-story').addEventListener('click', () => {
-    document.getElementById('event-home-view').classList.add('hidden'); // ✨ 숨김 처리
-    
-    document.getElementById('event-view').classList.remove('hidden');
-    displayEventView(); 
-    switchSubTab(document.getElementById('event-view'), eventSubTabStory); 
-});
-
-// 3. '이벤트 홈' -> '이벤트 상점' 버튼
-document.getElementById('goto-event-shop').addEventListener('click', () => {
-    document.getElementById('event-home-view').classList.add('hidden'); // ✨ 숨김 처리
-    
-    document.getElementById('event-view').classList.remove('hidden');
-    displayEventView(); 
-    switchSubTab(document.getElementById('event-view'), eventSubTabShop); 
-});
-
-// 4. '이벤트 홈' -> '이벤트 서가(가챠)' 버튼
-document.getElementById('goto-event-gacha').addEventListener('click', () => {
-    document.getElementById('event-home-view').classList.add('hidden'); // ✨ 숨김 처리
-    
-    switchTab('gacha'); // 가챠 탭으로 이동
-    switchGachaTab('event'); // 이벤트 뽑기 탭 활성화
-});
 
 
 // =================== 👇 '도감' 탭 전용 리스너 👇 ===================
@@ -6516,6 +6479,62 @@ async function loadRankingPreview() {
                 alert("수령 실패: " + e);
             }
         };
+		// ===============================================================
+    // ✨ [위치 이동] 이벤트 홈 버튼 연결 (스크립트 맨 끝에서 실행)
+    // ===============================================================
+
+    // 1. '이벤트 홈' -> '이벤트 전투' 버튼
+    const btnEventBattle = document.getElementById('goto-event-battle');
+    if (btnEventBattle) {
+        btnEventBattle.addEventListener('click', () => {
+            console.log("이벤트 전투 버튼 클릭됨");
+            document.getElementById('event-home-view').classList.add('hidden'); // 홈 숨기기
+            document.getElementById('event-view').classList.remove('hidden');   // 전투 탭 보이기
+            displayEventView(); 
+            switchSubTab(document.getElementById('event-view'), eventSubTabBattle); 
+        });
+    }
+
+    // 2. '이벤트 홈' -> '이벤트 스토리' 버튼
+    const btnEventStory = document.getElementById('goto-event-story');
+    if (btnEventStory) {
+        btnEventStory.addEventListener('click', () => {
+            console.log("이벤트 스토리 버튼 클릭됨");
+            document.getElementById('event-home-view').classList.add('hidden');
+            document.getElementById('event-view').classList.remove('hidden');
+            displayEventView(); 
+            switchSubTab(document.getElementById('event-view'), eventSubTabStory); 
+        });
+    }
+
+    // 3. '이벤트 홈' -> '이벤트 상점' 버튼
+    const btnEventShop = document.getElementById('goto-event-shop');
+    if (btnEventShop) {
+        btnEventShop.addEventListener('click', () => {
+            console.log("이벤트 상점 버튼 클릭됨");
+            document.getElementById('event-home-view').classList.add('hidden');
+            document.getElementById('event-view').classList.remove('hidden');
+            displayEventView(); 
+            switchSubTab(document.getElementById('event-view'), eventSubTabShop); 
+        });
+    }
+
+    // 4. '이벤트 홈' -> '이벤트 서가(가챠)' 버튼
+    const btnEventGacha = document.getElementById('goto-event-gacha');
+    if (btnEventGacha) {
+        btnEventGacha.addEventListener('click', () => {
+            console.log("이벤트 서가 버튼 클릭됨");
+            document.getElementById('event-home-view').classList.add('hidden');
+            switchTab('gacha'); 
+            switchGachaTab('event'); 
+        });
+    }
+
+// ⬇️ 아래 괄호들은 절대 지우면 안 됩니다! (파일 맨 끝에 원래 있던 것들)
+}); 
+</script>
+</body>
+</html>
 
     }); // <--- DOMContentLoaded 닫는 괄호 (절대 지우지 마세요!)
     </script>
