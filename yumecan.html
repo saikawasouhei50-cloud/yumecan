@@ -792,7 +792,16 @@ body.pointer-events-none {
     </div>
 
     <div class="flex flex-col md:flex-row gap-6 h-[70vh]">
-        <div class="md:w-1/3 bg-black/20 p-4 rounded-xl flex flex-col">
+        
+        <div class="md:w-1/3 bg-black/20 p-4 rounded-xl flex flex-col h-full">
+            
+            <div id="friend-request-section" class="hidden mb-4 border-b border-gray-600 pb-2">
+                <h3 class="text-sm font-bold text-pink-400 mb-2 flex items-center gap-2">
+                    📩 도착한 요청 <span id="request-count" class="bg-red-500 text-white text-[10px] px-1.5 rounded-full">0</span>
+                </h3>
+                <div id="friend-request-list" class="space-y-2 max-h-40 overflow-y-auto">
+                    </div>
+            </div>
             <h3 class="text-xl font-bold text-yellow-300 mb-4">내 친구 목록</h3>
             <div id="friend-list-container" class="flex-1 overflow-y-auto space-y-2 pr-2">
                 <p class="text-center text-gray-500 mt-10">친구가 없습니다.</p>
@@ -818,6 +827,7 @@ body.pointer-events-none {
             </div>
             <p id="friend-search-msg" class="text-center text-gray-400 mt-4"></p>
         </div>
+
     </div>
 </div>
 
@@ -6347,37 +6357,290 @@ if(marketTabBtn) marketTabBtn.click();
             }
         };
 		
-		// ================== 🤝 친구 시스템 ==================
+		
+		// ================== 🤝 친구 시스템 (상호 수락 버전) ==================
 
-// 1. 친구 추가 함수 (Firestore sub-collection 사용)
-async function addFriend(targetUid, targetNickname) {
+// 1. 친구 요청 보내기 (나는 'sent', 상대는 'received' 상태로 저장)
+async function sendFriendRequest(targetUid, targetNickname) {
     if (!currentUser) return alert("로그인이 필요합니다.");
-    if (targetUid === currentUser.uid) return alert("자기 자신은 친구로 추가할 수 없습니다.");
-
+    
     try {
-        // 내 친구 목록(users/{myUid}/friends/{targetUid})에 저장
-        await db.collection('users').doc(currentUser.uid)
-                .collection('friends').doc(targetUid).set({
-                    nickname: targetNickname,
-                    addedAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
+        const batch = db.batch();
 
-        alert(`[${targetNickname}]님을 친구로 추가했습니다!`);
+        // 1. 내 친구 목록에 추가 (상태: sent)
+        const myRef = db.collection('users').doc(currentUser.uid).collection('friends').doc(targetUid);
+        batch.set(myRef, {
+            nickname: targetNickname,
+            status: 'sent',
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        // 2. 상대방 친구 목록에 추가 (상태: received)
+        const theirRef = db.collection('users').doc(targetUid).collection('friends').doc(currentUser.uid);
+        batch.set(theirRef, {
+            nickname: currentPlayerNickname, // 내 닉네임을 상대방에게 저장
+            status: 'received',
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        await batch.commit();
         
-        // 검색창 초기화 및 친구 목록 갱신
-        document.getElementById('friend-search-result').classList.add('hidden');
-        document.getElementById('friend-search-input').value = '';
+        alert(`[${targetNickname}]님에게 친구 요청을 보냈습니다!`);
+        
+        // UI 갱신
         if (document.getElementById('other-user-profile-modal')) {
             document.getElementById('other-user-profile-modal').remove();
         }
-        
-        loadFriendList(); // 목록 새로고침
+        loadFriendList();
 
     } catch (error) {
-        console.error("친구 추가 실패:", error);
-        alert("친구 추가 중 오류가 발생했습니다.");
+        console.error("요청 실패:", error);
+        alert("친구 요청 전송에 실패했습니다.");
     }
 }
+
+// 2. 친구 수락하기 (양쪽 모두 'accepted' 상태로 변경)
+async function acceptFriendRequest(targetUid, targetNickname) {
+    try {
+        const batch = db.batch();
+
+        // 내 상태 변경
+        const myRef = db.collection('users').doc(currentUser.uid).collection('friends').doc(targetUid);
+        batch.update(myRef, { status: 'accepted' });
+
+        // 상대방 상태 변경
+        const theirRef = db.collection('users').doc(targetUid).collection('friends').doc(currentUser.uid);
+        batch.update(theirRef, { status: 'accepted' });
+
+        await batch.commit();
+
+        alert(`[${targetNickname}]님과 친구가 되었습니다!`);
+        loadFriendList();
+
+    } catch (error) {
+        console.error("수락 실패:", error);
+        alert("수락 중 오류가 발생했습니다.");
+    }
+}
+
+// 3. 친구 삭제 / 요청 취소 / 거절 (양쪽 데이터 모두 삭제)
+async function cancelFriendRequest(targetUid, targetNickname, isReject = false) {
+    const msg = isReject ? '거절' : '삭제/취소';
+    if (!confirm(`정말로 [${targetNickname}]님과의 관계를 ${msg}하시겠습니까?`)) return;
+
+    try {
+        const batch = db.batch();
+
+        const myRef = db.collection('users').doc(currentUser.uid).collection('friends').doc(targetUid);
+        batch.delete(myRef);
+
+        const theirRef = db.collection('users').doc(targetUid).collection('friends').doc(currentUser.uid);
+        batch.delete(theirRef);
+
+        await batch.commit();
+
+        alert("처리되었습니다.");
+        loadFriendList();
+        
+        // 검색창이나 프로필이 열려있다면 갱신을 위해 닫기
+        if (document.getElementById('other-user-profile-modal')) {
+            document.getElementById('other-user-profile-modal').remove();
+        }
+
+    } catch (error) {
+        console.error("삭제 실패:", error);
+        alert("오류가 발생했습니다.");
+    }
+}
+
+// 4. 친구 목록 및 요청 목록 불러오기 (통합)
+async function loadFriendList() {
+    const friendContainer = document.getElementById('friend-list-container');
+    const reqSection = document.getElementById('friend-request-section');
+    const reqContainer = document.getElementById('friend-request-list');
+    const reqCount = document.getElementById('request-count');
+
+    if (!currentUser) return;
+    
+    friendContainer.innerHTML = '<p class="text-gray-500 text-center">로딩 중...</p>';
+
+    try {
+        const snapshot = await db.collection('users').doc(currentUser.uid).collection('friends').get();
+        
+        friendContainer.innerHTML = '';
+        reqContainer.innerHTML = '';
+        
+        let friendCount = 0;
+        let requestCount = 0;
+
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const uid = doc.id;
+            const status = data.status || 'accepted'; // 예전 데이터 호환용
+
+            if (status === 'received') {
+                // [요청 받음] 상태
+                requestCount++;
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-center bg-pink-900/40 border border-pink-500/50 p-2 rounded-lg';
+                div.innerHTML = `
+                    <span class="font-bold text-white text-sm truncate w-24">${data.nickname}</span>
+                    <div class="flex gap-1">
+                        <button onclick="acceptFriendRequest('${uid}', '${data.nickname}')" class="bg-green-600 text-white text-xs px-2 py-1 rounded hover:bg-green-500">수락</button>
+                        <button onclick="cancelFriendRequest('${uid}', '${data.nickname}', true)" class="bg-red-600 text-white text-xs px-2 py-1 rounded hover:bg-red-500">거절</button>
+                    </div>
+                `;
+                reqContainer.appendChild(div);
+
+            } else if (status === 'accepted') {
+                // [친구] 상태
+                friendCount++;
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-center bg-gray-700 p-3 rounded-lg hover:bg-gray-600 transition-colors';
+                div.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-2 h-2 rounded-full bg-green-500"></div>
+                        <span class="font-bold text-white">${data.nickname}</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="visitFriendRoom('${uid}', '${data.nickname}')" class="bg-indigo-500 hover:bg-indigo-600 text-white text-xs px-3 py-2 rounded font-bold shadow">🏠</button>
+                        <button onclick="cancelFriendRequest('${uid}', '${data.nickname}')" class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-2 rounded font-bold shadow">✂️</button>
+                    </div>
+                `;
+                friendContainer.appendChild(div);
+            }
+            // 'sent' 상태(내가 보낸 요청)는 목록에 굳이 표시하지 않음 (검색 시 확인 가능)
+        });
+
+        // UI 상태 업데이트
+        if (requestCount > 0) {
+            reqSection.classList.remove('hidden');
+            reqCount.textContent = requestCount;
+        } else {
+            reqSection.classList.add('hidden');
+        }
+
+        if (friendCount === 0) {
+            friendContainer.innerHTML = '<p class="text-gray-500 text-center mt-4 text-sm">등록된 친구가 없습니다.</p>';
+        }
+
+    } catch (e) {
+        console.error(e);
+        friendContainer.innerHTML = '<p class="text-red-400 text-center">목록 로드 실패</p>';
+    }
+}
+
+// 5. 프로필 모달 열기 (친구 상태에 따라 버튼 바뀜)
+async function openOtherUserProfile(userData) {
+    const oldModal = document.getElementById('other-user-profile-modal');
+    if (oldModal) oldModal.remove();
+
+    const targetUid = userData.uid; // 중요: UID가 반드시 있어야 함
+    const targetNick = userData.nickname || "익명의 탐정";
+
+    // ✨ 현재 이 유저와의 친구 상태 확인 (실시간 체크)
+    let relationStatus = 'none'; // none, sent, received, accepted
+    let relationDoc = null;
+
+    if (currentUser && targetUid !== currentUser.uid) {
+        try {
+            const doc = await db.collection('users').doc(currentUser.uid).collection('friends').doc(targetUid).get();
+            if (doc.exists) {
+                relationStatus = doc.data().status;
+                relationDoc = doc.data();
+            }
+        } catch(e) { console.error(e); }
+    }
+
+    // 상태에 따른 버튼 생성
+    let actionBtnHTML = '';
+    
+    if (currentUser && targetUid === currentUser.uid) {
+        actionBtnHTML = `<button class="flex-1 gacha-button bg-gray-600 text-gray-400 py-3 rounded-lg font-bold text-lg cursor-default">본인입니다</button>`;
+    } else if (relationStatus === 'accepted') {
+        actionBtnHTML = `
+            <button onclick="visitFriendRoom('${targetUid}', '${targetNick}'); document.getElementById('other-user-profile-modal').remove();" class="flex-1 gacha-button bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-bold text-lg shadow-lg">
+                🏠 사무소 방문
+            </button>
+            <button onclick="cancelFriendRequest('${targetUid}', '${targetNick}');" class="w-16 gacha-button bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-bold text-lg shadow-lg">
+                ✂️
+            </button>
+        `;
+    } else if (relationStatus === 'sent') {
+        actionBtnHTML = `
+            <button onclick="cancelFriendRequest('${targetUid}', '${targetNick}');" class="flex-1 gacha-button bg-gray-500 hover:bg-gray-600 text-white py-3 rounded-lg font-bold text-lg shadow-lg">
+                ✉️ 요청 보냄 (취소)
+            </button>
+        `;
+    } else if (relationStatus === 'received') {
+        actionBtnHTML = `
+            <button onclick="acceptFriendRequest('${targetUid}', '${targetNick}'); document.getElementById('other-user-profile-modal').remove();" class="flex-1 gacha-button bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold text-lg shadow-lg animate-pulse">
+                ✅ 요청 수락하기
+            </button>
+        `;
+    } else {
+        // 친구 아님 (none)
+        actionBtnHTML = `
+            <button onclick="sendFriendRequest('${targetUid}', '${targetNick}');" class="flex-1 gacha-button bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold text-lg shadow-lg">
+                🤝 친구 요청 보내기
+            </button>
+        `;
+    }
+
+    // 모달 HTML 구성
+    const modal = document.createElement('div');
+    modal.id = 'other-user-profile-modal';
+    modal.className = 'fixed inset-0 bg-black/80 flex items-center justify-center z-[100]';
+    
+    // 대표 카드 정보
+    let cardName = "카드 정보 없음";
+    let imgUrl = "https://placehold.co/400x600/000000/ffffff?text=No+Card";
+    if (userData.representative) {
+        const charData = findCharacter(userData.representative);
+        if (charData) {
+            imgUrl = charData.imageUrl;
+            cardName = `[${charData.rarity}] ${charData.name}`;
+        }
+    }
+    const statusMsg = (userData.profile && userData.profile.statusMessage) ? userData.profile.statusMessage : "등록된 한마디가 없습니다.";
+
+    modal.innerHTML = `
+        <div class="bg-gray-800 p-6 rounded-lg max-w-2xl w-full relative border border-gray-600 shadow-2xl mx-4 animate-fadeIn">
+            <button onclick="document.getElementById('other-user-profile-modal').remove()" class="absolute top-3 right-4 text-gray-400 hover:text-white text-2xl">&times;</button>
+            <h3 class="text-2xl font-bold text-yellow-300 mb-8 text-center">탐정 프로필</h3>
+            <div class="flex flex-col md:flex-row gap-8 items-start">
+                <div class="w-full md:w-1/2 flex flex-col items-center">
+                    <div class="relative w-full max-w-[240px] aspect-[2/3] bg-black/30 rounded-lg overflow-hidden border-4 border-gray-700 shadow-xl mb-4 group">
+                        <img src="${imgUrl}" class="w-full h-full object-cover">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none"></div>
+                        <div class="absolute bottom-2 left-0 right-0 text-center">
+                            <span class="inline-block bg-black/60 text-yellow-300 text-xs font-bold px-3 py-1 rounded-full border border-yellow-500/30">${cardName}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="w-full md:w-1/2 flex flex-col justify-center space-y-6 py-2">
+                    <div class="bg-black/20 p-4 rounded-lg border-l-4 border-indigo-500">
+                        <p class="text-gray-400 text-xs font-bold mb-1 uppercase tracking-wider">Nickname</p>
+                        <p class="text-white font-bold text-2xl tracking-tight">${targetNick}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-400 text-xs font-bold mb-2 uppercase tracking-wider ml-1">Status Message</p>
+                        <div class="bg-black/30 p-6 rounded-xl text-gray-200 min-h-[120px] flex items-center justify-center relative border border-gray-700 shadow-inner">
+                            <span class="text-6xl text-gray-700 absolute top-0 left-2 font-serif select-none leading-none">“</span>
+                            <p class="italic px-4 break-words w-full text-center text-lg font-serif leading-relaxed z-10">${statusMsg}</p>
+                            <span class="text-6xl text-gray-700 absolute bottom-[-10px] right-2 font-serif select-none leading-none">”</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-8 flex gap-3">
+                ${actionBtnHTML}
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+		
 
 // 2. 닉네임으로 유저 검색
 // [수정] 닉네임 검색 함수 (결과 클릭 시 프로필 모달 오픈)
@@ -6445,69 +6708,6 @@ async function searchUserByName() {
     }
 }
 
-// 3. 친구 목록 불러오기
-// [수정] 친구 목록 불러오기 (삭제 버튼 추가됨)
-async function loadFriendList() {
-    const container = document.getElementById('friend-list-container');
-    if (!currentUser) return;
-    
-    container.innerHTML = '<p class="text-gray-500 text-center">로딩 중...</p>';
-
-    try {
-        const snapshot = await db.collection('users').doc(currentUser.uid).collection('friends').get();
-        
-        container.innerHTML = '';
-        if (snapshot.empty) {
-            container.innerHTML = '<p class="text-gray-500 text-center mt-4">친구가 없습니다.<br>닉네임을 검색해보세요!</p>';
-            return;
-        }
-
-        snapshot.forEach(doc => {
-            const friendData = doc.data();
-            const friendUid = doc.id;
-
-            const div = document.createElement('div');
-            div.className = 'flex justify-between items-center bg-gray-700 p-3 rounded-lg hover:bg-gray-600 transition-colors';
-            div.innerHTML = `
-                <div class="flex items-center gap-3">
-                    <div class="w-2 h-2 rounded-full bg-green-500"></div>
-                    <span class="font-bold text-white">${friendData.nickname}</span>
-                </div>
-                <div class="flex gap-2">
-                    <button onclick="visitFriendRoom('${friendUid}', '${friendData.nickname}')" class="bg-indigo-500 hover:bg-indigo-600 text-white text-xs px-3 py-2 rounded font-bold shadow">
-                        🏠 방문
-                    </button>
-                    <button onclick="deleteFriend('${friendUid}', '${friendData.nickname}')" class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-2 rounded font-bold shadow">
-                        ✂️ 삭제
-                    </button>
-                </div>
-            `;
-            container.appendChild(div);
-        });
-
-    } catch (e) {
-        console.error(e);
-        container.innerHTML = '<p class="text-red-400 text-center">목록 로드 실패</p>';
-    }
-}
-
-// [신규] 친구 삭제 함수
-async function deleteFriend(targetUid, targetNickname) {
-    if (!confirm(`정말로 [${targetNickname}]님을 친구 목록에서 삭제하시겠습니까?`)) return;
-
-    try {
-        // 내 친구 목록에서 해당 문서 삭제
-        await db.collection('users').doc(currentUser.uid)
-                .collection('friends').doc(targetUid).delete();
-
-        alert(`[${targetNickname}]님을 삭제했습니다.`);
-        loadFriendList(); // 목록 새로고침
-
-    } catch (error) {
-        console.error("친구 삭제 실패:", error);
-        alert("삭제 중 오류가 발생했습니다.");
-    }
-}
 
 // 4. 친구 마이룸 방문 (읽기 전용 모드)
 let originalMyRoomData = null; // 내 방 데이터를 임시 저장할 변수
@@ -6888,13 +7088,16 @@ async function loadRankingPreview() {
             }
         };
 		
-		// ✨ [추가] 친구 관련 함수들을 HTML에서 쓸 수 있게 전역으로 등록
+		// ✨ [수정] 친구 시스템 관련 함수 등록
     window.searchUserByName = searchUserByName;
-    window.addFriend = addFriend;
     window.loadFriendList = loadFriendList;
     window.visitFriendRoom = visitFriendRoom;
     window.exitVisitMode = exitVisitMode;
-	window.deleteFriend = deleteFriend;
+    window.openOtherUserProfile = openOtherUserProfile; // 이것도 등록해야 함!
+    
+    window.sendFriendRequest = sendFriendRequest;
+    window.acceptFriendRequest = acceptFriendRequest;
+    window.cancelFriendRequest = cancelFriendRequest;
 
     }); // <--- DOMContentLoaded 닫는 괄호 (절대 지우지 마세요!)
 	
