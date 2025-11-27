@@ -87,7 +87,7 @@ async function loadGameData() {
     // [1] 두 번째 스킬
     {
         name: row.skill2_name,
-        desc: row.skill2_dialogue,
+        desc: row.skill2_desc,
         dialogue: row.skill2_dialogue,
         // ✨ value를 power로 변경
         power: parseFloat(row.skill2_power) || 0.0, 
