@@ -972,51 +972,7 @@ body.pointer-events-none {
     </div>
 </div>
 
-<div id="other-user-profile-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-[70]">
-    <div class="bg-gray-800 p-6 rounded-lg max-w-2xl w-full relative border border-gray-600 shadow-2xl mx-4">
-        <button onclick="document.getElementById('other-user-profile-modal').classList.add('hidden')" class="absolute top-3 right-4 text-gray-400 hover:text-white text-2xl">&times;</button>
-        
-        <h3 class="text-2xl font-bold text-yellow-300 mb-8 text-center">탐정 프로필</h3>
-        
-        <div class="flex flex-col md:flex-row gap-8 items-start">
-            
-            <div class="w-full md:w-1/2 flex flex-col items-center">
-                <div class="relative w-full max-w-[240px] aspect-[2/3] bg-black/30 rounded-lg overflow-hidden border-4 border-gray-700 shadow-xl mb-4 group">
-                    <img id="other-profile-image" src="" class="w-full h-full object-cover transition-transform group-hover:scale-105">
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none"></div>
-                </div>
-                <div class="bg-black/60 px-4 py-2 rounded-full border border-gray-500">
-                    <p id="other-profile-cardname" class="text-sm text-yellow-100 text-center font-bold"></p>
-                </div>
-            </div>
 
-            <div class="w-full md:w-1/2 flex flex-col justify-center space-y-8 py-4">
-                <div>
-                    <p class="text-gray-400 text-sm mb-2 font-bold flex items-center gap-2">
-                        <span class="bg-indigo-500 w-2 h-2 rounded-full"></span> 닉네임
-                    </p>
-                    <p id="other-profile-nickname" class="text-white font-bold text-3xl tracking-tight pl-4 border-l-4 border-indigo-500"></p>
-                </div>
-                
-                <div>
-                    <p class="text-gray-400 text-sm mb-3 font-bold flex items-center gap-2">
-                        <span class="bg-green-500 w-2 h-2 rounded-full"></span> 한마디
-                    </p>
-                    <div class="bg-black/30 p-6 rounded-xl text-gray-200 min-h-[100px] flex items-center relative border border-gray-700/50 shadow-inner">
-                        <span class="text-5xl text-gray-600 absolute top-2 left-3 font-serif select-none">“</span>
-                        <p id="other-profile-message" class="italic px-6 break-words w-full text-center text-lg font-serif leading-relaxed"></p>
-                        <span class="text-5xl text-gray-600 absolute bottom-0 right-3 font-serif select-none">”</span>
-                    </div>
-                </div>
-            </div>
-            
-        </div>
-
-        <button onclick="document.getElementById('other-user-profile-modal').classList.add('hidden')" class="mt-10 w-full gacha-button bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white py-3 rounded-lg font-bold text-lg shadow-md transition-all">
-            닫기
-        </button>
-    </div>
-</div>
 
         </main>
 
@@ -6373,44 +6329,81 @@ async function openRankingModal() {
 }
 
 // [추가] 다른 유저 프로필 모달 열기 함수
+// [수정] 타 유저 프로필 모달 열기 (동적 생성 방식으로 변경하여 무조건 맨 위에 표시)
 function openOtherUserProfile(userData) {
-    const modal = document.getElementById('other-user-profile-modal');
-    const imgEl = document.getElementById('other-profile-image');
-    const nickEl = document.getElementById('other-profile-nickname');
-    const cardNameEl = document.getElementById('other-profile-cardname');
-    const msgEl = document.getElementById('other-profile-message');
+    // 1. 기존에 떠 있는 모달이 혹시 있다면 제거 (중복 방지)
+    const oldModal = document.getElementById('other-user-profile-modal');
+    if (oldModal) oldModal.remove();
 
-    // 1. 닉네임 설정
-    nickEl.textContent = userData.nickname || "익명의 탐정";
-
-    // 2. 대표 카드 이미지 및 이름 설정
+    // 2. 모달 HTML 요소를 직접 생성
+    const modal = document.createElement('div');
+    modal.id = 'other-user-profile-modal';
+    // z-[100]으로 설정하여 랭킹창(z-50)보다 확실하게 위에 오게 함
+    modal.className = 'fixed inset-0 bg-black/80 flex items-center justify-center z-[100]';
+    
+    // 데이터 준비
+    const nickname = userData.nickname || "익명의 탐정";
+    // 상태 메시지 안전하게 가져오기
+    const statusMsg = (userData.profile && userData.profile.statusMessage) ? userData.profile.statusMessage : "등록된 한마디가 없습니다.";
+    
     let cardName = "카드 정보 없음";
     let imgUrl = "https://placehold.co/400x600/000000/ffffff?text=No+Card";
     
-    // userData.representative (이름 문자열) 또는 userData.profile.repCardId 확인
-    const repName = userData.representative; 
-    
-    if (repName) {
-        const charData = findCharacter(repName);
+    // 대표 카드 정보 찾기
+    if (userData.representative) {
+        const charData = findCharacter(userData.representative);
         if (charData) {
             imgUrl = charData.imageUrl;
             cardName = `[${charData.rarity}] ${charData.name}`;
         }
     }
-    
-    imgEl.src = imgUrl;
-    cardNameEl.textContent = cardName;
 
-    // 3. 상태 메시지 설정
-    // (profile 객체 안에 statusMessage가 있을 수도 있고 없을 수도 있음)
-    const statusMsg = (userData.profile && userData.profile.statusMessage) 
-                      ? userData.profile.statusMessage 
-                      : "등록된 한마디가 없습니다.";
-    
-    msgEl.textContent = statusMsg;
+    // 3. 모달 내부 HTML 구성 (요청하신 대로 대표 카드를 왼쪽, 정보를 오른쪽으로 배치)
+    modal.innerHTML = `
+        <div class="bg-gray-800 p-6 rounded-lg max-w-2xl w-full relative border border-gray-600 shadow-2xl mx-4 animate-fadeIn">
+            <button onclick="document.getElementById('other-user-profile-modal').remove()" class="absolute top-3 right-4 text-gray-400 hover:text-white text-2xl">&times;</button>
+            
+            <h3 class="text-2xl font-bold text-yellow-300 mb-8 text-center">탐정 프로필</h3>
+            
+            <div class="flex flex-col md:flex-row gap-8 items-start">
+                
+                <div class="w-full md:w-1/2 flex flex-col items-center">
+                    <div class="relative w-full max-w-[240px] aspect-[2/3] bg-black/30 rounded-lg overflow-hidden border-4 border-gray-700 shadow-xl mb-4 group">
+                        <img src="${imgUrl}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none"></div>
+                        <div class="absolute bottom-2 left-0 right-0 text-center">
+                            <span class="inline-block bg-black/60 text-yellow-300 text-xs font-bold px-3 py-1 rounded-full border border-yellow-500/30">
+                                ${cardName}
+                            </span>
+                        </div>
+                    </div>
+                </div>
 
-    // 4. 모달 표시
-    modal.classList.remove('hidden');
+                <div class="w-full md:w-1/2 flex flex-col justify-center space-y-6 py-2">
+                    <div class="bg-black/20 p-4 rounded-lg border-l-4 border-indigo-500">
+                        <p class="text-gray-400 text-xs font-bold mb-1 uppercase tracking-wider">Nickname</p>
+                        <p class="text-white font-bold text-2xl tracking-tight">${nickname}</p>
+                    </div>
+                    
+                    <div>
+                        <p class="text-gray-400 text-xs font-bold mb-2 uppercase tracking-wider ml-1">Status Message</p>
+                        <div class="bg-black/30 p-6 rounded-xl text-gray-200 min-h-[120px] flex items-center justify-center relative border border-gray-700 shadow-inner">
+                            <span class="text-6xl text-gray-700 absolute top-0 left-2 font-serif select-none leading-none">“</span>
+                            <p class="italic px-4 break-words w-full text-center text-lg font-serif leading-relaxed z-10">${statusMsg}</p>
+                            <span class="text-6xl text-gray-700 absolute bottom-[-10px] right-2 font-serif select-none leading-none">”</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="document.getElementById('other-user-profile-modal').remove()" class="mt-8 w-full gacha-button bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-lg font-bold text-lg shadow-lg transition-all border border-gray-600">
+                닫기
+            </button>
+        </div>
+    `;
+
+    // 4. body에 직접 추가하여 최상단 표시 보장
+    document.body.appendChild(modal);
 }
 
 // 2. Firestore에서 랭킹 데이터 가져오기
