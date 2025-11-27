@@ -2592,69 +2592,52 @@ function triggerInteraction(charA, charB) {
     charB.dataset.isInteracting = 'true';
 
     try {
+        // ... (이미지 좌우 반전 로직은 기존 유지) ...
         const ax = parseFloat(charA.style.left);
         const bx = parseFloat(charB.style.left);
         const imgA = charA.querySelector('img');
         const imgB = charB.querySelector('img');
+        
+        if (ax < bx) { imgA.style.transform = 'scaleX(-1)'; imgB.style.transform = 'scaleX(1)'; } 
+        else { imgA.style.transform = 'scaleX(1)'; imgB.style.transform = 'scaleX(-1)'; }
 
-        if (ax < bx) { 
-            imgA.style.transform = 'scaleX(-1)'; 
-            imgB.style.transform = 'scaleX(1)';  
-        } else {
-            imgA.style.transform = 'scaleX(1)'; 
-            imgB.style.transform = 'scaleX(-1)'; 
-        }
-
+        // 데이터 가져오기
         const indexA = parseInt(charA.id.split('-')[1]);
         const indexB = parseInt(charB.id.split('-')[1]);
-        
         const list = playerDeck.length > 0 ? playerDeck : playerInventory.slice(0, 5);
-        
         const charDataA = findCharacter(list[indexA].name);
         const charDataB = findCharacter(list[indexB].name);
 
         if (!charDataA || !charDataB) throw new Error("데이터 없음");
 
-        // ★ 여기서부터 핵심! (공백 제거 trim() 추가)
+        // ✨ [핵심 수정] 이름을 정렬해서 Key를 만듭니다.
+        // 구글 시트의 'char1', 'char2'에 적은 이름(baseName)과 정확히 일치해야 합니다.
         const nameA = charDataA.baseName.trim();
         const nameB = charDataB.baseName.trim();
+        const searchKey = [nameA, nameB].sort().join('_');
 
-        // ▼▼▼ [디버깅 로그] F12 콘솔에서 확인하세요 ▼▼▼
-        console.log(`[상호작용 시도] ${nameA} ❤️ ${nameB}`);
-        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+        console.log(`[상호작용 시도] Key: ${searchKey}`); // 디버깅용 로그
 
         let dialoguePair = null;
-        
-        if (interactionDialogues && interactionDialogues.length > 0) {
-            // 이름 A, B 순서 확인
-            let match = interactionDialogues.find(d => 
-                (d.pair[0].trim() === nameA && d.pair[1].trim() === nameB)
-            );
-            
-            // 반대 순서(B, A) 확인
-            if (!match) {
-                match = interactionDialogues.find(d => 
-                    (d.pair[0].trim() === nameB && d.pair[1].trim() === nameA)
-                );
-            }
 
-            if (match) {
-                console.log("✅ 매칭 성공:", match.pair);
-                const randomPick = match.dialogues[Math.floor(Math.random() * match.dialogues.length)];
-                // 순서가 맞는지 확인하여 대사 분배
-                if (match.pair[0].trim() === nameA) {
-                    dialoguePair = { a: randomPick[0], b: randomPick[1] };
-                } else {
-                    dialoguePair = { a: randomPick[1], b: randomPick[0] };
-                }
+        // ✨ 맵에서 키로 바로 조회 (반복문 X)
+        if (interactionDialogues && interactionDialogues[searchKey]) {
+            const match = interactionDialogues[searchKey];
+            console.log("✅ 고유 대사 발견!");
+
+            const randomPick = match.dialogues[Math.floor(Math.random() * match.dialogues.length)];
+            
+            // 데이터에 저장된 첫 번째 이름이 누구인지 확인하여 대사 순서 결정
+            if (match.pair[0] === nameA) {
+                dialoguePair = { a: randomPick[0], b: randomPick[1] };
             } else {
-                console.warn(`❌ 매칭 실패! 데이터 목록에 [${nameA}, ${nameB}] 조합이 없습니다.`);
-                // 혹시 데이터가 어떻게 들어와 있는지 확인용 출력
-                console.log("현재 로드된 상호작용 목록:", interactionDialogues.map(d => d.pair));
+                dialoguePair = { a: randomPick[1], b: randomPick[0] };
             }
         }
 
+        // 고유 대사가 없으면 범용 대사 사용
         if (!dialoguePair) {
+            console.log("⚠️ 고유 대사 없음 -> 범용 대사 사용");
             const randomPick = genericInteractions[Math.floor(Math.random() * genericInteractions.length)];
             dialoguePair = { a: randomPick[0], b: randomPick[1] };
         }
@@ -6083,7 +6066,6 @@ if(marketTabBtn) marketTabBtn.click();
     </script>
 </body>
 </html>
-
 
 
 
