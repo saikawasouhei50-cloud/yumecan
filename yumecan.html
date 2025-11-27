@@ -336,6 +336,7 @@ body.pointer-events-none {
 				<button id="tab-myroom" class="tab-button font-bold py-2 px-4 rounded-full text-sm">탐정 사무소</button>
                 <button id="tab-collection" class="tab-button font-bold py-2 px-4 rounded-full text-sm">도감</button>
                 <button id="tab-achievements" class="tab-button font-bold py-2 px-4 rounded-full text-sm">업적</button>
+				<button id="tab-profile" class="tab-button font-bold py-2 px-4 rounded-full text-sm">프로필</button>
             </div>
         </div>
 
@@ -714,6 +715,55 @@ body.pointer-events-none {
             <h3 class="text-white font-bold mb-2">내가 등록한 거래</h3>
             <div id="my-trade-list" class="space-y-2"></div>
         </div>
+    </div>
+</div>
+
+<div id="profile-view" class="hidden">
+    <div class="text-center mb-6">
+        <p class="text-gray-200">다른 탐정들에게 보여질 당신의 프로필을 설정하세요.</p>
+    </div>
+
+    <div class="flex flex-col md:flex-row gap-6 items-start justify-center max-w-4xl mx-auto">
+        
+        <div class="w-full md:w-1/3 flex flex-col items-center">
+            <div class="relative w-full aspect-[2/3] bg-black/30 rounded-lg overflow-hidden border-2 border-gray-600 shadow-xl mb-4 group cursor-pointer" onclick="openProfileCardSelector()">
+                <img id="profile-rep-image" src="https://placehold.co/400x600/000000/ffffff?text=No+Card" class="w-full h-full object-cover">
+                <div class="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span class="text-white font-bold border border-white px-4 py-2 rounded-full">카드 변경</span>
+                </div>
+            </div>
+            <p class="text-yellow-300 font-bold text-lg" id="profile-rep-name">선택된 카드 없음</p>
+        </div>
+
+        <div class="w-full md:w-2/3 bg-black/20 p-6 rounded-xl space-y-6">
+            
+            <div>
+                <label class="block text-gray-400 text-sm font-bold mb-2">닉네임</label>
+                <input type="text" id="profile-nickname-edit" class="w-full bg-gray-700 text-white border border-gray-600 rounded p-3 focus:outline-none focus:border-blue-500 font-bold text-lg" placeholder="닉네임을 입력하세요">
+            </div>
+
+            <div>
+                <label class="block text-gray-400 text-sm font-bold mb-2">한마디 (최대 50자)</label>
+                <textarea id="profile-message-edit" maxlength="50" rows="3" class="w-full bg-gray-700 text-white border border-gray-600 rounded p-3 focus:outline-none focus:border-blue-500 resize-none" placeholder="자신을 소개하는 한마디를 입력하세요."></textarea>
+                <p class="text-right text-xs text-gray-500 mt-1"><span id="profile-msg-count">0</span>/50</p>
+            </div>
+
+            <button onclick="saveProfileData()" class="gacha-button w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg transition-transform transform hover:scale-105">
+                프로필 저장
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="profile-card-selector-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+    <div class="bg-gray-800 p-6 rounded-lg max-w-3xl w-full max-h-[80vh] flex flex-col">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold text-white">프로필 대표 카드 선택</h3>
+            <button onclick="document.getElementById('profile-card-selector-modal').classList.add('hidden')" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+        </div>
+        
+        <div id="profile-card-list" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 overflow-y-auto p-2 bg-black/20 rounded-lg">
+            </div>
     </div>
 </div>
             
@@ -1138,6 +1188,10 @@ let ownedFurniture = []; // 보유한 가구 목록
 			let currentSortOrder = 'rarity';
 			let currentRarityFilter = 'All'; // 👈 이 줄을 추가하세요.
 			let clearedStageStories = []; 
+			let playerProfile = {
+    repCardId: null, // 프로필 대표 카드 ID (인벤토리의 고유 ID)
+    statusMessage: "" // 상태 메시지
+};
 
             const DECK_CAPACITY = 5;
             const PULL_ONE_COST = 10;
@@ -1261,13 +1315,14 @@ const closeDismantleResultButton = document.getElementById('close-dismantle-resu
                 if (!currentUser) return; 
 
                 const saveData = {
-                    nickname: currentPlayerNickname, // ✨ [추가] 닉네임 저장
+        nickname: currentPlayerNickname, // 닉네임이 변경되었을 수 있으므로 갱신
                     currency: playerCurrency,
                     fountainPens: playerFountainPens,
         inkwells: playerInkwells,
         inventory: playerInventory,
         deck: playerDeck.map(card => card.id),
         capacity: inventoryCapacity,
+		profile: playerProfile,
         representative: representativeCharacter ? representativeCharacter.name : null,
         clearedStages: clearedStages,
 		currentEventId: CURRENT_EVENT_ID, // ✨ 1. 현재 이벤트 ID 저장
@@ -1355,6 +1410,12 @@ const closeDismantleResultButton = document.getElementById('close-dismantle-resu
             purchasedEventItems = {};
             playerChoices = {}; 
         }
+		// ✨ [추가] 프로필 데이터 로드
+        playerProfile = savedData.profile || { repCardId: null, statusMessage: "" };
+        
+        // 닉네임 인풋창에도 현재 닉네임 미리 채우기
+        const nickInput = document.getElementById('profile-nickname-edit');
+        if(nickInput) nickInput.value = currentPlayerNickname;
 
     } else {
         console.log("새로운 유저입니다. 초기 데이터로 시작합니다.");
@@ -1575,6 +1636,10 @@ function saveGame() {
     // ✅ [수정 1] 마이룸 탭을 누르면 myroom-view를 찾도록 명시합니다.
     else if (tabName === 'myroom') {
         targetView = document.getElementById('myroom-view');
+    }
+	else if (tabName === 'profile') {
+        targetView = document.getElementById('profile-view');
+        displayProfileView(); // 탭 열 때 뷰 갱신
     }
     // 그 외 탭들은 이름 규칙에 따라 뷰를 찾습니다. (예: home -> home-view)
     else {
@@ -4850,6 +4915,112 @@ function enhanceCard() {
     document.getElementById('choice-stats-modal').classList.remove('hidden');
 }
 
+// 1. 프로필 화면 표시
+function displayProfileView() {
+    // 닉네임 & 메시지 세팅
+    document.getElementById('profile-nickname-edit').value = currentPlayerNickname;
+    document.getElementById('profile-message-edit').value = playerProfile.statusMessage || "";
+    document.getElementById('profile-msg-count').textContent = (playerProfile.statusMessage || "").length;
+
+    // 대표 카드 이미지 세팅
+    const repImg = document.getElementById('profile-rep-image');
+    const repName = document.getElementById('profile-rep-name');
+
+    let cardData = null;
+    let charData = null;
+
+    // 저장된 대표 카드 ID가 있고, 인벤토리에 그 카드가 실제로 존재하는지 확인
+    if (playerProfile.repCardId) {
+        cardData = playerInventory.find(c => c.id === playerProfile.repCardId);
+    }
+
+    // 만약 저장된 카드가 없다면(파쇄됨 등), 인벤토리의 첫 번째 카드를 보여줌 (또는 빈 상태)
+    if (!cardData && playerInventory.length > 0) {
+        // 기본값 없음 상태 유지
+    }
+
+    if (cardData) {
+        charData = findCharacter(cardData.name);
+        repImg.src = charData.imageUrl;
+        repName.textContent = `[${charData.rarity}] ${charData.name} (Lv.${cardData.level})`;
+        repName.className = "text-yellow-300 font-bold text-lg mt-2";
+    } else {
+        repImg.src = "https://placehold.co/400x600/000000/ffffff?text=Select+Card";
+        repName.textContent = "대표 카드를 선택해주세요";
+        repName.className = "text-gray-500 font-bold text-lg mt-2";
+    }
+}
+
+// 2. 프로필 저장 버튼 클릭 시
+function saveProfileData() {
+    const newNickname = document.getElementById('profile-nickname-edit').value.trim();
+    const newMessage = document.getElementById('profile-message-edit').value.trim();
+
+    if (!newNickname) return alert("닉네임을 입력해주세요.");
+
+    // 데이터 갱신
+    currentPlayerNickname = newNickname;
+    playerProfile.statusMessage = newMessage;
+
+    // UI 갱신 (상단 닉네임 표시 등)
+    document.getElementById('nickname-display').textContent = currentPlayerNickname;
+
+    // Firebase 저장
+    saveGame();
+    alert("프로필이 저장되었습니다.");
+}
+
+// 3. 카드 선택 모달 열기
+function openProfileCardSelector() {
+    const modal = document.getElementById('profile-card-selector-modal');
+    const list = document.getElementById('profile-card-list');
+    list.innerHTML = '';
+
+    // 인벤토리를 등급순 정렬하여 표시
+    const sortedInv = [...playerInventory].sort((a, b) => {
+        const charA = findCharacter(a.name);
+        const charB = findCharacter(b.name);
+        const rarityOrder = { 'SSR': 4, 'SR': 3, 'R': 2, 'N': 1 };
+        return (rarityOrder[charB.rarity] - rarityOrder[charA.rarity]) || (b.level - a.level);
+    });
+
+    sortedInv.forEach(card => {
+        const charData = findCharacter(card.name);
+        const el = document.createElement('div');
+        // 선택된 카드는 테두리 강조
+        const isSelected = (playerProfile.repCardId === card.id);
+        
+        el.className = `relative cursor-pointer border-2 rounded overflow-hidden transition-transform hover:scale-105 ${isSelected ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-gray-600'}`;
+        
+        el.onclick = () => {
+            selectProfileCard(card.id);
+        };
+
+        el.innerHTML = `
+            <img src="${charData.imageUrl}" class="w-full h-full object-cover">
+            <div class="absolute bottom-0 w-full bg-black/70 text-white text-[10px] text-center py-1 truncate">
+                Lv.${card.level} ${card.name}
+            </div>
+            ${isSelected ? '<div class="absolute top-0 right-0 bg-yellow-400 text-black text-xs font-bold px-1">V</div>' : ''}
+        `;
+        list.appendChild(el);
+    });
+
+    modal.classList.remove('hidden');
+}
+
+// 4. 카드 선택 처리
+function selectProfileCard(cardId) {
+    playerProfile.repCardId = cardId;
+    document.getElementById('profile-card-selector-modal').classList.add('hidden');
+    displayProfileView(); // 화면 갱신 (저장은 아직 안 함, 유저가 저장 버튼 눌러야 함)
+}
+
+// 5. 한마디 글자수 카운팅 (이벤트 리스너 연결 필요)
+document.getElementById('profile-message-edit').addEventListener('input', function() {
+    document.getElementById('profile-msg-count').textContent = this.value.length;
+});
+
 
 		function handleStoryInteraction(e) {
     const choiceButton = e.target.closest('button');
@@ -5158,6 +5329,8 @@ pullTenEventButton.addEventListener('click', () => handlePull(10, PULL_TEN_COST,
 expandInventoryButton.addEventListener('click', expandInventory);
 autoFillDeckButton.addEventListener('click', autoFillDeck);
 resetButton.addEventListener('click', resetGame);
+// 기존 탭 버튼 연결 코드 근처에 추가 (allTabs forEach가 있다면 자동으로 될 수도 있지만 명시적으로 확인)
+document.getElementById('tab-profile').addEventListener('click', () => switchTab('profile'));
 
 		// 1. 탭 전환 기능에 마이룸 추가 (기존 switchTab 함수가 tabName을 받으므로 연결만 하면 됨)
 document.getElementById('tab-myroom').addEventListener('click', () => switchTab('myroom'));
@@ -6080,7 +6253,6 @@ if(marketTabBtn) marketTabBtn.click();
     </script>
 </body>
 </html>
-
 
 
 
