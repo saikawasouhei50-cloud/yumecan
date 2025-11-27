@@ -481,6 +481,15 @@ const RARITY_COST_MULTIPLIER = {
 
 const CURRENT_EVENT_ID = "mini_event_202510_dohwa";
 
+// yumecan_data.js 파일 맨 끝부분에 추가하세요.
+
+// 범용 상호작용 대사 (쌍이 맞지 않을 때 사용하는 기본 대사)
+const genericInteractions = [
+    ['오늘 날씨가 좋네요.', '그러게 말입니다.'],
+    ['사건 조사는 잘 돼가나요?', '쉽지 않네요.'],
+    ['안녕하세요!', '반갑습니다.'],
+    ['잠시 쉬었다 갈까요?', '좋은 생각입니다.']
+];
 
 
 
