@@ -5038,7 +5038,7 @@ function openProfileCardSelector() {
         const el = document.createElement('div');
         const isSelected = (playerProfile.repCardId === card.id);
         
-        el.className = `relative cursor-pointer border-2 rounded overflow-hidden transition-transform hover:scale-105 ${isSelected ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-gray-600'}`;
+        el.className = `relative cursor-pointer border-2 rounded overflow-hidden transition-transform hover:scale-105 aspect-[2/3] ${isSelected ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-gray-600'}`;
         
         el.onclick = () => {
             selectProfileCard(card.id);
@@ -6305,7 +6305,6 @@ if(marketTabBtn) marketTabBtn.click();
     </script>
 </body>
 </html>
-
 
 
 
