@@ -991,8 +991,9 @@ body.pointer-events-none {
 </div>
 
                 <div class="flex justify-center gap-4 mt-6">
-    <button id="open-furniture-shop" onclick="openFurnitureShop()" class="gacha-button bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-2 px-6 rounded-full">🪑 가구 상점</button>
+    <button onclick="openMyRoomCharacterSelector()" class="gacha-button bg-pink-500 hover:bg-pink-600 text-white font-bold py-2 px-6 rounded-full">👥 입주 관리</button>
     
+    <button id="open-furniture-shop" onclick="openFurnitureShop()" class="gacha-button bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-2 px-6 rounded-full">🪑 가구 상점</button>
     <button id="open-furniture-storage" class="hidden gacha-button bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-6 rounded-full">📦 보관함</button>
     <button id="myroom-edit-mode" class="gacha-button bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full">🔨 배치 모드</button>
 </div>
@@ -1156,6 +1157,23 @@ body.pointer-events-none {
     </div>
 </div>
 
+<div id="myroom-char-selector-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+    <div class="bg-gray-800 p-6 rounded-lg max-w-2xl w-full h-[80vh] flex flex-col border border-pink-400">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold text-pink-300">마이룸 입주민 설정</h3>
+            <span id="myroom-selected-count" class="text-white font-bold bg-pink-600 px-3 py-1 rounded-full text-sm">0 / 5</span>
+        </div>
+        <p class="text-gray-400 text-sm mb-4 text-center">사무소에 머물게 할 등장인물을 선택하세요. (최대 5명)</p>
+        
+        <div id="myroom-char-list" class="grid grid-cols-4 sm:grid-cols-5 gap-3 overflow-y-auto p-2 bg-black/20 rounded-lg flex-grow">
+            </div>
+
+        <div class="flex gap-2 mt-4">
+            <button onclick="saveMyRoomCharacters()" class="flex-1 gacha-button bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 rounded-lg shadow-lg">저장하기</button>
+            <button onclick="document.getElementById('myroom-char-selector-modal').classList.add('hidden')" class="w-1/4 gacha-button bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 rounded-lg">취소</button>
+        </div>
+    </div>
+</div>
 
 
         </main>
@@ -2898,8 +2916,22 @@ function displayMyRoom() {
         }
     });
 
-    // (2) SD 캐릭터 렌더링
-    const activeCharacters = playerDeck.length > 0 ? playerDeck : playerInventory.slice(0, 5);
+    // (2) SD 캐릭터 렌더링 (수정됨: 마이룸 설정 우선 -> 없으면 덱 -> 없으면 인벤토리)
+    let activeCharacters = [];
+
+    // 1순위: 마이룸에 저장된 입주민 ID 리스트 확인
+    if (playerRoom.characters && playerRoom.characters.length > 0) {
+        // ID 목록을 실제 카드 객체로 변환 (이미 파쇄된 카드는 제외됨)
+        activeCharacters = playerRoom.characters
+            .map(id => playerInventory.find(c => c.id === id))
+            .filter(Boolean); 
+    }
+
+    // 2순위: 설정된 입주민이 없거나 유효한 카드가 0장이면 -> 현재 '편찬(Deck)' 사용
+    if (activeCharacters.length === 0) {
+        activeCharacters = playerDeck.length > 0 ? playerDeck : playerInventory.slice(0, 5);
+    }
+
     activeCharacters.forEach((card, index) => {
         const charData = findCharacter(card.name);
         if (!charData) return;
@@ -7422,6 +7454,94 @@ async function loadRankingPreview() {
             }
         }
     }
+	
+	// ================== ✨ 마이룸 입주 관리 시스템 ✨ ==================
+
+let tempMyRoomChars = new Set(); // 선택 중인 캐릭터 ID 임시 저장
+
+// 1. 입주 관리 모달 열기
+function openMyRoomCharacterSelector() {
+    const modal = document.getElementById('myroom-char-selector-modal');
+    const list = document.getElementById('myroom-char-list');
+    
+    // 현재 설정된 입주민 목록을 임시 저장소에 복사
+    tempMyRoomChars = new Set(playerRoom.characters || []);
+    
+    // 유효성 검사: 인벤토리에 없는 카드 ID(파쇄됨)는 제거
+    tempMyRoomChars.forEach(id => {
+        if (!playerInventory.some(c => c.id === id)) tempMyRoomChars.delete(id);
+    });
+
+    updateMyRoomSelectorUI(); // 화면 그리기
+    modal.classList.remove('hidden');
+}
+
+// 2. 선택창 UI 그리기 (인벤토리 목록)
+function updateMyRoomSelectorUI() {
+    const list = document.getElementById('myroom-char-selector-modal').querySelector('#myroom-char-list');
+    const countSpan = document.getElementById('myroom-selected-count');
+    
+    list.innerHTML = '';
+    countSpan.textContent = `${tempMyRoomChars.size} / 5`;
+
+    // 인벤토리 정렬 (등급 > 레벨 > 이름)
+    const sortedInv = [...playerInventory].sort((a, b) => {
+        const charA = findCharacter(a.name);
+        const charB = findCharacter(b.name);
+        const rarityOrder = { 'SSR': 4, 'SR': 3, 'R': 2, 'N': 1 };
+        return (rarityOrder[charB.rarity] - rarityOrder[charA.rarity]) || (b.level - a.level);
+    });
+
+    sortedInv.forEach(cardInstance => {
+        const charData = findCharacter(cardInstance.name);
+        const isSelected = tempMyRoomChars.has(cardInstance.id);
+        
+        const cardEl = document.createElement('div');
+        cardEl.className = `relative cursor-pointer border-2 rounded-lg p-1 transition-all ${isSelected ? 'border-pink-500 bg-pink-900/40' : 'border-transparent bg-black/40 hover:bg-white/10'}`;
+        
+        // 클릭 시 토글
+        cardEl.onclick = () => toggleMyRoomChar(cardInstance.id);
+
+        cardEl.innerHTML = `
+            <div class="aspect-[2/3] overflow-hidden rounded mb-1 relative pointer-events-none">
+                <img src="${charData.imageUrl}" class="w-full h-full object-cover ${isSelected ? '' : 'opacity-70'}">
+                ${isSelected ? '<div class="absolute inset-0 border-4 border-pink-500 rounded"></div><span class="absolute top-0 right-0 bg-pink-500 text-white text-xs font-bold px-1.5 py-0.5">V</span>' : ''}
+            </div>
+            <p class="text-[10px] text-center text-white truncate">${cardInstance.name}</p>
+        `;
+        list.appendChild(cardEl);
+    });
+}
+
+// 3. 캐릭터 선택/해제 토글
+function toggleMyRoomChar(cardId) {
+    if (tempMyRoomChars.has(cardId)) {
+        tempMyRoomChars.delete(cardId);
+    } else {
+        if (tempMyRoomChars.size >= 5) {
+            alert("최대 5명까지만 입주할 수 있습니다.");
+            return;
+        }
+        tempMyRoomChars.add(cardId);
+    }
+    updateMyRoomSelectorUI(); // 화면 갱신
+}
+
+// 4. 저장하기
+function saveMyRoomCharacters() {
+    // 임시 선택 목록을 실제 데이터에 반영 (배열로 변환)
+    playerRoom.characters = Array.from(tempMyRoomChars);
+    
+    saveGame();
+    displayMyRoom(); // 마이룸 즉시 새로고침 (캐릭터 변경 반영)
+    
+    document.getElementById('myroom-char-selector-modal').classList.add('hidden');
+    alert("입주민 명단이 갱신되었습니다!");
+}
+
+// ✨ HTML 버튼에서 함수를 찾을 수 있도록 window에 등록
+window.openMyRoomCharacterSelector = openMyRoomCharacterSelector;
+window.saveMyRoomCharacters = saveMyRoomCharacters;
 	
 
     }); // <--- DOMContentLoaded 닫는 괄호 (절대 지우지 마세요!)
