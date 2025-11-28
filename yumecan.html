@@ -2919,12 +2919,18 @@ function displayMyRoom() {
     // (2) SD 캐릭터 렌더링 (수정됨: 마이룸 설정 우선 -> 없으면 덱 -> 없으면 인벤토리)
     let activeCharacters = [];
 
-    // 1순위: 마이룸에 저장된 입주민 ID 리스트 확인
+    // 1순위: 마이룸에 저장된 입주민 확인
     if (playerRoom.characters && playerRoom.characters.length > 0) {
-        // ID 목록을 실제 카드 객체로 변환 (이미 파쇄된 카드는 제외됨)
-        activeCharacters = playerRoom.characters
-            .map(id => playerInventory.find(c => c.id === id))
-            .filter(Boolean); 
+        // (A) 내 방일 때: 데이터가 ID(문자열)로 저장되어 있으므로 인벤토리에서 찾음
+        if (typeof playerRoom.characters[0] === 'string') {
+            activeCharacters = playerRoom.characters
+                .map(id => playerInventory.find(c => c.id === id))
+                .filter(Boolean);
+        } 
+        // (B) 친구 방일 때: visitFriendRoom에서 이미 객체로 변환해두었으므로 그대로 사용
+        else {
+            activeCharacters = playerRoom.characters;
+        }
     }
 
     // 2순위: 설정된 입주민이 없거나 유효한 카드가 0장이면 -> 현재 '편찬(Deck)' 사용
@@ -7022,7 +7028,7 @@ async function searchUserByName() {
 let originalMyRoomData = null; // 내 방 데이터를 임시 저장할 변수
 
 async function visitFriendRoom(targetUid, targetNickname) {
-if (typeof isEditMode !== 'undefined' && isEditMode) {
+    if (typeof isEditMode !== 'undefined' && isEditMode) {
         toggleEditMode();
     }
     try {
@@ -7031,32 +7037,48 @@ if (typeof isEditMode !== 'undefined' && isEditMode) {
         if (!doc.exists) return alert("존재하지 않는 유저입니다.");
 
         const friendData = doc.data();
-        const friendRoom = friendData.myRoom || { furniture: [], characters: [] };
+        const friendInventory = friendData.inventory || []; // ✨ 친구 인벤토리 가져오기
+        
+        // 깊은 복사 (참조 끊기)
+        let friendRoom = JSON.parse(JSON.stringify(friendData.myRoom || { furniture: [], characters: [] }));
 
-        // 2. 내 방 데이터 백업 (돌아오기 위해)
+        // ✨ [핵심 수정] 친구의 입주민 ID를 실제 카드 객체로 변환하여 미리 넣어둡니다.
+        if (friendRoom.characters && friendRoom.characters.length > 0) {
+            // ID 목록을 순회하며 친구 인벤토리에서 카드 정보를 찾습니다.
+            const resolvedCharacters = friendRoom.characters
+                .map(id => friendInventory.find(c => c.id === id))
+                .filter(Boolean); // 없는 카드(파쇄됨 등) 제거
+            
+            // ID 목록(String Array)을 객체 목록(Object Array)으로 교체
+            friendRoom.characters = resolvedCharacters;
+        }
+
+        // 2. 내 방 데이터 백업
         if (!originalMyRoomData) {
             originalMyRoomData = JSON.parse(JSON.stringify(playerRoom));
         }
 
-        // 3. 현재 방 데이터를 친구 데이터로 덮어쓰기 (메모리 상에서만)
+        // 3. 현재 방 데이터를 친구 데이터로 덮어쓰기
         playerRoom = friendRoom;
 
-        // 4. 화면 전환 및 UI 설정
+        // 4. 화면 전환
         switchTab('myroom');
         
         // 방문 모드 UI 표시
         document.getElementById('visit-mode-overlay').classList.remove('hidden');
       
-        
-        // 수정/상점 버튼 숨기기
+        // ✨ 수정/상점/보관함/입주관리 버튼 모두 숨기기
         document.getElementById('myroom-edit-mode').classList.add('hidden');
         document.getElementById('open-furniture-shop').classList.add('hidden');
         document.getElementById('open-furniture-storage').classList.add('hidden');
+        
+        // [추가] 입주 관리 버튼 숨기기 (onclick 속성으로 찾습니다)
+        const charSelectorBtn = document.querySelector('button[onclick="openMyRoomCharacterSelector()"]');
+        if(charSelectorBtn) charSelectorBtn.classList.add('hidden');
 
         // 방 렌더링
         displayMyRoom();
         
-        // 안내 메시지
         showMessage(`${targetNickname}님의 사무소에 방문했습니다.`, 'text-indigo-300', messageArea);
 
     } catch (e) {
@@ -7077,6 +7099,10 @@ function exitVisitMode() {
     document.getElementById('myroom-edit-mode').classList.remove('hidden');
     document.getElementById('open-furniture-shop').classList.remove('hidden');
     document.getElementById('open-furniture-storage').classList.add('hidden'); // 이건 원래 꺼져있음
+	
+	// ✨ [추가] 입주 관리 버튼 다시 보이기
+    const charSelectorBtn = document.querySelector('button[onclick="openMyRoomCharacterSelector()"]');
+    if(charSelectorBtn) charSelectorBtn.classList.remove('hidden');
 
     // 내 방 다시 그리기
     displayMyRoom();
