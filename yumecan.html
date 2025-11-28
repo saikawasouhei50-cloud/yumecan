@@ -395,14 +395,13 @@ body.pointer-events-none {
     <div class="absolute bottom-4 left-0 w-full px-4 flex justify-between items-end z-10 pointer-events-none">
         
         <div class="pointer-events-auto">
-            <button onclick="switchTab('event')" class="bg-gradient-to-r from-pink-600 to-rose-700 text-white px-6 py-2 rounded-tr-2xl rounded-bl-xl shadow-lg hover:brightness-110 flex items-center gap-2 border border-pink-400">
-                <span class="text-2xl animate-bounce">🎉</span>
-                <div class="text-left">
-                    <p class="text-xs text-pink-200 font-bold">EVENT</p>
-                    <p class="font-bold">이벤트 확인</p>
-                </div>
-            </button>
-        </div>
+    <button id="event-banner" onclick="switchTab('event')" class="bg-gradient-to-r from-pink-600 to-rose-700 text-white px-6 py-2 rounded-tr-2xl rounded-bl-xl shadow-lg hover:brightness-110 flex items-center gap-2 border border-pink-400">
+        <span class="text-2xl animate-bounce">🎉</span>
+        <div class="text-left">
+            <p class="text-xs text-pink-200 font-bold">EVENT</p>
+            <p id="event-banner-text" class="font-bold">이벤트 확인</p> </div>
+    </button>
+</div>
 
         <div class="flex gap-1 pointer-events-auto bg-black/60 backdrop-blur-md p-2 rounded-xl border border-white/10">
             <button onclick="switchTab('friends')" class="hover:bg-white/20 p-2 rounded-lg transition-colors text-white" title="친구">
@@ -1921,40 +1920,42 @@ async function resetGame() {
                 }
             }
 
-            function checkEventStatus() {
-    // yumecan_data.js에서 이미 날짜 계산을 끝내고 CURRENT_EVENT_ID를 설정했습니다.
-    // 여기서는 그 결과만 확인하면 됩니다.
-    
+            // [수정] 이벤트 상태 체크 (오류 수정판)
+function checkEventStatus() {
+    // 전역 변수 대신 함수 실행 시점에 요소를 다시 찾습니다.
+    const banner = document.getElementById('event-banner'); 
+    const evtTab = document.getElementById('tab-event');
+    const gachaTab = document.getElementById('gacha-tab-event');
+    const bannerText = document.getElementById('event-banner-text');
+    const gachaInfo = document.getElementById('event-gacha-info');
+
     if (CURRENT_EVENT_ID && currentEventInfo) {
         // ✅ 이벤트 진행 중
-        eventBanner.classList.remove('hidden');
+        if (banner) banner.classList.remove('hidden');
         
-        // 배너 텍스트 설정
-        if (eventBannerText) {
-            eventBannerText.textContent = `${currentEventInfo.title} 진행 중!`;
+        if (bannerText) {
+            bannerText.textContent = `${currentEventInfo.title} 진행 중!`;
         }
         
-        // 가챠 화면 정보 업데이트
-        if (eventGachaInfo && currentEventInfo.gachaCharacterName) {
-            const pTag = eventGachaInfo.querySelector('p');
+        if (gachaInfo && currentEventInfo.gachaCharacterName) {
+            const pTag = gachaInfo.querySelector('p');
             if (pTag) pTag.textContent = `[${currentEventInfo.gachaCharacterName}] 등장 확률 UP!`;
         }
 
-        // 탭 보이기
-        gachaTabEvent.classList.remove('hidden');
-        eventTab.classList.remove('hidden');
+        if (gachaTab) gachaTab.classList.remove('hidden');
+        if (evtTab) evtTab.classList.remove('hidden');
 
     } else {
         // ❌ 진행 중인 이벤트 없음
-        eventBanner.classList.add('hidden');
-        gachaTabEvent.classList.add('hidden');
-        eventTab.classList.add('hidden');
+        if (banner) banner.classList.add('hidden');
+        if (gachaTab) gachaTab.classList.add('hidden');
+        if (evtTab) evtTab.classList.add('hidden');
         
-        // 만약 유저가 이벤트 탭이나 이벤트 가챠를 보고 있었다면 강제로 홈/일반가챠로 보냄
-        if (document.getElementById('event-home-view').classList.contains('hidden') === false) {
+        // 강제 이동 로직
+        if (document.getElementById('event-home-view') && !document.getElementById('event-home-view').classList.contains('hidden')) {
             switchTab('home');
         }
-        if (gachaTabEvent.classList.contains('active')) {
+        if (gachaTab && gachaTab.classList.contains('active')) {
             switchGachaTab('normal');
         }
     }
@@ -5469,10 +5470,13 @@ dismantleCardButton.addEventListener('click', () => {
 // ================ 👇 이벤트 홈 관련 리스너 (신규) 👇 ================
 
 // 1. '홈' 화면의 이벤트 배너 클릭 시 -> 이벤트 홈으로 이동
-console.log('Checking eventBanner:', eventBanner); // 디버깅용 로그 추가
-eventBanner.addEventListener('click', () => {
-    switchTab('event'); // event-home-view를 보여줌
-});
+const bannerBtn = document.getElementById('event-banner'); // 요소를 다시 한번 확실하게 찾습니다.
+
+if (bannerBtn) { // ✨ "만약 버튼이 존재한다면" 실행
+    bannerBtn.addEventListener('click', () => {
+        switchTab('event'); 
+    });
+}
 
 // 2. '이벤트 홈'의 '이벤트 전투' 버튼 클릭 시
 document.getElementById('goto-event-battle').addEventListener('click', () => {
