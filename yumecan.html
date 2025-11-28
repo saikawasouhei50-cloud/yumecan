@@ -330,66 +330,13 @@ body.pointer-events-none {
             <button id="reset-game" class="gacha-button bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-full text-sm flex-shrink-0">초기화</button>
         </div>
         
-        <nav class="fixed right-6 top-1/2 -translate-y-1/2 z-40 flex flex-col gap-6 items-end pointer-events-none">
     
-    <div class="flex flex-col gap-3 pointer-events-auto">
-        <button id="tab-home" class="tab-button active group relative flex items-center justify-end">
-            <span class="absolute right-14 bg-black/60 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">홈으로</span>
-            <div class="w-14 h-14 bg-gradient-to-br from-blue-600 to-blue-800 rounded-full flex items-center justify-center shadow-lg border-2 border-white/20 hover:scale-110 transition-transform">
-                <span class="text-2xl">🏠</span>
-            </div>
-        </button>
-        
-        <button id="tab-event" class="tab-button group relative flex items-center justify-end">
-            <span class="absolute right-14 bg-pink-600 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">이벤트</span>
-            <div class="w-12 h-12 bg-gradient-to-br from-pink-500 to-rose-600 rounded-full flex items-center justify-center shadow-lg border-2 border-white/20 hover:scale-110 transition-transform animate-pulse">
-                <span class="text-xl">🎉</span>
-            </div>
-        </button>
-    </div>
-
-    <div class="bg-black/30 backdrop-blur-md p-2 rounded-2xl border border-white/10 flex flex-col gap-2 pointer-events-auto shadow-2xl">
-        <button id="tab-story" class="tab-button w-12 h-12 rounded-xl hover:bg-white/20 flex items-center justify-center transition-all group relative" title="스토리">
-            <span class="text-2xl">📖</span>
-            <span class="absolute right-14 text-white font-bold text-sm opacity-0 group-hover:opacity-100 transition-opacity shadow-black drop-shadow-md">스토리</span>
-        </button>
-        <button id="tab-combat" class="tab-button w-12 h-12 rounded-xl hover:bg-white/20 flex items-center justify-center transition-all group relative" title="독서(전투)">
-            <span class="text-2xl">⚔️</span>
-            <span class="absolute right-14 text-white font-bold text-sm opacity-0 group-hover:opacity-100 transition-opacity shadow-black drop-shadow-md">독서</span>
-        </button>
-        <button id="tab-myroom" class="tab-button w-12 h-12 rounded-xl hover:bg-white/20 flex items-center justify-center transition-all group relative" title="사무소">
-            <span class="text-2xl">☕</span>
-            <span class="absolute right-14 text-white font-bold text-sm opacity-0 group-hover:opacity-100 transition-opacity shadow-black drop-shadow-md">사무소</span>
-        </button>
-    </div>
-
-    <div class="bg-black/30 backdrop-blur-md p-2 rounded-2xl border border-white/10 flex flex-col gap-2 pointer-events-auto shadow-2xl">
-        <button id="tab-inventory" class="tab-button w-10 h-10 rounded-lg hover:bg-white/20 flex items-center justify-center transition-all group relative">
-            <span class="text-xl">📚</span>
-            <span class="absolute right-12 text-gray-300 text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">서고</span>
-        </button>
-        <button id="tab-deck" class="tab-button w-10 h-10 rounded-lg hover:bg-white/20 flex items-center justify-center transition-all group relative">
-            <span class="text-xl">📝</span>
-            <span class="absolute right-12 text-gray-300 text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">편찬</span>
-        </button>
-        <div class="h-px w-full bg-white/20 my-1"></div> <button id="tab-gacha" class="tab-button w-10 h-10 rounded-lg hover:bg-white/20 flex items-center justify-center transition-all group relative">
-            <span class="text-xl">✨</span>
-            <span class="absolute right-12 text-yellow-300 text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap font-bold">소환</span>
-        </button>
-        <button id="tab-trade" class="tab-button w-10 h-10 rounded-lg hover:bg-white/20 flex items-center justify-center transition-all group relative">
-            <span class="text-xl">⚖️</span>
-            <span class="absolute right-12 text-gray-300 text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">교환</span>
-        </button>
-    </div>
-
-    <div class="flex gap-2 pointer-events-auto bg-black/60 rounded-full p-1 border border-white/5">
-        <button id="tab-friends" class="tab-button w-8 h-8 rounded-full hover:bg-white/20 flex items-center justify-center" title="친구">🤝</button>
-        <button id="tab-collection" class="tab-button w-8 h-8 rounded-full hover:bg-white/20 flex items-center justify-center" title="도감">📒</button>
-        <button id="tab-achievements" class="tab-button w-8 h-8 rounded-full hover:bg-white/20 flex items-center justify-center" title="업적">🏆</button>
-        <button id="tab-profile" class="tab-button w-8 h-8 rounded-full hover:bg-white/20 flex items-center justify-center" title="프로필">👤</button>
-    </div>
-
-</nav>
+    
+    
+<button id="global-home-button" onclick="switchTab('home')" class="hidden fixed top-20 left-4 z-50 bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-2 px-4 rounded-full shadow-lg border-2 border-white flex items-center gap-2 transition-transform hover:scale-105">
+    <span>🏠</span>
+    <span>로비로 복귀</span>
+</button>
 
         <!-- 메인 컨텐츠 영역 -->
         <main>
@@ -399,25 +346,84 @@ body.pointer-events-none {
                 <strong>경고:</strong> 게임 진행 상황을 저장할 수 없습니다. 브라우저가 시크릿 모드이거나 저장 기능이 비활성화되었는지 확인해주세요.
             </div>
 
-            <div id="home-view">
-                <div class="relative min-h-[50vh] flex flex-col justify-center items-center text-center p-4">
-                    <div id="event-banner" class="hidden absolute top-4 right-4 bg-gradient-to-r from-yellow-400 via-red-500 to-pink-500 p-4 rounded-lg shadow-lg cursor-pointer transform hover:scale-105 transition-transform duration-300 z-10">
-                        <h3 class="text-white text-lg font-bold drop-shadow-md">기간 한정 이벤트!</h3>
-                        <p id="event-banner-text" class="text-white text-sm drop-shadow-md"></p>
-                    </div>
-
-                    <div id="home-character-container" class="flex-grow flex items-center justify-center cursor-pointer">
-                        <img id="home-character-image" src="" alt="대표 캐릭터" class="max-w-full">
-                    </div>
-                    <div id="home-dialogue-container" class="w-full max-w-2xl bg-black/30 backdrop-blur-sm p-4 rounded-xl mt-4">
-                        <p id="home-character-name" class="font-bold text-lg text-yellow-300"></p>
-                        <p id="home-character-dialogue" class="text-white"></p>
-                    </div>
-                     <div id="home-default-message" class="text-2xl text-gray-300">
-                        당신의 서고에서 대표 등장인물을 설정해주세요!
-                    </div>
-                </div>
+            <div id="home-view" class="relative w-full h-[85vh] overflow-hidden">
+    <div class="absolute inset-0 flex items-center justify-center md:justify-start md:pl-20 z-0">
+        <div id="home-character-container" class="relative h-full flex items-end cursor-pointer group transition-transform duration-300 hover:scale-[1.02]">
+            <img id="home-character-image" src="" alt="대표 캐릭터" class="max-h-[90%] object-contain drop-shadow-2xl">
+            
+            <div id="home-dialogue-container" class="absolute top-1/4 -right-10 md:-right-40 bg-white/90 text-black p-4 rounded-xl rounded-bl-none shadow-lg max-w-xs hidden group-hover:block transition-opacity duration-300 animate-fadeIn">
+                <p id="home-character-name" class="font-bold text-blue-600 mb-1"></p>
+                <p id="home-character-dialogue" class="text-sm font-medium leading-relaxed"></p>
             </div>
+        </div>
+        
+        <div id="home-default-message" class="text-2xl text-gray-300 hidden">
+            당신의 서고에서 대표 등장인물을 설정해주세요!
+        </div>
+    </div>
+
+    <div class="absolute right-0 top-0 bottom-24 w-1/3 min-w-[200px] flex flex-col justify-center items-end gap-3 pr-4 z-10 pointer-events-none">
+        
+        <button id="btn-lobby-combat" onclick="switchTab('combat')" class="pointer-events-auto w-full max-w-[280px] h-24 bg-gradient-to-r from-yellow-500 to-orange-600 text-white font-black text-3xl italic transform -skew-x-12 hover:scale-105 hover:brightness-110 transition-all shadow-[5px_5px_0px_rgba(0,0,0,0.5)] border-2 border-yellow-300 flex items-center justify-center gap-2 group">
+            <span class="transform skew-x-12 inline-block">⚔️ 독 서</span>
+            <span class="absolute -bottom-2 -right-2 text-4xl opacity-20 transform skew-x-12 text-black">COMBAT</span>
+        </button>
+
+        <button id="btn-lobby-deck" onclick="switchTab('deck')" class="pointer-events-auto w-[90%] max-w-[250px] h-16 bg-gradient-to-r from-gray-700 to-gray-800 text-white font-bold text-xl transform -skew-x-12 hover:scale-105 hover:bg-gray-600 transition-all shadow-lg border-l-4 border-blue-400 flex items-center justify-center">
+            <span class="transform skew-x-12">📝 편 찬</span>
+        </button>
+
+        <button id="btn-lobby-inventory" onclick="switchTab('inventory')" class="pointer-events-auto w-[90%] max-w-[250px] h-16 bg-gradient-to-r from-gray-700 to-gray-800 text-white font-bold text-xl transform -skew-x-12 hover:scale-105 hover:bg-gray-600 transition-all shadow-lg border-l-4 border-green-400 flex items-center justify-center">
+            <span class="transform skew-x-12">📚 서 고</span>
+        </button>
+
+        <button id="btn-lobby-gacha" onclick="switchTab('gacha')" class="pointer-events-auto w-[90%] max-w-[250px] h-16 bg-gradient-to-r from-gray-700 to-gray-800 text-white font-bold text-xl transform -skew-x-12 hover:scale-105 hover:bg-gray-600 transition-all shadow-lg border-l-4 border-purple-400 flex items-center justify-center">
+            <span class="transform skew-x-12">✨ 소 환</span>
+        </button>
+        
+        <div class="flex gap-2 w-[90%] max-w-[250px] justify-end">
+            <button onclick="switchTab('trade')" class="pointer-events-auto flex-1 h-12 bg-blue-900/80 hover:bg-blue-800 text-white font-bold transform -skew-x-12 shadow-lg flex items-center justify-center border border-white/20">
+                <span class="transform skew-x-12 text-sm">⚖️ 교환</span>
+            </button>
+            <button onclick="switchTab('myroom')" class="pointer-events-auto flex-1 h-12 bg-pink-900/80 hover:bg-pink-800 text-white font-bold transform -skew-x-12 shadow-lg flex items-center justify-center border border-white/20">
+                <span class="transform skew-x-12 text-sm">☕ 사무소</span>
+            </button>
+        </div>
+
+    </div>
+
+    <div class="absolute bottom-4 left-0 w-full px-4 flex justify-between items-end z-10 pointer-events-none">
+        
+        <div class="pointer-events-auto">
+            <button onclick="switchTab('event')" class="bg-gradient-to-r from-pink-600 to-rose-700 text-white px-6 py-2 rounded-tr-2xl rounded-bl-xl shadow-lg hover:brightness-110 flex items-center gap-2 border border-pink-400">
+                <span class="text-2xl animate-bounce">🎉</span>
+                <div class="text-left">
+                    <p class="text-xs text-pink-200 font-bold">EVENT</p>
+                    <p class="font-bold">이벤트 확인</p>
+                </div>
+            </button>
+        </div>
+
+        <div class="flex gap-1 pointer-events-auto bg-black/60 backdrop-blur-md p-2 rounded-xl border border-white/10">
+            <button onclick="switchTab('friends')" class="hover:bg-white/20 p-2 rounded-lg transition-colors text-white" title="친구">
+                <div class="text-xl">🤝</div>
+                <div class="text-[10px] text-center text-gray-300">친구</div>
+            </button>
+            <button onclick="switchTab('collection')" class="hover:bg-white/20 p-2 rounded-lg transition-colors text-white" title="도감">
+                <div class="text-xl">📒</div>
+                <div class="text-[10px] text-center text-gray-300">도감</div>
+            </button>
+            <button onclick="switchTab('achievements')" class="hover:bg-white/20 p-2 rounded-lg transition-colors text-white" title="업적">
+                <div class="text-xl">🏆</div>
+                <div class="text-[10px] text-center text-gray-300">업적</div>
+            </button>
+            <button onclick="switchTab('profile')" class="hover:bg-white/20 p-2 rounded-lg transition-colors text-white" title="프로필">
+                <div class="text-xl">👤</div>
+                <div class="text-[10px] text-center text-gray-300">프로필</div>
+            </button>
+        </div>
+    </div>
+</div>
             
 			<div id="event-home-view" class="hidden">
     <div class="flex flex-col md:flex-row gap-6">
@@ -1848,49 +1854,36 @@ async function resetGame() {
             function switchTab(tabName) {
     if (isCombatRunning) return;
     
-    // 1. 모든 뷰 숨기기 및 탭 비활성화
+    // 1. 모든 뷰 숨기기
     allViews.forEach(view => {
         if (view) view.classList.add('hidden'); 
     });
-    allTabs.forEach(tab => tab.classList.remove('active'));
+    // (기존 탭 버튼 비활성화 코드는 이제 상단 메뉴가 없으므로 에러가 날 수 있어 제거하거나 무시해도 됩니다)
     
-    // 2. 선택된 뷰 활성화 로직
+    // 2. 뷰 전환 로직
     let targetView;
-
-    if (tabName === 'event') {
-        // '이벤트' 탭은 event-home-view를 보여줍니다.
-        targetView = document.getElementById('event-home-view'); 
-    } 
-	 // ✨ [여기입니다!] 교환소(trade) 탭 처리 코드를 여기에 추가하세요 ✨
-    else if (tabName === 'trade') {
-        targetView = document.getElementById('trade-view');
-    }
-    // ✅ [수정 1] 마이룸 탭을 누르면 myroom-view를 찾도록 명시합니다.
-    else if (tabName === 'myroom') {
-        targetView = document.getElementById('myroom-view');
-    }
-	else if (tabName === 'profile') {
+    if (tabName === 'event') targetView = document.getElementById('event-home-view'); 
+    else if (tabName === 'trade') targetView = document.getElementById('trade-view');
+    else if (tabName === 'myroom') targetView = document.getElementById('myroom-view');
+    else if (tabName === 'profile') {
         targetView = document.getElementById('profile-view');
-        displayProfileView(); // 탭 열 때 뷰 갱신
+        displayProfileView(); 
     }
-    // 그 외 탭들은 이름 규칙에 따라 뷰를 찾습니다. (예: home -> home-view)
-    else {
-        targetView = document.getElementById(`${tabName}-view`);
-    }
+    else targetView = document.getElementById(`${tabName}-view`);
     
-    const targetTab = document.getElementById(`tab-${tabName}`);
+    if (targetView) targetView.classList.remove('hidden');
 
-    // 방어 코드: 뷰나 탭 버튼이 없으면 에러를 띄우고 중단합니다.
-    if (!targetView || !targetTab) {
-        console.error(`Error: Cannot find view or tab for name: ${tabName}`);
-        return; 
+    // ✨ [핵심 추가] 홈 화면이 아니면 '로비로 복귀' 버튼 표시
+    const homeBtn = document.getElementById('global-home-button');
+    if (homeBtn) {
+        if (tabName === 'home') {
+            homeBtn.classList.add('hidden'); // 홈에서는 숨김
+        } else {
+            homeBtn.classList.remove('hidden'); // 다른 곳에서는 보임
+        }
     }
     
-    // 선택된 뷰를 보여주고 탭을 활성화합니다.
-    targetView.classList.remove('hidden');
-    targetTab.classList.add('active');
-    
-    // 3. 탭에 맞는 화면 그리기 함수 호출
+    // 3. 탭별 함수 호출 (기존 유지)
     if (tabName === 'home') displayHomeView();
     else if (tabName === 'inventory') displayInventory(); 
     else if (tabName === 'deck') displayDeckManagement();
@@ -1899,8 +1892,6 @@ async function resetGame() {
     else if (tabName === 'story') displayStoryView();
     else if (tabName === 'event') displayEventHomeView();
     else if (tabName === 'achievements') displayAchievements();
-    
-    // ✅ [수정 2] 마이룸 탭일 때, 마이룸 화면을 그리는 함수를 실행합니다.
     else if (tabName === 'myroom') displayMyRoom();
 }
             function switchSubTab(viewContainer, button) {
