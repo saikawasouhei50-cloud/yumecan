@@ -1892,6 +1892,7 @@ async function resetGame() {
     else if (tabName === 'event') displayEventHomeView();
     else if (tabName === 'achievements') displayAchievements();
     else if (tabName === 'myroom') displayMyRoom();
+	else if (tabName === 'friends') loadFriendList();
 }
 window.switchTab = switchTab;
             function switchSubTab(viewContainer, button) {
@@ -5620,11 +5621,9 @@ pullTenEventButton.addEventListener('click', () => handlePull(10, PULL_TEN_COST,
 expandInventoryButton.addEventListener('click', expandInventory);
 autoFillDeckButton.addEventListener('click', autoFillDeck);
 resetButton.addEventListener('click', resetGame);
-// 기존 탭 버튼 연결 코드 근처에 추가 (allTabs forEach가 있다면 자동으로 될 수도 있지만 명시적으로 확인)
-document.getElementById('tab-profile').addEventListener('click', () => switchTab('profile'));
 
-		// 1. 탭 전환 기능에 마이룸 추가 (기존 switchTab 함수가 tabName을 받으므로 연결만 하면 됨)
-document.getElementById('tab-myroom').addEventListener('click', () => switchTab('myroom'));
+
+		
 
 // 2. 마이룸 내부 버튼들
 const openShopBtn = document.getElementById('open-furniture-shop');
@@ -6954,12 +6953,7 @@ function exitVisitMode() {
     showMessage("나의 탐정 사무소로 돌아왔습니다.", 'text-green-300', messageArea);
 }
 
-// ✨ 탭 연결 (기존 탭 리스너 근처에 추가하거나 여기에 둬도 됨)
-document.getElementById('tab-friends').addEventListener('click', () => {
-    switchTab('friends'); // friends-view 보여주기
-    loadFriendList();     // 목록 로드
-});
-		
+/	
 		
 		// ================== 🏆 이벤트 랭킹 시스템 ==================
 		
