@@ -1217,6 +1217,7 @@ const COLLECTION_GROUPS = ['히어로 대 빌런: 각축전', '히어로 대 빌
                 currentUser = null;
                 loginView.classList.remove('hidden');
                 loggedInView.classList.add('hidden');
+				startBookmarkRegenTimer();
                 
                 // ================== 👇 4. 로딩 상태 비활성화 👇 ==================
                 // 로딩 화면을 숨겨서 로그인/회원가입을 할 수 있도록 합니다.
@@ -1328,8 +1329,8 @@ const GRID_SIZE = 100;
 			const DISMANTLE_REWARDS = {
     'N': { fountainPens: 10, inkwells: 0 },
     'R': { fountainPens: 30, inkwells: 0 },
-    'SR': { fountainPens: 0, inkwells: 1 },
-    'SSR': { fountainPens: 0, inkwells: 3 }, // SSR 파쇄 시 잉크병 3개 지급
+    'SR': { fountainPens: 50, inkwells: 1 },
+    'SSR': { fountainPens: 100, inkwells: 3 }, // SSR 파쇄 시 잉크병 3개 지급
 };
 			const MAX_REVISION_LEVEL = 5; // ✨ 최대 개정 레벨
 const STAT_INCREASE_PER_REVISION = 0.10; // ✨ 개정 1단계당 기본 능력치 10% 증가
@@ -1378,6 +1379,7 @@ let ownedFurniture = []; // 보유한 가구 목록
             let currentStoryPageIndex = 0;
             let playerBookmarks = 10;
             const MAX_BOOKMARKS = 10;
+			const HARD_MAX_BOOKMARKS = 30; // ✨ 최대 축적 한도 (이벤트/업적용)
             let lastBookmarkUpdateTime = Date.now();
             const BOOKMARK_REGEN_TIME = 5 * 60 * 1000; // 5 minutes
             let playerAchievements = {}; // { ach_001: 'unlocked' | 'claimed' }
@@ -1872,8 +1874,9 @@ async function resetGame() {
 
     // 보상 지급
     if (ach.reward.currency) playerCurrency += ach.reward.currency;
-    if (ach.reward.fountainPens) playerFountainPens += ach.reward.fountainPens; // ✨ 이 라인이 중요합니다! ✨
-    if (ach.reward.bookmarks) playerBookmarks = Math.min(MAX_BOOKMARKS, playerBookmarks + ach.reward.bookmarks);
+    if (ach.reward.fountainPens) playerFountainPens += ach.reward.fountainPens;
+    // ✨ 업적 보상은 최대 30개까지 축적 가능
+    if (ach.reward.bookmarks) playerBookmarks = Math.min(HARD_MAX_BOOKMARKS, playerBookmarks + ach.reward.bookmarks);
     
     playerAchievements[ach.id] = 'claimed'; // 상태 변경
     
@@ -2386,6 +2389,27 @@ function displayEventHomeView() {
                 } else if (item.type === 'currency') {
                     playerCurrency += item.itemData;
                     showMessage(`보석 ${item.itemData}개 획득!`, 'text-green-300', messageArea);
+                }
+				// ✨ [추가] 만년필 구매 로직
+                else if (item.type === 'fountainPen') {
+                    playerFountainPens += item.itemData;
+                    showMessage(`만년필 ${item.itemData}개 획득!`, 'text-gray-300', messageArea);
+                }
+                // ✨ [추가] 잉크병도 나중에 팔고 싶다면 미리 추가해두세요
+                else if (item.type === 'inkwell') {
+                    playerInkwells += item.itemData;
+                    showMessage(`잉크병 ${item.itemData}개 획득!`, 'text-fuchsia-300', messageArea);
+                }
+				// ✨ [추가] 책갈피 구매 로직 (30개 한도 적용)
+                else if (item.type === 'bookmark') {
+                    if (playerBookmarks >= HARD_MAX_BOOKMARKS) {
+                        showMessage(`책갈피는 최대 ${HARD_MAX_BOOKMARKS}개까지만 소지할 수 있습니다.`, 'text-red-400', messageArea);
+                        return; // 구매 취소 (포인트 차감 안 됨)
+                    }
+                    
+                    // 구매 시 30개를 초과하면 30개까지만 채움
+                    playerBookmarks = Math.min(HARD_MAX_BOOKMARKS, playerBookmarks + item.itemData);
+                    showMessage(`책갈피 획득! (현재: ${playerBookmarks})`, 'text-cyan-300', messageArea);
                 }
 
                 updateUI();
