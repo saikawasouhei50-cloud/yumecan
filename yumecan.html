@@ -1631,48 +1631,74 @@ function saveGame() {
 
 		
 
-            // [수정] 게임 데이터 초기화 (리세마라 기능)
-// [수정] 게임 데이터 초기화 (리세마라 기능 + 거래소 매물 정리)
+            // [수정] 게임 데이터 초기화 (리세마라 + 거래소 삭제 + 친구 관계 완전 삭제)
 async function resetGame() {
     // 1. 확인 버튼 로직 (한 번 누르면 '확인?'으로 바뀜)
     if (resetButton.dataset.confirming === 'true') {
         try {
             if (currentUser) {
-                console.log("Firebase 데이터 초기화 중...");
+                console.log("🔥 계정 초기화 시작...");
 
-                // ✨ [추가] 1. 거래소에 올려둔 내 매물 삭제하기
-                // (이걸 안 하면 리셋 후에도 다른 사람들이 내 카드를 볼 수 있음)
+                // =========================================================
+                // 1단계: 거래소에 올려둔 내 매물 삭제
+                // =========================================================
                 const myTradesSnapshot = await db.collection('trades')
                     .where('senderUid', '==', currentUser.uid)
                     .get();
 
-                // 내 거래가 있다면 하나씩 삭제 (Batch 처리로 더 효율적으로 가능)
-                const batch = db.batch();
+                const tradeBatch = db.batch();
                 myTradesSnapshot.forEach(doc => {
-                    batch.delete(doc.ref);
+                    tradeBatch.delete(doc.ref);
                 });
-                await batch.commit();
-                console.log(`거래소에 등록된 매물 ${myTradesSnapshot.size}건 삭제 완료.`);
+                await tradeBatch.commit();
+                console.log(`✅ 거래소 매물 ${myTradesSnapshot.size}건 삭제 완료.`);
 
-                // ✨ 2. 유저 데이터(본체) 삭제
+                // =========================================================
+                // 2단계: 친구 관계 끊기 (나 <-> 친구 양쪽 모두 삭제)
+                // =========================================================
+                const myFriendsSnapshot = await db.collection('users')
+                    .doc(currentUser.uid)
+                    .collection('friends')
+                    .get();
+
+                if (!myFriendsSnapshot.empty) {
+                    const friendBatch = db.batch();
+                    
+                    myFriendsSnapshot.forEach(doc => {
+                        const friendUid = doc.id;
+                        
+                        // 1. 상대방의 친구 목록에서 '나'를 삭제
+                        const theirRef = db.collection('users').doc(friendUid)
+                                           .collection('friends').doc(currentUser.uid);
+                        friendBatch.delete(theirRef);
+
+                        // 2. 내 친구 목록에서 '상대방'을 삭제 (사실 본체 삭제하면 같이 사라지지만 확실하게 처리)
+                        friendBatch.delete(doc.ref);
+                    });
+
+                    await friendBatch.commit();
+                    console.log(`✅ 친구 ${myFriendsSnapshot.size}명과의 관계 삭제 완료.`);
+                }
+
+                // =========================================================
+                // 3단계: 내 유저 데이터(본체) 삭제
+                // =========================================================
                 await db.collection('users').doc(currentUser.uid).delete();
-                
-                // (참고: 친구 목록 하위 컬렉션은 자동 삭제되지 않지만, 
-                // 본체가 사라지면 게임상에서 접근 불가능하므로 리세마라엔 문제없음)
+                console.log("✅ 유저 데이터 삭제 완료.");
             }
 
-            // 3. 로컬 데이터 삭제
+            // 4. 로컬 데이터 삭제 및 새로고침
             localStorage.removeItem(SAVE_DATA_KEY);
 
-            alert("데이터가 초기화되었습니다. 거래소 매물도 회수(삭제)되었습니다.\n게임을 다시 시작합니다.");
-            location.reload(); // 새로고침
+            alert("계정이 완벽하게 초기화되었습니다.\n(친구 목록, 거래소 매물, 게임 데이터 삭제 완료)");
+            location.reload(); 
 
         } catch (e) {
             console.error("초기화 실패:", e);
-            alert("데이터 삭제 중 오류가 발생했습니다: " + e.message);
+            alert("초기화 중 오류가 발생했습니다: " + e.message);
         }
     } else {
-        // 버튼 UI 변경 로직 (기존 유지)
+        // 버튼 UI 변경 로직
         resetButton.textContent = '확인?';
         resetButton.dataset.confirming = 'true';
         resetButton.classList.remove('bg-red-600', 'hover:bg-red-700');
