@@ -302,32 +302,46 @@ body.pointer-events-none {
     <div class="w-full max-w-5xl bg-white/10 backdrop-blur-md rounded-2xl shadow-xl text-white p-6 md:p-8">
         
         <!-- 제목 부분 -->
-        <header class="text-center mb-4">
-            <h1 class="text-4xl md:text-5xl font-bold tracking-wider text-yellow-300" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">YUMECAN!_</h1>
+        <header class="text-center mb-1 md:mb-4">
+            <h1 class="text-3xl md:text-5xl font-bold tracking-wider text-yellow-300" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">YUMECAN!_</h1>
         </header>
 
-        <div class="bg-black/20 p-3 rounded-lg mb-4 flex flex-wrap justify-between items-center gap-2">
-    <div id="login-view" class="flex flex-wrap items-center gap-2">
-    <input type="text" id="nickname-input" placeholder="닉네임 (가입시 필수)" class="bg-gray-700 text-white px-3 py-1 rounded-md text-sm">
-    
-    <input type="email" id="email-input" placeholder="이메일" class="bg-gray-700 text-white px-3 py-1 rounded-md text-sm">
-    <input type="password" id="password-input" placeholder="비밀번호" class="bg-gray-700 text-white px-3 py-1 rounded-md text-sm">
-    
-    <button id="login-button" class="gacha-button bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-3 rounded-full text-sm">로그인</button>
-    <button id="register-button" class="gacha-button bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-3 rounded-full text-sm">회원가입</button>
-</div>
-    <div id="logged-in-view" class="hidden flex items-center gap-3">
-        <p class="font-bold">환영합니다, <span id="nickname-display" class="text-yellow-300"></span>님!</p>
-        <button id="logout-button" class="gacha-button bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded-full text-sm">로그아웃</button>
-    </div>
-</div>
+        <div class="bg-black/20 p-1.5 md:p-3 rounded-lg mb-2 md:mb-4 flex flex-wrap justify-between items-center gap-2">
+            <div id="login-view" class="flex flex-wrap items-center gap-1 md:gap-2 justify-center w-full md:w-auto">
+                <input type="text" id="nickname-input" placeholder="닉네임" class="bg-gray-700 text-white px-2 py-1 rounded-md text-xs md:text-sm w-24">
+                <input type="email" id="email-input" placeholder="이메일" class="bg-gray-700 text-white px-2 py-1 rounded-md text-xs md:text-sm w-24">
+                <input type="password" id="password-input" placeholder="비번" class="bg-gray-700 text-white px-2 py-1 rounded-md text-xs md:text-sm w-20">
+                
+                <button id="login-button" class="gacha-button bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-2 rounded-full text-xs md:text-sm">로그인</button>
+                <button id="register-button" class="gacha-button bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-2 rounded-full text-xs md:text-sm">가입</button>
+            </div>
+            
+            <div id="logged-in-view" class="hidden flex items-center gap-2 justify-center w-full md:w-auto">
+                <p class="font-bold text-sm md:text-base">환영합니다, <span id="nickname-display" class="text-yellow-300"></span>님!</p>
+                <button id="logout-button" class="gacha-button bg-red-600 hover:bg-red-700 text-white font-bold py-0.5 px-2 md:py-1 md:px-3 rounded-full text-xs md:text-sm">로그아웃</button>
+            </div>
+        </div>
         
-        <div class="flex flex-wrap items-center justify-center md:justify-end gap-3 mb-3">
-            <div class="text-xl font-bold text-cyan-300 bg-black/20 py-2 px-4 rounded-full inline-block whitespace-nowrap">🔖 <span id="bookmark-display">10</span> / <span id="max-bookmark-display">10</span><span id="bookmark-timer-container" class="text-sm ml-2"></span></div>
-            <div class="text-2xl font-bold text-yellow-300 bg-black/20 py-2 px-6 rounded-full inline-block whitespace-nowrap">💎 <span id="currency-display">100</span></div>
-            <div class="text-xl font-bold text-gray-300 bg-black/20 py-2 px-4 rounded-full inline-block whitespace-nowrap">🖋️ <span id="fountainpen-display">500</span></div>
-             <div class="text-xl font-bold text-fuchsia-400 bg-black/20 py-2 px-4 rounded-full inline-block whitespace-nowrap">💧 <span id="inkwell-display">0</span></div>
-            <button id="reset-game" class="gacha-button bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-full text-sm flex-shrink-0">초기화</button>
+        <div class="flex flex-wrap items-center justify-center md:justify-end gap-1.5 md:gap-3 mb-2 md:mb-3">
+            <div class="text-sm md:text-xl font-bold text-cyan-300 bg-black/20 py-1 px-3 md:py-2 md:px-4 rounded-full inline-block whitespace-nowrap">
+                🔖 <span id="bookmark-display">10</span>/<span id="max-bookmark-display">10</span><span id="bookmark-timer-container" class="text-xs md:text-sm ml-1 md:ml-2"></span>
+            </div>
+            
+            <div class="text-sm md:text-2xl font-bold text-yellow-300 bg-black/20 py-1 px-3 md:py-2 md:px-6 rounded-full inline-block whitespace-nowrap">
+                💎 <span id="currency-display">100</span>
+            </div>
+            
+            <div class="text-sm md:text-xl font-bold text-gray-300 bg-black/20 py-1 px-3 md:py-2 md:px-4 rounded-full inline-block whitespace-nowrap">
+                🖋️ <span id="fountainpen-display">500</span>
+            </div>
+            
+            <div class="text-sm md:text-xl font-bold text-fuchsia-400 bg-black/20 py-1 px-3 md:py-2 md:px-4 rounded-full inline-block whitespace-nowrap">
+                💧 <span id="inkwell-display">0</span>
+            </div>
+            
+            <button id="reset-game" class="gacha-button bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 md:py-2 md:px-4 rounded-full text-xs md:text-sm flex-shrink-0">
+                초기화
+            </button>
         </div>
         
     
