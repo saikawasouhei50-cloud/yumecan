@@ -347,16 +347,19 @@ body.pointer-events-none {
             </div>
 
             <div id="home-view" class="relative w-full h-[85vh] overflow-hidden">
-    <div class="absolute inset-0 flex items-center justify-center md:justify-center z-0"> <div id="home-character-container" class="relative h-full flex items-end cursor-pointer group transition-transform duration-300 hover:scale-[1.02]">
-        <img id="home-character-image" src="" alt="대표 캐릭터" class="max-h-[85%] md:max-h-[95%] object-contain drop-shadow-2xl transition-all">
+    <div class="absolute inset-0 flex items-center justify-center md:justify-start md:items-center z-0 pb-32 md:pb-0 md:pl-32 md:-translate-y-12 pointer-events-none">
+    
+    <div id="home-character-container" class="relative h-full flex items-center md:items-center justify-center pointer-events-auto cursor-pointer group transition-transform duration-300 hover:scale-[1.02]">
         
-        <div id="home-dialogue-container" class="absolute top-[20%] right-0 md:top-1/4 md:-right-32 bg-white/95 text-black p-3 md:p-6 rounded-xl rounded-bl-none shadow-xl max-w-[180px] md:max-w-xs hidden group-hover:block transition-opacity duration-300 animate-fadeIn z-20 border-2 border-blue-100">
+        <img id="home-character-image" src="" alt="대표 캐릭터" class="max-h-[70%] md:max-h-[85%] object-contain drop-shadow-2xl transition-all">
+        
+        <div id="home-dialogue-container" class="absolute top-[15%] right-[-10%] md:top-[10%] md:-right-40 bg-white/95 text-black p-3 md:p-6 rounded-xl rounded-bl-none shadow-xl max-w-[160px] md:max-w-xs hidden group-hover:block transition-opacity duration-300 animate-fadeIn z-20 border-2 border-blue-100">
             <p id="home-character-name" class="font-bold text-blue-600 mb-1 text-sm md:text-xl"></p>
             <p id="home-character-dialogue" class="text-xs md:text-base font-medium leading-relaxed"></p>
         </div>
     </div>
     
-    <div id="home-default-message" class="text-xl md:text-3xl text-gray-300 hidden font-bold drop-shadow-md">
+    <div id="home-default-message" class="text-xl md:text-3xl text-gray-300 hidden font-bold drop-shadow-md absolute">
         당신의 서고에서 대표 등장인물을 설정해주세요!
     </div>
 </div>
