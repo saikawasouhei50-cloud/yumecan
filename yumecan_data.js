@@ -16,6 +16,7 @@ let interactionDialogues = {};
 // ✨ [변경] 인연 데이터는 이제 시트에서 불러오므로 초기값은 빈 배열입니다.
 let synergies = []; 
 let chibiImages = {};
+let CURRENT_EVENT_ID = null; 
 
 // ==========================================
 // 1. 웹 앱 URL (여기에만 최신 주소를 적으세요!)
@@ -211,20 +212,37 @@ async function loadGameData() {
             });
         }
 
-        // 8. 이벤트 정보 설정
+        // 8. ✨ [수정됨] 이벤트 정보 자동 설정 (날짜 기준 자동 판별)
         if (data.eventInfo && data.eventInfo.length > 0) {
-            const info = data.eventInfo[0]; 
-            currentEventInfo = {
-                title: info.title,
-                startDate: new Date(info.startDate),
-                endDate: new Date(info.endDate),
-                bannerImageUrl: info.bannerImageUrl,
-                description: info.description,
-                gachaCharacterName: info.gachaCharacterName
-            };
-            // 전역 변수가 있다면 설정
-            if (typeof EVENT_CHARACTER_NAME !== 'undefined') {
-                EVENT_CHARACTER_NAME = info.gachaCharacterName;
+            const now = new Date(); // 현재 시간
+            
+            // 시트에 있는 이벤트 목록 중 '오늘 날짜'가 진행 기간에 포함되는 이벤트 찾기
+            const activeEvent = data.eventInfo.find(info => {
+                const start = new Date(info.startDate);
+                const end = new Date(info.endDate);
+                return now >= start && now <= end;
+            });
+
+            if (activeEvent) {
+                console.log(`현재 진행 중인 이벤트 발견: ${activeEvent.title}`);
+                
+                // 전역 변수 업데이트
+                CURRENT_EVENT_ID = activeEvent.id; 
+                EVENT_CHARACTER_NAME = activeEvent.gachaCharacterName;
+
+                currentEventInfo = {
+                    id: activeEvent.id, // ID도 포함
+                    title: activeEvent.title,
+                    startDate: new Date(activeEvent.startDate),
+                    endDate: new Date(activeEvent.endDate),
+                    bannerImageUrl: activeEvent.bannerImageUrl,
+                    description: activeEvent.description,
+                    gachaCharacterName: activeEvent.gachaCharacterName
+                };
+            } else {
+                console.log("현재 진행 중인 이벤트가 없습니다.");
+                CURRENT_EVENT_ID = null;
+                currentEventInfo = null;
             }
         }
 
@@ -517,7 +535,7 @@ const RARITY_COST_MULTIPLIER = {
     'SSR': 1.6, 
 };
 
-const CURRENT_EVENT_ID = "mini_event_202510_dohwa";
+
 
 // yumecan_data.js 파일 맨 끝부분에 추가하세요.
 
@@ -528,7 +546,6 @@ const genericInteractions = [
     ['안녕하세요!', '반갑습니다.'],
     ['잠시 쉬었다 갈까요?', '좋은 생각입니다.']
 ];
-
 
 
 
