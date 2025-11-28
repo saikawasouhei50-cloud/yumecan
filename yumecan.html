@@ -7476,7 +7476,7 @@ function openMyRoomCharacterSelector() {
     modal.classList.remove('hidden');
 }
 
-// 2. 선택창 UI 그리기 (인벤토리 목록)
+// 2. 선택창 UI 그리기 (안전장치 추가 버전)
 function updateMyRoomSelectorUI() {
     const list = document.getElementById('myroom-char-selector-modal').querySelector('#myroom-char-list');
     const countSpan = document.getElementById('myroom-selected-count');
@@ -7488,12 +7488,26 @@ function updateMyRoomSelectorUI() {
     const sortedInv = [...playerInventory].sort((a, b) => {
         const charA = findCharacter(a.name);
         const charB = findCharacter(b.name);
+        
+        // ✨ [안전장치 1] 데이터가 없는 카드는 맨 뒤로 보냄 (에러 방지)
+        if (!charA) return 1;
+        if (!charB) return -1;
+
         const rarityOrder = { 'SSR': 4, 'SR': 3, 'R': 2, 'N': 1 };
-        return (rarityOrder[charB.rarity] - rarityOrder[charA.rarity]) || (b.level - a.level);
+        
+        // ✨ [안전장치 2] 등급 정보가 없으면 0점 처리
+        const rA = rarityOrder[charA.rarity] || 0;
+        const rB = rarityOrder[charB.rarity] || 0;
+
+        return (rB - rA) || (b.level - a.level);
     });
 
     sortedInv.forEach(cardInstance => {
         const charData = findCharacter(cardInstance.name);
+        
+        // ✨ [안전장치 3] 데이터가 없는 카드는 목록에 표시하지 않음
+        if (!charData) return;
+
         const isSelected = tempMyRoomChars.has(cardInstance.id);
         
         const cardEl = document.createElement('div');
