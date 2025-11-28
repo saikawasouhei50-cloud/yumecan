@@ -463,7 +463,9 @@ body.pointer-events-none {
 
         <div class="flex gap-0.5 md:gap-1 pointer-events-auto bg-black/60 backdrop-blur-md p-1.5 md:p-2 rounded-xl border border-white/10">
     
-    <button onclick="switchTab('friends')" class="hover:bg-white/20 p-1 md:p-2 rounded-lg transition-colors text-white" title="친구">
+    <button onclick="switchTab('friends')" class="relative hover:bg-white/20 p-1 md:p-2 rounded-lg transition-colors text-white" title="친구">
+        <span id="main-friend-badge" class="hidden absolute top-0 right-0 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-black animate-bounce">0</span>
+        
         <div class="text-base md:text-xl">🤝</div>
         <div class="text-[9px] md:text-[10px] text-center text-gray-300 leading-none mt-0.5">친구</div>
     </button>
@@ -473,7 +475,9 @@ body.pointer-events-none {
         <div class="text-[9px] md:text-[10px] text-center text-gray-300 leading-none mt-0.5">도감</div>
     </button>
     
-    <button onclick="switchTab('achievements')" class="hover:bg-white/20 p-1 md:p-2 rounded-lg transition-colors text-white" title="업적">
+    <button onclick="switchTab('achievements')" class="relative hover:bg-white/20 p-1 md:p-2 rounded-lg transition-colors text-white" title="업적">
+        <span id="achievement-badge" class="hidden absolute top-0 right-0 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-black animate-bounce">0</span>
+        
         <div class="text-base md:text-xl">🏆</div>
         <div class="text-[9px] md:text-[10px] text-center text-gray-300 leading-none mt-0.5">업적</div>
     </button>
@@ -1192,19 +1196,21 @@ const COLLECTION_GROUPS = ['히어로 대 빌런: 각축전', '히어로 대 빌
 	const exitMultiModeButton = document.getElementById('exit-multi-mode');
     const enterMultiModeButton = document.getElementById('enter-multi-mode');
 
-        // --- 인증 상태 감지 리스너 (가장 중요한 부분) ---
+        // --- 인증 상태 감지 리스너 ---
         auth.onAuthStateChanged(user => {
             const loginView = document.getElementById('login-view');
             const loggedInView = document.getElementById('logged-in-view');
             
             if (user) {
-                // --- 유저가 로그인했을 때 ---
                 currentUser = user;
                 loginView.classList.add('hidden');
                 loggedInView.classList.remove('hidden');
                 document.getElementById('nickname-display').textContent = user.displayName || user.email;
 
                 loadGameFromFirebase(user.uid);
+                
+                // ✨ [추가] 친구 요청 실시간 감시 시작
+                startFriendListener(user.uid);
 
             } else {
                 // --- 유저가 로그아웃했을 때 ---
@@ -1672,9 +1678,10 @@ async function saveGameToFirebase() {
     checkEventStatus();
     switchTab('home');
     checkAchievements();
+	updateAchievementBadge(); // ✨ 추가: 로드 시 배지 갱신
     document.getElementById('loading-overlay').classList.add('hidden');
     document.body.classList.remove('loading');
-}
+}	
 
 function saveGame() {
                 // 이 함수는 이미 만들어두신 saveGameToFirebase() 함수를
@@ -1822,7 +1829,9 @@ async function resetGame() {
         if (document.getElementById('achievements-view').classList.contains('hidden') === false) {
             displayAchievements();
         }
+		
     }
+	updateAchievementBadge();
 }
             
             function displayAchievements() {
@@ -1871,6 +1880,7 @@ async function resetGame() {
     updateUI();
     displayAchievements(); // UI 갱신
     saveGame();
+	updateAchievementBadge();
 }
 			
 			// --- 인연(Synergy) 관련 함수 ---
@@ -1956,6 +1966,7 @@ async function resetGame() {
     else if (tabName === 'achievements') displayAchievements();
     else if (tabName === 'myroom') displayMyRoom();
 	else if (tabName === 'friends') loadFriendList();
+	else if (tabName === 'trade') loadTradeList();
 }
 window.switchTab = switchTab;
             function switchSubTab(viewContainer, button) {
@@ -7337,6 +7348,55 @@ async function loadRankingPreview() {
     window.sendFriendRequest = sendFriendRequest;
     window.acceptFriendRequest = acceptFriendRequest;
     window.cancelFriendRequest = cancelFriendRequest;
+	
+	// ✨ 친구 요청 실시간 감시 함수
+    function startFriendListener(uid) {
+        db.collection('users').doc(uid).collection('friends')
+          .where('status', '==', 'received') // '받음' 상태인 요청만 감시
+          .onSnapshot(snapshot => {
+              const count = snapshot.size; // 요청 개수
+              const badge = document.getElementById('main-friend-badge');
+              
+              if (badge) {
+                  if (count > 0) {
+                      badge.classList.remove('hidden'); // 배지 보이기
+                      badge.textContent = count;
+                  } else {
+                      badge.classList.add('hidden'); // 배지 숨기기
+                  }
+              }
+
+              // 만약 현재 '친구 탭'을 보고 있다면 목록도 즉시 새로고침
+              const friendsView = document.getElementById('friends-view');
+              if (friendsView && !friendsView.classList.contains('hidden')) {
+                  loadFriendList();
+              }
+          });
+    }
+	
+	// ✨ 업적 배지 업데이트 함수
+    function updateAchievementBadge() {
+        // 'unlocked' 상태인(달성했지만 보상 안 받은) 업적 개수 세기
+        let count = 0;
+        
+        // 전역 변수 achievements 배열을 순회
+        achievements.forEach(ach => {
+            // playerAchievements 객체에 해당 ID가 있고, 상태가 'unlocked'이면 카운트
+            if (playerAchievements[ach.id] === 'unlocked') {
+                count++;
+            }
+        });
+
+        const badge = document.getElementById('achievement-badge');
+        if (badge) {
+            if (count > 0) {
+                badge.textContent = count;
+                badge.classList.remove('hidden'); // 배지 보이기
+            } else {
+                badge.classList.add('hidden');    // 배지 숨기기
+            }
+        }
+    }
 	
 
     }); // <--- DOMContentLoaded 닫는 괄호 (절대 지우지 마세요!)
