@@ -1583,30 +1583,44 @@ function saveGame() {
 		
 
             // [수정] 게임 데이터 초기화 (리세마라 기능)
+// [수정] 게임 데이터 초기화 (리세마라 기능 + 거래소 매물 정리)
 async function resetGame() {
     // 1. 확인 버튼 로직 (한 번 누르면 '확인?'으로 바뀜)
     if (resetButton.dataset.confirming === 'true') {
         try {
-            // 2. 로그인된 상태라면 Firebase 데이터 삭제
             if (currentUser) {
                 console.log("Firebase 데이터 초기화 중...");
-                // 유저의 문서(doc) 자체를 삭제합니다.
-                // 이렇게 하면 새로고침 시 '새 유저'로 인식되어 초기 템을 다시 줍니다.
+
+                // ✨ [추가] 1. 거래소에 올려둔 내 매물 삭제하기
+                // (이걸 안 하면 리셋 후에도 다른 사람들이 내 카드를 볼 수 있음)
+                const myTradesSnapshot = await db.collection('trades')
+                    .where('senderUid', '==', currentUser.uid)
+                    .get();
+
+                // 내 거래가 있다면 하나씩 삭제 (Batch 처리로 더 효율적으로 가능)
+                const batch = db.batch();
+                myTradesSnapshot.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+                await batch.commit();
+                console.log(`거래소에 등록된 매물 ${myTradesSnapshot.size}건 삭제 완료.`);
+
+                // ✨ 2. 유저 데이터(본체) 삭제
                 await db.collection('users').doc(currentUser.uid).delete();
                 
-                // (선택사항) 친구 목록 등 하위 컬렉션도 지우고 싶지만, 
-                // 리세마라 용도라면 본체만 지워도 충분합니다.
+                // (참고: 친구 목록 하위 컬렉션은 자동 삭제되지 않지만, 
+                // 본체가 사라지면 게임상에서 접근 불가능하므로 리세마라엔 문제없음)
             }
 
-            // 3. 로컬 데이터 삭제 (게스트 모드 대비)
+            // 3. 로컬 데이터 삭제
             localStorage.removeItem(SAVE_DATA_KEY);
 
-            alert("데이터가 초기화되었습니다. 게임을 다시 시작합니다.");
+            alert("데이터가 초기화되었습니다. 거래소 매물도 회수(삭제)되었습니다.\n게임을 다시 시작합니다.");
             location.reload(); // 새로고침
 
         } catch (e) {
             console.error("초기화 실패:", e);
-            alert("데이터 삭제 중 오류가 발생했습니다.");
+            alert("데이터 삭제 중 오류가 발생했습니다: " + e.message);
         }
     } else {
         // 버튼 UI 변경 로직 (기존 유지)
