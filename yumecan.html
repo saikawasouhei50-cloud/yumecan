@@ -7083,10 +7083,10 @@ function openOtherUserProfile(userData) {
         }
     }
 
-    // ✨ [추가] 내 프로필이 아닐 때만 '친구 추가' 버튼 표시
+    /// ✨ [추가] 내 프로필이 아닐 때만 '친구 추가' 버튼 표시
     const isMe = (currentUser && userData.uid === currentUser.uid);
     const friendBtnHTML = isMe ? '' : `
-        <button onclick="addFriend('${userData.uid}', '${nickname}')" class="flex-1 gacha-button bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold text-lg shadow-lg transition-all border border-green-500">
+        <button onclick="sendFriendRequest('${userData.uid}', '${nickname}')" class="flex-1 gacha-button bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold text-lg shadow-lg transition-all border border-green-500">
             🤝 친구 추가
         </button>
     `;
