@@ -1893,6 +1893,7 @@ async function resetGame() {
     else if (tabName === 'achievements') displayAchievements();
     else if (tabName === 'myroom') displayMyRoom();
 }
+window.switchTab = switchTab;
             function switchSubTab(viewContainer, button) {
                 Array.from(viewContainer.children).forEach(view => {
                     if(view.id.endsWith('-view')) view.classList.add('hidden');
@@ -7280,7 +7281,7 @@ async function loadRankingPreview() {
     window.sendFriendRequest = sendFriendRequest;
     window.acceptFriendRequest = acceptFriendRequest;
     window.cancelFriendRequest = cancelFriendRequest;
-	window.switchTab = switchTab;
+	
 
     }); // <--- DOMContentLoaded 닫는 괄호 (절대 지우지 마세요!)
 	
