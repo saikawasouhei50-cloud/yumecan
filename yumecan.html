@@ -1811,25 +1811,43 @@ function saveGame() {
             }
 
             function checkEventStatus() {
-                const now = new Date();
-                const isEventActive = true; // For testing: now >= EVENT_START_DATE && now <= EVENT_END_DATE;
-                if (isEventActive) {
-                    eventBanner.classList.remove('hidden');
-                    eventBannerText.textContent = `${EVENT_CHARACTER_NAME} 확률 UP!`;
-                    eventGachaInfo.querySelector('p').textContent = `[${EVENT_CHARACTER_NAME}] 등장 확률 UP!`;
-                    gachaTabEvent.classList.remove('hidden');
-                    eventTab.classList.remove('hidden');
-                    // eventPointDisplay.classList.remove('hidden');
-                } else {
-                    eventBanner.classList.add('hidden');
-                    gachaTabEvent.classList.add('hidden');
-                    eventTab.classList.add('hidden');
-                    eventPointDisplay.classList.add('hidden');
-                    if(gachaTabEvent.classList.contains('active')) {
-                        switchGachaTab('normal');
-                    }
-                }
-            }
+    // yumecan_data.js에서 이미 날짜 계산을 끝내고 CURRENT_EVENT_ID를 설정했습니다.
+    // 여기서는 그 결과만 확인하면 됩니다.
+    
+    if (CURRENT_EVENT_ID && currentEventInfo) {
+        // ✅ 이벤트 진행 중
+        eventBanner.classList.remove('hidden');
+        
+        // 배너 텍스트 설정
+        if (eventBannerText) {
+            eventBannerText.textContent = `${currentEventInfo.title} 진행 중!`;
+        }
+        
+        // 가챠 화면 정보 업데이트
+        if (eventGachaInfo && currentEventInfo.gachaCharacterName) {
+            const pTag = eventGachaInfo.querySelector('p');
+            if (pTag) pTag.textContent = `[${currentEventInfo.gachaCharacterName}] 등장 확률 UP!`;
+        }
+
+        // 탭 보이기
+        gachaTabEvent.classList.remove('hidden');
+        eventTab.classList.remove('hidden');
+
+    } else {
+        // ❌ 진행 중인 이벤트 없음
+        eventBanner.classList.add('hidden');
+        gachaTabEvent.classList.add('hidden');
+        eventTab.classList.add('hidden');
+        
+        // 만약 유저가 이벤트 탭이나 이벤트 가챠를 보고 있었다면 강제로 홈/일반가챠로 보냄
+        if (document.getElementById('event-home-view').classList.contains('hidden') === false) {
+            switchTab('home');
+        }
+        if (gachaTabEvent.classList.contains('active')) {
+            switchGachaTab('normal');
+        }
+    }
+}
 
             function displayHomeView(cycleDialogue = false) {
                 if (representativeCharacter) {
@@ -7144,4 +7162,3 @@ async function loadRankingPreview() {
     </script>
 </body>
 </html>
-
