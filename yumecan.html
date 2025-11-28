@@ -1582,24 +1582,47 @@ function saveGame() {
 
 		
 
-            function resetGame() {
-                if (!isStorageAvailable()) return;
-                if (resetButton.dataset.confirming === 'true') {
-                    localStorage.removeItem(SAVE_DATA_KEY);
-                    location.reload();
-                } else {
-                    resetButton.textContent = '확인?';
-                    resetButton.dataset.confirming = 'true';
-                    resetButton.classList.remove('bg-red-600', 'hover:bg-red-700');
-                    resetButton.classList.add('bg-yellow-500', 'hover:bg-yellow-600');
-                    setTimeout(() => {
-                        resetButton.textContent = '초기화';
-                        resetButton.dataset.confirming = 'false';
-                        resetButton.classList.remove('bg-yellow-500', 'hover:bg-yellow-600');
-                        resetButton.classList.add('bg-red-600', 'hover:bg-red-700');
-                    }, 3000);
-                }
+            // [수정] 게임 데이터 초기화 (리세마라 기능)
+async function resetGame() {
+    // 1. 확인 버튼 로직 (한 번 누르면 '확인?'으로 바뀜)
+    if (resetButton.dataset.confirming === 'true') {
+        try {
+            // 2. 로그인된 상태라면 Firebase 데이터 삭제
+            if (currentUser) {
+                console.log("Firebase 데이터 초기화 중...");
+                // 유저의 문서(doc) 자체를 삭제합니다.
+                // 이렇게 하면 새로고침 시 '새 유저'로 인식되어 초기 템을 다시 줍니다.
+                await db.collection('users').doc(currentUser.uid).delete();
+                
+                // (선택사항) 친구 목록 등 하위 컬렉션도 지우고 싶지만, 
+                // 리세마라 용도라면 본체만 지워도 충분합니다.
             }
+
+            // 3. 로컬 데이터 삭제 (게스트 모드 대비)
+            localStorage.removeItem(SAVE_DATA_KEY);
+
+            alert("데이터가 초기화되었습니다. 게임을 다시 시작합니다.");
+            location.reload(); // 새로고침
+
+        } catch (e) {
+            console.error("초기화 실패:", e);
+            alert("데이터 삭제 중 오류가 발생했습니다.");
+        }
+    } else {
+        // 버튼 UI 변경 로직 (기존 유지)
+        resetButton.textContent = '확인?';
+        resetButton.dataset.confirming = 'true';
+        resetButton.classList.remove('bg-red-600', 'hover:bg-red-700');
+        resetButton.classList.add('bg-yellow-500', 'hover:bg-yellow-600');
+        
+        setTimeout(() => {
+            resetButton.textContent = '초기화';
+            resetButton.dataset.confirming = 'false';
+            resetButton.classList.remove('bg-yellow-500', 'hover:bg-yellow-600');
+            resetButton.classList.add('bg-red-600', 'hover:bg-red-700');
+        }, 3000);
+    }
+}
 
             // --- 업적 관련 함수 ---
             function showToast() {
