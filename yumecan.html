@@ -376,11 +376,6 @@ body.pointer-events-none {
         당신의 서고에서 대표 등장인물을 설정해주세요!
     </div>
 </div>
-    
-    <div id="home-default-message" class="text-xl md:text-3xl text-gray-300 hidden font-bold drop-shadow-md absolute">
-        당신의 서고에서 대표 등장인물을 설정해주세요!
-    </div>
-</div>
 
     <div class="absolute z-20 pointer-events-none 
             bottom-[6.5rem] left-0 w-full flex flex-row items-end justify-center gap-1 px-1
@@ -7083,7 +7078,7 @@ function openOtherUserProfile(userData) {
         }
     }
 
-    /// ✨ [추가] 내 프로필이 아닐 때만 '친구 추가' 버튼 표시
+    // ✨ [추가] 내 프로필이 아닐 때만 '친구 추가' 버튼 표시
     const isMe = (currentUser && userData.uid === currentUser.uid);
     const friendBtnHTML = isMe ? '' : `
         <button onclick="sendFriendRequest('${userData.uid}', '${nickname}')" class="flex-1 gacha-button bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold text-lg shadow-lg transition-all border border-green-500">
