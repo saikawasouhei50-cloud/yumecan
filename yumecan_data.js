@@ -212,26 +212,40 @@ async function loadGameData() {
             });
         }
 
-        // 8. ✨ [수정됨] 이벤트 정보 자동 설정 (날짜 기준 자동 판별)
+        // 8. 이벤트 정보 설정 (디버깅 로그 추가 버전)
         if (data.eventInfo && data.eventInfo.length > 0) {
             const now = new Date(); // 현재 시간
+            console.log("🕒 [시스템 시간]:", now.toLocaleString());
             
             // 시트에 있는 이벤트 목록 중 '오늘 날짜'가 진행 기간에 포함되는 이벤트 찾기
             const activeEvent = data.eventInfo.find(info => {
+                // 시트의 날짜 문자열을 Date 객체로 변환
+                // (문자열 뒤에 'T'가 없으면 호환성을 위해 추가하는 안전장치도 고려 가능하지만, 
+                // 보통 구글 시트 날짜는 "YYYY-MM-DD HH:mm:ss" 형식이면 잘 됩니다.)
                 const start = new Date(info.startDate);
                 const end = new Date(info.endDate);
-                return now >= start && now <= end;
+                
+                const isOpen = now >= start && now <= end;
+
+                // 디버깅용 로그 (F12 콘솔에서 확인 가능)
+                console.log(`🔍 [이벤트 체크] ${info.title}`);
+                console.log(`   - 시작: ${start.toLocaleString()}`);
+                console.log(`   - 종료: ${end.toLocaleString()}`);
+                console.log(`   - 현재: ${now.toLocaleString()}`);
+                console.log(`   👉 결과: ${isOpen ? "✅ 진행중" : "❌ 기간 아님"}`);
+
+                return isOpen;
             });
 
             if (activeEvent) {
-                console.log(`현재 진행 중인 이벤트 발견: ${activeEvent.title}`);
+                console.log(`🎉 현재 활성화된 이벤트: ${activeEvent.title} (ID: ${activeEvent.id})`);
                 
                 // 전역 변수 업데이트
                 CURRENT_EVENT_ID = activeEvent.id; 
                 EVENT_CHARACTER_NAME = activeEvent.gachaCharacterName;
 
                 currentEventInfo = {
-                    id: activeEvent.id, // ID도 포함
+                    id: activeEvent.id,
                     title: activeEvent.title,
                     startDate: new Date(activeEvent.startDate),
                     endDate: new Date(activeEvent.endDate),
@@ -240,7 +254,7 @@ async function loadGameData() {
                     gachaCharacterName: activeEvent.gachaCharacterName
                 };
             } else {
-                console.log("현재 진행 중인 이벤트가 없습니다.");
+                console.log("⚠️ 현재 날짜에 진행 중인 이벤트가 없습니다. (CURRENT_EVENT_ID = null)");
                 CURRENT_EVENT_ID = null;
                 currentEventInfo = null;
             }
