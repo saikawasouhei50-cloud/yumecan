@@ -5786,11 +5786,11 @@ document.getElementById('combat-view').addEventListener('click', (e) => {
 
 // ✨ 홈 화면 및 이벤트 배너
 homeCharacterContainer.addEventListener('click', () => { if (representativeCharacter) displayHomeView(true); });
-eventBanner.addEventListener('click', () => {
-    showMessage(`[${EVENT_CHARACTER_NAME}] 확률 UP 이벤트 진행 중!`, 'text-blue-300', messageArea);
-    switchTab('gacha');
-});
 
+eventBanner.addEventListener('click', () => {
+    // 메시지는 띄우지 않고 바로 이벤트 탭으로 이동
+    switchTab('event'); 
+});
 // ✨ 모달 닫기 버튼들
 closeCombatResultButton.addEventListener('click', () => {
     combatResultModal.classList.add('hidden');
