@@ -6638,11 +6638,20 @@ if(marketTabBtn) marketTabBtn.click();
 		
 		// ================== 🤝 친구 시스템 (상호 수락 버전) ==================
 
-// 1. 친구 요청 보내기 (나는 'sent', 상대는 'received' 상태로 저장)
+// 1. 친구 요청 보내기 (중복 방지 안전장치 추가)
 async function sendFriendRequest(targetUid, targetNickname) {
     if (!currentUser) return alert("로그인이 필요합니다.");
     
     try {
+        // ✨ [핵심] 이미 친구인지 먼저 확인!
+        const myCheck = await db.collection('users').doc(currentUser.uid).collection('friends').doc(targetUid).get();
+        if (myCheck.exists) {
+            const status = myCheck.data().status || 'accepted';
+            if (status === 'accepted') return alert("이미 친구 사이입니다.");
+            if (status === 'sent') return alert("이미 요청을 보낸 상태입니다.");
+            if (status === 'received') return alert("상대방이 이미 요청을 보냈습니다. 받은 요청을 확인해주세요.");
+        }
+
         const batch = db.batch();
 
         // 1. 내 친구 목록에 추가 (상태: sent)
@@ -6656,7 +6665,7 @@ async function sendFriendRequest(targetUid, targetNickname) {
         // 2. 상대방 친구 목록에 추가 (상태: received)
         const theirRef = db.collection('users').doc(targetUid).collection('friends').doc(currentUser.uid);
         batch.set(theirRef, {
-            nickname: currentPlayerNickname, // 내 닉네임을 상대방에게 저장
+            nickname: currentPlayerNickname, 
             status: 'received',
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
@@ -6665,7 +6674,7 @@ async function sendFriendRequest(targetUid, targetNickname) {
         
         alert(`[${targetNickname}]님에게 친구 요청을 보냈습니다!`);
         
-        // UI 갱신
+        // UI 갱신 (프로필 창이 열려있다면 닫고, 친구 목록이 열려있다면 갱신)
         if (document.getElementById('other-user-profile-modal')) {
             document.getElementById('other-user-profile-modal').remove();
         }
@@ -6810,19 +6819,18 @@ async function loadFriendList() {
     }
 }
 
-// [수정] 타 유저 프로필 모달 열기 (친구 관계 확인 기능 추가)
+// [수정] 타 유저 프로필 모달 열기 (친구 관계 확인 강화)
 async function openOtherUserProfile(userData) {
+    // 기존 모달 닫기
     const oldModal = document.getElementById('other-user-profile-modal');
     if (oldModal) oldModal.remove();
 
-    // 1. 기본 정보 설정
     const targetUid = userData.uid;
     const nickname = userData.nickname || "익명의 탐정";
-    const statusMsg = (userData.profile && userData.profile.statusMessage) ? userData.profile.statusMessage : "등록된 한마디가 없습니다.";
     
-    let cardName = "카드 정보 없음";
+    // 대표 카드 이미지 준비
     let imgUrl = "https://placehold.co/400x600/000000/ffffff?text=No+Card";
-    
+    let cardName = "카드 정보 없음";
     if (userData.representative) {
         const charData = findCharacter(userData.representative);
         if (charData) {
@@ -6830,27 +6838,29 @@ async function openOtherUserProfile(userData) {
             cardName = `[${charData.rarity}] ${charData.name}`;
         }
     }
+    const statusMsg = (userData.profile && userData.profile.statusMessage) ? userData.profile.statusMessage : "등록된 한마디가 없습니다.";
 
-    // 2. ✨ [핵심 추가] 친구 관계 확인 (DB 조회)
+    // ✨ [핵심] DB에서 관계 조회 (비동기 대기)
     let relationStatus = 'none'; 
     if (currentUser && targetUid && targetUid !== currentUser.uid) {
         try {
             const doc = await db.collection('users').doc(currentUser.uid).collection('friends').doc(targetUid).get();
             if (doc.exists) {
+                // status 필드가 없으면 'accepted'(친구)로 간주
                 relationStatus = doc.data().status || 'accepted';
             }
         } catch(e) { console.error("관계 확인 실패:", e); }
     }
 
-    // 3. ✨ [핵심 추가] 관계에 따른 버튼 생성 로직
+    // ✨ 버튼 HTML 생성 로직
     let actionBtnHTML = '';
 
     if (currentUser && targetUid === currentUser.uid) {
-        // (A) 본인인 경우
+        // (A) 본인
         actionBtnHTML = `<button class="flex-1 gacha-button bg-gray-600 text-gray-400 py-3 rounded-lg font-bold text-lg cursor-default">본인입니다</button>`;
     } 
     else if (relationStatus === 'accepted') {
-        // (B) 이미 친구인 경우 -> 방문/삭제 버튼
+        // (B) 친구 -> 방문/삭제
         actionBtnHTML = `
             <button onclick="visitFriendRoom('${targetUid}', '${nickname}'); document.getElementById('other-user-profile-modal').remove();" class="flex-1 gacha-button bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-bold text-lg shadow-lg border border-indigo-500">
                 🏠 사무소 방문
@@ -6861,31 +6871,31 @@ async function openOtherUserProfile(userData) {
         `;
     } 
     else if (relationStatus === 'sent') {
-        // (C) 내가 요청을 보낸 경우 -> 취소 버튼
+        // (C) 요청 보냄 -> 취소
         actionBtnHTML = `
-            <button onclick="cancelFriendRequest('${targetUid}', '${nickname}'); document.getElementById('other-user-profile-modal').remove();" class="flex-1 gacha-button bg-gray-500 hover:bg-gray-600 text-white py-3 rounded-lg font-bold text-lg shadow-lg border border-gray-400">
+            <button onclick="cancelFriendRequest('${targetUid}', '${nickname}'); document.getElementById('other-user-profile-modal').remove();" class="flex-1 gacha-button bg-gray-500 hover:bg-gray-600 text-white py-3 rounded-lg font-bold text-lg shadow-lg">
                 ✉️ 요청 보냄 (취소)
             </button>
         `;
     } 
     else if (relationStatus === 'received') {
-        // (D) 상대가 나에게 요청한 경우 -> 수락 버튼
+        // (D) 요청 받음 -> 수락
         actionBtnHTML = `
-            <button onclick="acceptFriendRequest('${targetUid}', '${nickname}'); document.getElementById('other-user-profile-modal').remove();" class="flex-1 gacha-button bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold text-lg shadow-lg animate-pulse border border-green-500">
+            <button onclick="acceptFriendRequest('${targetUid}', '${nickname}'); document.getElementById('other-user-profile-modal').remove();" class="flex-1 gacha-button bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold text-lg shadow-lg animate-pulse">
                 ✅ 요청 수락하기
             </button>
         `;
     } 
     else {
-        // (E) 남남인 경우 -> 친구 추가 버튼
+        // (E) 남남 -> 친구 추가
         actionBtnHTML = `
-            <button onclick="sendFriendRequest('${targetUid}', '${nickname}'); document.getElementById('other-user-profile-modal').remove();" class="flex-1 gacha-button bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold text-lg shadow-lg border border-blue-500">
+            <button onclick="sendFriendRequest('${targetUid}', '${nickname}'); document.getElementById('other-user-profile-modal').remove();" class="flex-1 gacha-button bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold text-lg shadow-lg">
                 🤝 친구 추가
             </button>
         `;
     }
 
-    // 4. 모달 HTML 생성 (기존 디자인 유지)
+    // 모달 HTML 생성
     const modal = document.createElement('div');
     modal.id = 'other-user-profile-modal';
     modal.className = 'fixed inset-0 bg-black/80 flex items-center justify-center z-[100]';
@@ -6923,7 +6933,8 @@ async function openOtherUserProfile(userData) {
             </div>
 
             <div class="mt-8 flex gap-3">
-                ${actionBtnHTML} <button onclick="document.getElementById('other-user-profile-modal').remove()" class="flex-1 gacha-button bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-lg font-bold text-lg shadow-lg transition-all border border-gray-600">
+                ${actionBtnHTML}
+                <button onclick="document.getElementById('other-user-profile-modal').remove()" class="flex-1 gacha-button bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-lg font-bold text-lg shadow-lg transition-all border border-gray-600">
                     닫기
                 </button>
             </div>
