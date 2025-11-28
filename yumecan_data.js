@@ -238,14 +238,17 @@ async function loadGameData() {
             });
 
             if (activeEvent) {
-                console.log(`🎉 현재 활성화된 이벤트: ${activeEvent.title} (ID: ${activeEvent.id})`);
+                // ✨ [핵심 수정] 시트에 ID가 없으면 'title'을 대신 ID로 사용합니다.
+                const safeId = activeEvent.id || `event_${activeEvent.title}`; 
+
+                console.log(`🎉 현재 활성화된 이벤트: ${activeEvent.title} (ID: ${safeId})`);
                 
                 // 전역 변수 업데이트
-                CURRENT_EVENT_ID = activeEvent.id; 
+                CURRENT_EVENT_ID = safeId; 
                 EVENT_CHARACTER_NAME = activeEvent.gachaCharacterName;
 
                 currentEventInfo = {
-                    id: activeEvent.id,
+                    id: safeId, // 수정된 ID 사용
                     title: activeEvent.title,
                     startDate: new Date(activeEvent.startDate),
                     endDate: new Date(activeEvent.endDate),
@@ -254,6 +257,7 @@ async function loadGameData() {
                     gachaCharacterName: activeEvent.gachaCharacterName
                 };
             } else {
+                // ... (기존 코드 유지)
                 console.log("⚠️ 현재 날짜에 진행 중인 이벤트가 없습니다. (CURRENT_EVENT_ID = null)");
                 CURRENT_EVENT_ID = null;
                 currentEventInfo = null;
