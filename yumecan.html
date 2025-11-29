@@ -2121,17 +2121,20 @@ async function resetGame() {
             }
 
             // yumecan.html - switchTab 함수 (2137행 근처)
-			let currentTab = 'home';
+
+let currentTab = 'home';
 
 function switchTab(newTab) {
     if (currentTab === newTab) return;
 
-    // 모든 뷰 DOM 요소 리스트
+    // 모든 뷰 DOM 요소 리스트 (모든 뷰를 명시적으로 나열)
     const allViews = [
         document.getElementById('home-view'),
+        document.getElementById('gacha-view'), // 추가
         document.getElementById('inventory-view'),
         document.getElementById('deck-view'),
         document.getElementById('combat-view'),
+        document.getElementById('combat-in-progress-view'), // 추가
         document.getElementById('collection-view'),
         document.getElementById('event-view'),
         document.getElementById('event-home-view'),
@@ -2139,45 +2142,77 @@ function switchTab(newTab) {
         document.getElementById('myroom-view'),
         document.getElementById('trade-view'),
         document.getElementById('profile-view'),
+        document.getElementById('friends-view'), // 추가
+        document.getElementById('story-view'), // 추가
     ];
 
-    // 모든 탭 숨기기
+    // 홈뷰의 오버레이 요소 셀렉터 (홈 뷰가 아닌 곳으로 이동할 때 항상 숨겨야 함)
+    const homeOverlaySelectors = [
+        '#home-view > .absolute.z-20.pointer-events-none', // 버튼 메뉴 영역
+        '#home-view > .absolute.bottom-4.left-0.w-full.px-4', // 이벤트 배너, 유틸리티 메뉴 영역
+    ];
+    
+    // 1. 모든 메인 뷰 숨기기
     allViews.forEach(view => {
         if (view) view.classList.add('hidden');
     });
 
-    // 홈뷰 오버레이 요소들도 항상 숨기기
-    const homeOverlaySelectors = [
-        '.absolute.z-20.pointer-events-none',
-        '.absolute.bottom-4.left-0.w-full.px-4'
-    ];
+    // 2. 홈 뷰의 오버레이 요소 숨기기 (새 탭이 'home'이 아닐 경우)
+    if (newTab !== 'home') {
+        homeOverlaySelectors.forEach(sel => {
+            const el = document.querySelector(sel);
+            if (el) el.classList.add('hidden');
+        });
+    }
 
-    homeOverlaySelectors.forEach(sel => {
-        const el = document.querySelector(sel);
-        if (el) el.classList.add('hidden');
-    });
-
-    // 새 탭 열기
+    // 3. 새 탭 열기
     const newViewId = newTab + "-view";
     const newView = document.getElementById(newViewId);
     if (newView) newView.classList.remove('hidden');
 
-    // 홈뷰에 돌아가는 경우 → 오버레이 다시 표시
+    // 4. 홈뷰에 돌아가는 경우 → 오버레이 다시 표시
     if (newTab === 'home') {
         homeOverlaySelectors.forEach(sel => {
             const el = document.querySelector(sel);
             if (el) el.classList.remove('hidden');
         });
     }
+    
+    // 5. 전역 '로비로 복귀' 버튼 상태 업데이트
+    const globalHomeBtn = document.getElementById('global-home-button');
+    if (globalHomeBtn) {
+        if (newTab === 'home') {
+            globalHomeBtn.classList.add('hidden');
+        } else {
+            globalHomeBtn.classList.remove('hidden');
+        }
+    }
 
     currentTab = newTab;
 
-    // 탭 이동 후 추가 UI 업데이트 (필요 시)
+    // 6. 탭 이동 후 추가 UI 업데이트 (필요 시)
     if (newTab === 'inventory') {
-        loadInventoryPageData();
-    }
-    if (newTab === 'event') {
-        loadEventHome();
+        // [수정] 인벤토리 로직이 displayInventory로 통합되었으므로 이 함수는 제거합니다.
+        displayInventory();
+    } else if (newTab === 'deck') {
+        displayDeckManagement();
+    } else if (newTab === 'combat') {
+        displayCombatView();
+    } else if (newTab === 'collection') {
+        displayCollectionView();
+    } else if (newTab === 'event') {
+        displayEventHomeView();
+    } else if (newTab === 'achievements') {
+        displayAchievements();
+    } else if (newTab === 'profile') {
+        displayProfileView();
+    } else if (newTab === 'friends') {
+        loadFriendList();
+    } else if (newTab === 'story') {
+        displayStoryView();
+    } else if (newTab === 'myroom') {
+        displayMyRoom();
+        if (typeof isEditMode !== 'undefined' && isEditMode) toggleEditMode();
     }
 }
 
