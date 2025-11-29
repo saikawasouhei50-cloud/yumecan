@@ -1705,9 +1705,9 @@ async function saveGameToFirebase() {
 		cumulativeEventPoints: playerCumulativeEventPoints || 0,
 		raidCumulativeDamage: playerRaidDamage || 0,
 		raidDailyCount: playerRaidDailyCount || 0,
-        raidLastResetDate: (playerRaidLastResetDate instanceof Date && !isNaN(playerRaidLastResetDate)) 
-                           ? playerRaidLastResetDate 
-                           : null,
+        raidLastResetDate: (playerRaidLastResetDate instanceof Date && !isNaN(if (playerRaidLastResetDate instanceof Date && !isNaN(playerRaidLastResetDate)) {
+    rawSaveData.raidLastResetDate = playerRaidLastResetDate;
+}
         
         clearedEventDungeons: clearedEventDungeons || [],
         purchasedEventItems: purchasedEventItems || {},
@@ -8557,22 +8557,16 @@ async function submitRaidDamage(damage) {
             // 💡 보상과 피해량은 로컬에서 계산/처리할 것이므로, 트랜잭션이 아닌 필드는 건드리지 않습니다.
             
             // 3. DB 업데이트 예약 (보스 HP 감소)
-    const newHp = Math.max(0, currentHp - damage);
+            t.update(bossRef, { currentHp: newHp });
+            
+            // 4. DB 업데이트 예약 (유저 카운트 증가 및 날짜 기록)
+            t.update(userRef, {
+                raidDailyCount: countAfterIncrement, 
+                raidLastResetDate: firebase.firestore.FieldValue.serverTimestamp()
+            });
 
-    // ⭐⭐ [핵심 수정] update 대신 set으로 변경하고, 
-    //      불필요한 필드를 set에서 제외하여 다른 필드 변경 시 충돌을 최소화합니다.
-    t.update(bossRef, { currentHp: newHp }); // HP만 업데이트
-    
-    // 4. DB 업데이트 예약 (유저 카운트 증가 및 날짜 기록)
-    t.update(userRef, {
-        raidDailyCount: countAfterIncrement, 
-        raidLastResetDate: firebase.firestore.FieldValue.serverTimestamp(),
-        // 누적 피해량도 트랜잭션 내에서 업데이트합니다.
-        raidCumulativeDamage: firebase.firestore.FieldValue.increment(damage) 
-    });
-
-    return countAfterIncrement;
-});
+            return countAfterIncrement; // 트랜잭션 성공 시 최종 카운트 반환
+        });
         
         // --- 트랜잭션 성공 후 (Commit) 로컬 업데이트 및 보상 지급 ---
 
@@ -8751,5 +8745,4 @@ async function checkAndSpawnRaidBoss() {
     </script>
 </body>
 </html>
-
 
