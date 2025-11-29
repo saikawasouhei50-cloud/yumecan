@@ -519,22 +519,19 @@ body.pointer-events-none {
                 </button>
             </div>
 
-            <<div class="bg-black/20 p-4 rounded-lg shadow-lg flex-col">
-    <p id="event-home-description" class="text-gray-200 mb-4 text-center"></p>
-    
-    <button id="goto-event-shop" class="gacha-button bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg text-lg w-full mb-3">
-        이벤트 상점
-    </button>
-    
-    <div class="flex gap-2">
-        <button id="goto-event-battle" class="flex-1 gacha-button bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-black font-bold py-5 px-6 rounded-lg shadow-lg text-xl">
-            이벤트 전투
-        </button>
-        <button id="goto-event-raid" class="flex-1 gacha-button bg-gradient-to-r from-red-600 to-rose-800 hover:from-red-700 hover:to-rose-900 text-white font-bold py-5 px-6 rounded-lg shadow-lg text-xl animate-pulse">
-            👹 레이드
-        </button>
-    </div>
-</div>
+            <div class="bg-black/20 p-4 rounded-lg shadow-lg flex-col">
+                <p id="event-home-description" class="text-gray-200 mb-4 text-center"></p>
+                
+                <button id="goto-event-shop" class="gacha-button bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg text-lg w-full mb-3">
+                    이벤트 상점
+                </button>
+                
+                <button id="goto-event-battle" class="gacha-button bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-black font-bold py-5 px-6 rounded-lg shadow-lg text-xl w-full animate-pulse">
+                    이벤트 전투
+                </button>
+            </div>
+
+        </div>
 
         <div class="md:w-1/2 flex flex-col gap-4">
 
@@ -571,14 +568,11 @@ body.pointer-events-none {
 
 <div id="event-view" class="hidden">
 				
-                 <div class="bg-black/20 rounded-full p-1 flex justify-center items-center mb-4 max-w-2xl mx-auto">
-    <button id="event-sub-tab-battle" class="sub-tab-button active w-1/4 font-bold py-2 px-2 md:px-4 rounded-full text-sm md:text-base">전투</button>
-    
-    <button id="event-sub-tab-raid" class="sub-tab-button w-1/4 font-bold py-2 px-2 md:px-4 rounded-full text-sm md:text-base text-red-400">레이드</button>
-    
-    <button id="event-sub-tab-story" class="sub-tab-button w-1/4 font-bold py-2 px-2 md:px-4 rounded-full text-sm md:text-base">스토리</button>
-    <button id="event-sub-tab-shop" class="sub-tab-button w-1/4 font-bold py-2 px-2 md:px-4 rounded-full text-sm md:text-base">상점</button>
-</div>
+                 <div class="bg-black/20 rounded-full p-1 flex justify-center items-center mb-4 max-w-md mx-auto">
+                    <button id="event-sub-tab-battle" class="sub-tab-button active w-1/3 font-bold py-2 px-4 rounded-full">전투</button>
+                    <button id="event-sub-tab-story" class="sub-tab-button w-1/3 font-bold py-2 px-4 rounded-full">스토리</button>
+                    <button id="event-sub-tab-shop" class="sub-tab-button w-1/3 font-bold py-2 px-4 rounded-full">상점</button>
+                </div>
 
 				<div class="flex justify-center mb-4">
                     <div id="event-point-display" class="hidden text-xl font-bold text-pink-300 bg-black/20 py-2 px-4 rounded-full">EVENT P: <span id="event-points">0</span></div>
@@ -588,47 +582,6 @@ body.pointer-events-none {
                     <p class="text-center text-gray-200 mb-4">이벤트 스테이지에 도전하여 이벤트 포인트를 획득하세요!</p>
                     <div id="event-dungeon-list-container" class="grid grid-cols-2 md:grid-cols-5 gap-4"></div>
                 </div>
-				
-				<div id="event-raid-view" class="hidden">
-    <div class="text-center mb-4">
-        <h2 class="text-2xl font-bold text-red-500 mb-2">⚠ 긴급 토벌 작전 ⚠</h2>
-        <p class="text-gray-300 text-sm">모든 탐정과 협력하여 거대한 위협을 제거하세요.</p>
-    </div>
-
-    <div id="raid-boss-container" class="bg-black/40 p-4 rounded-xl border-2 border-red-600 relative overflow-hidden max-w-2xl mx-auto">
-        <div class="absolute inset-0 bg-red-900/20 animate-pulse pointer-events-none"></div>
-        
-        <div class="relative z-10 flex flex-col items-center">
-            <h3 id="raid-boss-name" class="text-2xl font-bold text-white mb-1">UNKNOWN</h3>
-            <div class="text-sm text-yellow-300 mb-2">Level <span id="raid-boss-level">??</span></div>
-            
-            <img id="raid-boss-image" src="" class="w-48 h-48 object-contain drop-shadow-[0_0_15px_rgba(255,0,0,0.5)] mb-2">
-            
-            <div class="w-full max-w-md bg-gray-800 h-5 rounded-full border border-gray-600 relative overflow-hidden mb-1">
-                <div id="raid-boss-hp-bar" class="h-full bg-gradient-to-r from-red-600 to-red-400 transition-all duration-500" style="width: 100%"></div>
-                <p id="raid-boss-hp-text" class="absolute inset-0 flex items-center justify-center text-xs font-bold text-white drop-shadow-md">Loading...</p>
-            </div>
-            <p class="text-[10px] text-gray-400 mb-4">전체 탐정들이 입힌 총 피해량 공유 중</p>
-
-            <button id="btn-start-raid" onclick="startRaidBattle()" class="gacha-button bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-8 rounded-full text-lg shadow-[0_0_20px_rgba(220,38,38,0.6)] disabled:opacity-50 disabled:cursor-not-allowed">
-                ⚔️ 전투 개시
-            </button>
-        </div>
-    </div>
-
-    <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
-        <div class="bg-black/20 p-3 rounded-lg text-center">
-            <h4 class="text-yellow-300 font-bold text-sm mb-1">나의 기여도</h4>
-            <p class="text-xs">누적 피해량: <span id="my-raid-damage" class="text-white font-bold">0</span></p>
-        </div>
-        
-        <div class="bg-black/20 p-3 rounded-lg flex items-center justify-between">
-            <span class="text-gray-500 text-xs">관리자 메뉴</span>
-            <button onclick="adminSpawnRaidBoss()" class="bg-gray-700 text-[10px] px-2 py-1 rounded text-white hover:bg-gray-600">보스 소환</button>
-        </div>
-    </div>
-</div>
-				
                 <div id="event-story-view" class="hidden">
                     <p class="text-center text-gray-200 mb-4">이벤트 스테이지를 클리어하고 스토리를 해금하세요.</p>
 
@@ -1317,137 +1270,6 @@ body.pointer-events-none {
     const db = firebase.firestore();
     const auth = firebase.auth(); // 인증 서비스 변수 추가
 
-
-// --- 레이드 시스템 전역 변수 ---
-let raidBossData = null;
-let raidUnsubscribe = null; // 리스너 해제용
-
-// 1. 레이드 데이터 실시간 리스너 (탭을 열 때 실행)
-function initRaidListener() {
-    if (raidUnsubscribe) return; // 이미 실행 중이면 패스
-
-    // 'system' 컬렉션의 'raid_boss' 문서를 구독합니다.
-    raidUnsubscribe = db.collection('system').doc('raid_boss')
-        .onSnapshot((doc) => {
-            if (doc.exists) {
-                raidBossData = doc.data();
-                updateRaidUI();
-            } else {
-                // 보스가 없음
-                raidBossData = null;
-                updateRaidUI(false);
-            }
-        });
-}
-
-// 2. UI 업데이트 함수
-function updateRaidUI(exists = true) {
-    const nameEl = document.getElementById('raid-boss-name');
-    const hpBar = document.getElementById('raid-boss-hp-bar');
-    const hpText = document.getElementById('raid-boss-hp-text');
-    const imgEl = document.getElementById('raid-boss-image');
-    const lvlEl = document.getElementById('raid-boss-level');
-    const startBtn = document.getElementById('btn-start-raid');
-
-    if (!exists || !raidBossData || raidBossData.currentHp <= 0) {
-        nameEl.textContent = raidBossData ? `${raidBossData.name} (토벌 완료)` : "출현 중인 보스가 없습니다";
-        hpBar.style.width = '0%';
-        hpText.textContent = "0 / 0";
-        imgEl.style.opacity = '0.5';
-        imgEl.style.filter = 'grayscale(100%)'; // 죽으면 흑백 처리
-        startBtn.disabled = true;
-        startBtn.textContent = "토벌 완료";
-        return;
-    }
-
-    // 보스 정보 표시
-    nameEl.textContent = raidBossData.name;
-    lvlEl.textContent = raidBossData.level;
-    imgEl.src = raidBossData.imageUrl;
-    imgEl.style.opacity = '1';
-    imgEl.style.filter = 'none';
-
-    // HP 바 계산
-    const percent = Math.max(0, (raidBossData.currentHp / raidBossData.maxHp) * 100);
-    hpBar.style.width = `${percent}%`;
-    hpText.textContent = `${raidBossData.currentHp.toLocaleString()} / ${raidBossData.maxHp.toLocaleString()}`;
-
-    startBtn.disabled = false;
-    startBtn.textContent = "⚔️ 전투 개시";
-}
-
-// 3. 탭 전환 시 리스너 연결 (switchTab 함수 수정 필요)
-// 기존 switchTab 함수 내부에 아래 코드를 추가해주세요.
-/*
-    if (tabName === 'raid') {
-        initRaidListener(); 
-    }
-*/
-
-// 1. 레이드 전투 시작
-function startRaidBattle() {
-    if (!raidBossData || raidBossData.currentHp <= 0) return alert("전투 가능한 보스가 없습니다.");
-    if (playerDeck.length < 5) return alert("덱을 5장 채워주세요.");
-
-    // 보스 데이터를 몬스터 포맷으로 변환
-    const monsterFormat = {
-        name: raidBossData.name,
-        stats: { 
-            hp: raidBossData.currentHp, // 현재 체력으로 시작
-            atk: raidBossData.atk, 
-            def: raidBossData.def 
-        },
-        imageUrl: raidBossData.imageUrl,
-        isAoE: true // ✨ 레이드 보스는 광역 공격 필수! (아까 만든 기능)
-    };
-    
-    // 기존 startCombat 함수 호출 (타입을 'raid'로 지정)
-    // 주의: 기존 startCombat 함수가 인자(indices, type)를 받도록 되어 있으니 맞춰줍니다.
-    // indices는 레이드에선 필요 없으므로 null 전달
-    startCombat(null, 'raid'); 
-    
-    // (중요) startCombat 함수 내부에서 monsterData를 세팅할 때 
-    // type === 'raid' 이면 위에서 만든 monsterFormat을 쓰도록 수정해야 합니다. (아래 4단계 참고)
-}
-
-// 2. 레이드 데미지 서버 전송 (전투 종료 시 호출)
-async function submitRaidDamage(damageDealt) {
-    if (!currentUser) return;
-    if (damageDealt <= 0) return;
-
-    const bossRef = db.collection('system').doc('raid_boss');
-    
-    try {
-        await db.runTransaction(async (transaction) => {
-            const doc = await transaction.get(bossRef);
-            if (!doc.exists) throw "보스가 사라졌습니다.";
-            
-            const currentHp = doc.data().currentHp;
-            if (currentHp <= 0) throw "이미 처치된 보스입니다.";
-
-            // 1. 보스 체력 깎기 (원자적 연산 아님, 트랜잭션 내에서 계산)
-            // Firestore의 increment를 써도 되지만, HP가 음수가 되는걸 막기 위해 트랜잭션 사용 추천
-            const newHp = Math.max(0, currentHp - damageDealt);
-            
-            transaction.update(bossRef, { currentHp: newHp });
-
-            // 2. (선택사항) 내 기여도 기록 저장 (users/{uid}/raid_stats 등)
-            // 여기서는 간단하게 보상만 팝업으로 띄웁니다.
-        });
-
-        // 보상 지급 (데미지의 10%만큼 보석 지급 등 간단하게)
-        const reward = Math.floor(damageDealt / 100); // 예: 1000데미지 -> 10보석
-        playerCurrency += reward;
-        saveGame();
-        
-        // 레이드 결과창은 기존 endCombat에서 처리되거나, 여기서 별도 모달을 띄울 수 있습니다.
-        alert(`레이드 보스에게 ${damageDealt}의 피해를 입혔습니다!\n보상: 💎 ${reward}`);
-
-    } catch (e) {
-        console.error("데미지 전송 실패:", e);
-        alert("데미지 전송 실패: " + e);
-    }
-}
     
 let currentCollectionGroup = '히어로 대 빌런: 각축전';
 	// ▼▼▼ [수정] 도감 그룹 관리 변수 ▼▼▼
@@ -4246,16 +4068,6 @@ function startStageCombat(chapterIndex, stageIndex) {
 
                 let combatData;
                 let monsterData;
-				if (type === 'raid') {
-        // startRaidBattle에서 전역변수나 인자로 데이터를 넘겨주기 힘들다면,
-        // 여기서 바로 전역 raidBossData를 사용해도 됩니다.
-        monsterData = JSON.parse(JSON.stringify({
-            name: raidBossData.name,
-            stats: { hp: raidBossData.currentHp, atk: raidBossData.atk, def: raidBossData.def },
-            imageUrl: raidBossData.imageUrl,
-            isAoE: true // 레이드 보스 특성
-        }));
-    }
 
                 if (type === 'main_stage') {
                     combatData = mainChapters[indices.chapter].stages[indices.stage];
@@ -4317,129 +4129,136 @@ function startStageCombat(chapterIndex, stageIndex) {
 
             const delay = ms => new Promise(res => setTimeout(res, ms / combatSpeedMultiplier));
 
-            // ✅ 기존 runCombatLoop 함수를 이 코드로 교체하세요.
-async function runCombatLoop(combatDeck, originalBonusDeck, monsterData, dungeon, type) { 
-    const originalMonsterDef = monsterData.stats.def;
-    
-    // ▼▼▼ [신규] 총 피해량 기록 변수 ▼▼▼
-    let totalDamageDealt = 0; 
+            async function runCombatLoop(combatDeck, originalBonusDeck, monsterData, dungeon, type) { // originalBonusDeck 인자 추가
+				const originalMonsterDef = monsterData.stats.def;
 
-    while (monsterData.stats.hp > 0 && combatDeck.some(c => c.stats.hp > 0)) {
-        // --- 플레이어 턴 ---
-        for (let i = 0; i < combatDeck.length; i++) {
-            const card = combatDeck[i];
-            if (card.stats.hp > 0) {
-                await delay(800);
-                const monsterImage = document.getElementById('combat-monster-image');
-                
-                // (스킬 사용 로직은 기존과 동일)
-                const useUltimate = card.rarity === 'SSR' && Math.random() < 0.25;
-                const useSkill = Math.random() < 0.4;
-                let skillToUse = null;
+				while (monsterData.stats.hp > 0 && combatDeck.some(c => c.stats.hp > 0)) {
+					for (let i = 0; i < combatDeck.length; i++) {
+						const card = combatDeck[i];
+						if (card.stats.hp > 0) {
+                            await delay(800);
+                            const monsterImage = document.getElementById('combat-monster-image');
+                            
+                            const useUltimate = card.rarity === 'SSR' && Math.random() < 0.25;
+                            const useSkill = Math.random() < 0.4;
+                            let skillToUse = null;
 
-                if (useUltimate && card.skills.length > 1) skillToUse = card.skills[1];
-                else if (useSkill) skillToUse = card.skills[0];
+                            if (useUltimate && card.skills.length > 1) skillToUse = card.skills[1];
+                            else if (useSkill) skillToUse = card.skills[0];
 
-                let damage = 0;
-                if (skillToUse) {
-                    logCombat(`<strong>${card.name}</strong>의 스킬! <span class="text-yellow-300">"${skillToUse.name}"</span>`);
-                    await delay(400);
-                    logCombat(`<em>"${skillToUse.dialogue}"</em>`);
-                    
-                    // 스킬 데미지 계산 (기존 로직 유지)
-                    if (skillToUse.type === 'true_damage') {
-                        damage = Math.floor(card.stats.atk * skillToUse.power);
-                        logCombat(`방어력을 무시한 강력한 일격!`);
-                    } else if (skillToUse.type === 'heal') {
-                        damage = 0;
-                        const healAmount = Math.floor(card.stats.atk * skillToUse.power);
-                        const maxHp = originalBonusDeck[i].stats.hp;
-                        card.stats.hp = Math.min(maxHp, card.stats.hp + healAmount);
-                        logCombat(`<strong>${card.name}</strong>이(가) 체력을 ${healAmount} 회복했습니다!`);
-                    } else if (skillToUse.type === 'vampire') {
-                        damage = Math.max(1, Math.floor(card.stats.atk * skillToUse.power) - monsterData.stats.def);
-                        const healedAmount = Math.floor(damage * 0.5);
-                        const maxHp = originalBonusDeck[i].stats.hp;
-                        card.stats.hp = Math.min(maxHp, card.stats.hp + healedAmount);
-                        logCombat(`<strong>${card.name}</strong>이(가) ${healedAmount}의 체력을 흡수했습니다!`);
-                    } else if (skillToUse.type === 'debuff_def') {
-                        monsterData.stats.def = Math.max(0, Math.floor(monsterData.stats.def * 0.8));
-                        logCombat(`<strong>${monsterData.name}</strong>의 방어력이 감소했습니다!`);
-                    } else if (skillToUse.type === 'debuff_atk') {
-                        monsterData.stats.atk = Math.max(0, Math.floor(monsterData.stats.atk * 0.9));
-                        logCombat(`<strong>${monsterData.name}</strong>의 공격력이 감소했습니다!`);
-                    } else if (skillToUse.type === 'buff_atk') {
-                        card.stats.atk = Math.floor(card.stats.atk * 1.1);
-                        logCombat(`<strong>${card.name}</strong>의 공격력이 상승했습니다!`);
-                    } else { // damage 타입 등
-                        damage = Math.max(1, Math.floor(card.stats.atk * skillToUse.power) - monsterData.stats.def);
+                            let damage = 0;
+                            if (skillToUse) {
+                                logCombat(`<strong>${card.name}</strong>의 스킬! <span class="text-yellow-300">"${skillToUse.name}"</span>`);
+                                await delay(400);
+                                logCombat(`<em>"${skillToUse.dialogue}"</em>`);
+                                
+                                // 1. 기본 데미지 계산
+                                damage = Math.max(1, Math.floor(card.stats.atk * skillToUse.power) - monsterData.stats.def);
+                                
+                                // --- [신규] 스킬 타입별 효과 구현 ---
+
+                                // (1) 관통 공격 (True Damage): 방어력 무시
+                                if (skillToUse.type === 'true_damage') {
+                                    damage = Math.floor(card.stats.atk * skillToUse.power);
+                                    logCombat(`방어력을 무시한 강력한 일격!`);
+                                }
+
+                                // (2) 치유 (Heal): 공격 안 함, 회복만 함
+                                else if (skillToUse.type === 'heal') {
+                                    damage = 0; // 적에게 주는 데미지 0
+                                    const healAmount = Math.floor(card.stats.atk * skillToUse.power);
+                                    const maxHp = originalBonusDeck[i].stats.hp;
+                                    card.stats.hp = Math.min(maxHp, card.stats.hp + healAmount);
+                                    logCombat(`<strong>${card.name}</strong>이(가) 체력을 ${healAmount} 회복했습니다!`);
+                                }
+
+                                // (3) 흡혈 (Vampire): 데미지 주고 + 회복
+                                else if (skillToUse.type === 'vampire') {
+                                    const healedAmount = Math.floor(damage * 0.5);
+                                    const maxHp = originalBonusDeck[i].stats.hp;
+                                    card.stats.hp = Math.min(maxHp, card.stats.hp + healedAmount);
+                                    logCombat(`<strong>${card.name}</strong>이(가) ${healedAmount}의 체력을 흡수했습니다!`);
+                                }
+
+                                // (4) 방어력 감소 (Debuff Def): 적 방어력 20% 감소
+                                else if (skillToUse.type === 'debuff_def') {
+                                    monsterData.stats.def = Math.max(0, Math.floor(monsterData.stats.def * 0.8));
+                                    logCombat(`<strong>${monsterData.name}</strong>의 방어력이 감소했습니다!`);
+                                }
+
+                                // (5) 공격력 감소 (Debuff Atk): 적 공격력 10% 감소
+                                else if (skillToUse.type === 'debuff_atk') {
+                                    monsterData.stats.atk = Math.max(0, Math.floor(monsterData.stats.atk * 0.9));
+                                    logCombat(`<strong>${monsterData.name}</strong>의 공격력이 감소했습니다!`);
+                                }
+
+                                // (6) 자가 버프 (Buff Atk): 내 공격력 10% 증가
+                                else if (skillToUse.type === 'buff_atk') {
+                                    card.stats.atk = Math.floor(card.stats.atk * 1.1);
+                                    logCombat(`<strong>${card.name}</strong>의 공격력이 상승했습니다!`);
+                                }
+
+                            } else {
+                                // 일반 공격
+                                logCombat(`<strong>${card.name}</strong>의 일반 공격!`);
+                                damage = Math.max(1, card.stats.atk - monsterData.stats.def);
+                            }
+                            
+                            monsterData.stats.hp = Math.max(0, monsterData.stats.hp - damage);
+                            logCombat(`<strong>${monsterData.name}</strong>에게 ${damage}의 데미지!`);
+                            monsterImage.classList.add('shake-animation');
+                            updateCombatUI(combatDeck, originalBonusDeck, monsterData);
+                            setTimeout(() => monsterImage.classList.remove('shake-animation'), 300 / combatSpeedMultiplier);
+
+                            if (monsterData.stats.hp <= 0) break;
+                        }
                     }
+                    if (monsterData.stats.hp <= 0) break;
 
-                } else {
-                    // 일반 공격
-                    logCombat(`<strong>${card.name}</strong>의 일반 공격!`);
-                    damage = Math.max(1, card.stats.atk - monsterData.stats.def);
-                }
-                
-                // ▼▼▼ [중요] 데미지 누적 및 HP 감소 ▼▼▼
-                if (damage > 0) {
-                    monsterData.stats.hp = Math.max(0, monsterData.stats.hp - damage);
-                    totalDamageDealt += damage; // ✨ 여기서 누적!
-                    logCombat(`<strong>${monsterData.name}</strong>에게 ${damage}의 데미지!`);
-                    
-                    monsterImage.classList.add('shake-animation');
-                    updateCombatUI(combatDeck, originalBonusDeck, monsterData);
-                    setTimeout(() => monsterImage.classList.remove('shake-animation'), 300 / combatSpeedMultiplier);
-                }
+                    await delay(1000);
+const alivePlayers = combatDeck.filter(c => c.stats.hp > 0);
 
-                if (monsterData.stats.hp <= 0) break;
+if (alivePlayers.length > 0) {
+    // 1. 광역 공격(AoE)인지 확인
+    if (monsterData.isAoE) {
+        logCombat(`<strong>${monsterData.name}</strong>의 <span class="text-red-400 font-bold">광역 공격!</span>`);
+        
+        // 모든 생존자에게 데미지 적용
+        for (const targetCard of alivePlayers) {
+            // (선택사항) 광역 공격은 데미지를 0.7배로 줄이려면: Math.floor(monsterData.stats.atk * 0.7)
+            const damage = Math.max(1, monsterData.stats.atk - targetCard.stats.def);
+            const hpBeforeAttack = targetCard.stats.hp;
+            
+            targetCard.stats.hp = Math.max(0, targetCard.stats.hp - damage);
+            logCombat(`- <strong>${targetCard.name}</strong>에게 ${damage}의 데미지!`);
+
+            // 사망 대사 처리
+            if (targetCard.stats.hp <= 0 && hpBeforeAttack > 0) {
+                await delay(200); // 텀을 짧게 줌
+                logCombat(`<strong>${targetCard.name}</strong>: <em>"${targetCard.deathDialogue}"</em>`);
             }
         }
-        if (monsterData.stats.hp <= 0) break;
-
-        // --- 몬스터 턴 (광역 공격 로직 포함) ---
-        await delay(1000);
-        const alivePlayers = combatDeck.filter(c => c.stats.hp > 0);
         
-        if (alivePlayers.length > 0) {
-            // ✨ [레이드] 광역 공격 처리
-            if (monsterData.isAoE) {
-                logCombat(`<strong>${monsterData.name}</strong>의 <span class="text-red-400 font-bold">광역 공격!</span>`);
-                for (const targetCard of alivePlayers) {
-                    const damage = Math.max(1, monsterData.stats.atk - targetCard.stats.def);
-                    const hpBeforeAttack = targetCard.stats.hp;
-                    targetCard.stats.hp = Math.max(0, targetCard.stats.hp - damage);
-                    logCombat(`- <strong>${targetCard.name}</strong>에게 ${damage}의 데미지!`);
-                    
-                    if (targetCard.stats.hp <= 0 && hpBeforeAttack > 0) {
-                        await delay(200);
-                        logCombat(`<strong>${targetCard.name}</strong>: <em>"${targetCard.deathDialogue}"</em>`);
-                    }
-                }
-            } else {
-                // 기존 단일 공격
-                const targetCard = alivePlayers[Math.floor(Math.random() * alivePlayers.length)];
-                logCombat(`<strong>${monsterData.name}</strong>의 공격!`);
-                const damage = Math.max(1, monsterData.stats.atk - targetCard.stats.def);
-                const hpBeforeAttack = targetCard.stats.hp;
-                targetCard.stats.hp = Math.max(0, targetCard.stats.hp - damage);
-                logCombat(`<strong>${targetCard.name}</strong>에게 ${damage}의 데미지!`);
-                
-                if (targetCard.stats.hp <= 0 && hpBeforeAttack > 0) {
-                    await delay(400);
-                    logCombat(`<strong>${targetCard.name}</strong>: <em>"${targetCard.deathDialogue}"</em>`);
-                }
-            }
-            updateCombatUI(combatDeck, originalBonusDeck, monsterData);
+    } else {
+        // 2. 기존 단일 공격 (랜덤 1명)
+        const targetCard = alivePlayers[Math.floor(Math.random() * alivePlayers.length)];
+        logCombat(`<strong>${monsterData.name}</strong>의 공격!`);
+        
+        const damage = Math.max(1, monsterData.stats.atk - targetCard.stats.def);
+        const hpBeforeAttack = targetCard.stats.hp;
+        
+        targetCard.stats.hp = Math.max(0, targetCard.stats.hp - damage);
+        logCombat(`<strong>${targetCard.name}</strong>에게 ${damage}의 데미지!`);
+        
+        if (targetCard.stats.hp <= 0 && hpBeforeAttack > 0) {
+            await delay(400);
+            logCombat(`<strong>${targetCard.name}</strong>: <em>"${targetCard.deathDialogue}"</em>`);
         }
     }
-    
-    await delay(1000);
-    monsterData.stats.def = originalMonsterDef;
-    
-    // ▼▼▼ [수정됨] totalDamageDealt를 인자로 전달 ▼▼▼
-    endCombat(monsterData.stats.hp <= 0, {indices, type}, type, totalDamageDealt);
+
+    updateCombatUI(combatDeck, originalBonusDeck, monsterData);
 }
+// ▲▲▲ [수정된 몬스터 공격 로직 끝] ▲▲▲
 
 } // runCombatLoop의 while문 끝
                 
@@ -4646,50 +4465,21 @@ function displayEventStoryPart2() {
 }
 			
             // gacha3.html - endCombat 함수 (기존 코드 전체 교체)
-f// ✅ 기존 endCombat 함수를 이 코드로 교체하세요.
-function endCombat(isVictory, combatInfo, type, totalDamageDealt = 0) {
-    lastCombatType = type; // 재도전 등을 위해 저장
-
-    // ▼▼▼ [신규] 레이드 종료 로직 ▼▼▼
-    if (type === 'raid') {
-        isCombatRunning = false;
-        
-        // 전투 UI 숨기기
-        combatResultModal.classList.add('hidden'); 
-        combatInProgressView.classList.add('hidden');
-        
-        // ✨ 서버로 데미지 전송 (이전에 만든 함수 호출)
-        submitRaidDamage(totalDamageDealt);
-        
-        // ✨ [중요] 이벤트 뷰를 켜고 '레이드' 탭으로 복귀
-        document.getElementById('event-view').classList.remove('hidden');
-        
-        // 레이드 탭 버튼(DOM 요소)을 찾아 활성화
-        const raidTabBtn = document.getElementById('event-sub-tab-raid');
-        if (raidTabBtn) {
-            switchSubTab(document.getElementById('event-view'), raidTabBtn);
-        }
-        
-        return; // 레이드는 여기서 종료 (아래 승패 로직 실행 안 함)
-    }
-    // ▲▲▲ [신규 끝] ▲▲▲
-
-    // --- 기존 일반/이벤트 던전 승패 로직 ---
+function endCombat(isVictory, combatInfo) { // dungeon, type 대신 combatInfo 객체 받기
+    lastCombatType = combatInfo.type;
     if (isVictory) {
         let rewardMsg = '';
-        if (type === 'event') {
-            // combatInfo.indices는 던전 인덱스(숫자)
-            const dungeon = eventDungeons[combatInfo.indices]; 
+        if (combatInfo.type === 'event') {
+            const dungeon = eventDungeons[combatInfo.indices];
             const reward = dungeon.eventPointReward;
-            playerEventPoints += reward;
-            playerCumulativeEventPoints += reward;
+			playerEventPoints += reward;            // 지갑에 추가 (상점에서 씀)
+    playerCumulativeEventPoints += reward;  // ✨ 점수판에 추가 (랭킹용, 절대 안 깎임)
             
             if (!clearedEventDungeons.includes(dungeon.name)) {
                 clearedEventDungeons.push(dungeon.name);
             }
             rewardMsg = `이벤트 스테이지 클리어! ${reward} P를 획득했습니다.`;
-        } else if (type === 'main_stage') {
-            // combatInfo.indices는 객체 {chapter, stage}
+        } else if (combatInfo.type === 'main_stage') {
             const stage = mainChapters[combatInfo.indices.chapter].stages[combatInfo.indices.stage];
             const stageId = `${combatInfo.indices.chapter + 1}-${combatInfo.indices.stage + 1}`;
             
@@ -4702,6 +4492,7 @@ function endCombat(isVictory, combatInfo, type, totalDamageDealt = 0) {
                 playerFountainPens += stage.rewards.fountainPens;
                 rewardsEarned.push(`🖋️${stage.rewards.fountainPens}`);
             }
+            // ✨ 추가: 보석(currency) 보상 지급 로직 ✨
             if (stage.rewards.currency) {
                 playerCurrency += stage.rewards.currency;
                 rewardsEarned.push(`💎${stage.rewards.currency}`);
@@ -6084,19 +5875,6 @@ document.getElementById('goto-event-gacha').addEventListener('click', () => {
                 // '상점' 탭을 활성화하기 위해 eventSubTabShop 변수(DOM 요소)를 전달
                 switchSubTab(document.getElementById('event-view'), eventSubTabShop); 
             });
-			// 6. [신규] '이벤트 홈'의 '레이드' 버튼 클릭 시
-document.getElementById('goto-event-raid').addEventListener('click', () => {
-    // 1. 이벤트 홈 숨기고 상세 뷰 보이기
-    document.getElementById('event-home-view').classList.add('hidden');
-    document.getElementById('event-view').classList.remove('hidden');
-    
-    // 2. 레이드 탭 활성화 함수 호출
-    displayEventView(); 
-    switchSubTab(document.getElementById('event-view'), eventSubTabRaid);
-    
-    // 3. 리스너 시작
-    initRaidListener();
-});
 
 // ======================================================================
 
@@ -6375,21 +6153,13 @@ speed1xButton.addEventListener('click', () => setCombatSpeed(1));
 speed2xButton.addEventListener('click', () => setCombatSpeed(2));
 speed4xButton.addEventListener('click', () => setCombatSpeed(4));
 
-		const eventSubTabRaid = document.getElementById('event-sub-tab-raid');
+		
 
 // ✨ 이벤트 뷰의 서브 탭 (수정됨)
         eventSubTabBattle.addEventListener('click', () => {
             displayEventView(); 
             switchSubTab(document.getElementById('event-view'), eventSubTabBattle); 
         });
-		eventSubTabRaid.addEventListener('click', () => {
-    // 1. 화면 전환 (뷰 보이기)
-    displayEventView(); 
-    // 2. 탭 활성화 스타일 적용 및 컨텐츠 표시
-    switchSubTab(document.getElementById('event-view'), eventSubTabRaid);
-    // 3. 레이드 데이터 실시간 리스너 실행 (필요할 때만 켜기 위해)
-    initRaidListener();
-});
         eventSubTabStory.addEventListener('click', () => {
             displayEventView(); 
             switchSubTab(document.getElementById('event-view'), eventSubTabStory); 
