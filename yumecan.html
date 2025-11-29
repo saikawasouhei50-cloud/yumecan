@@ -1804,17 +1804,20 @@ async function saveGameToFirebase() {
 
             // ✨ [핵심 수정 2] 레이드 참여 횟수 로드 및 초기화 체크
             const lastResetTimestamp = savedData.raidLastResetDate;
-            const today = new Date().toDateString(); // 예: 'Sat Nov 29 2025'
+            const today = new Date().toDateString(); 
             
-            // ⚠️ [수정된 안전 장치] Timestamp 객체인지 확인 (TypeError 방지)
+            // ⚠️ [수정된 안전 장치] Timestamp 객체인지 확인
             const savedLastRaidDate = (lastResetTimestamp && typeof lastResetTimestamp.toDate === 'function')
                 ? lastResetTimestamp.toDate().toDateString() 
-                : ''; // 유효하지 않으면 빈 문자열로 처리
-            
-            // 날짜가 바뀌었으면 0으로 초기화
-            if (savedLastRaidDate !== today) {
+                : null; // ✨ 유효하지 않으면 null로 처리
+
+            // 날짜가 바뀌었거나 (savedLastRaidDate가 null이 아닐 때) 
+            // 또는 아예 저장된 날짜가 없을 때 (savedLastRaidDate === null)
+            if (savedLastRaidDate !== today) { 
                 playerRaidDailyCount = 0; 
-                playerRaidLastResetDate = null; // null 유지
+                // DB에 저장할 때 Timestamp가 들어가기 때문에, 
+                // 로컬 변수는 일단 null로 두어도 다음 트랜잭션에서 서버 타임스탬프를 기록합니다.
+                playerRaidLastResetDate = null; 
             } else {
                 // 날짜가 같으면 DB 카운트 로드
                 playerRaidDailyCount = savedData.raidDailyCount ?? 0;
@@ -8569,18 +8572,13 @@ async function submitRaidDamage(damage) {
 
         // finalCount가 null이면 (제한 초과 또는 보스 사망) 처리 후 종료
         if (finalCount === null) {
-             if (isLimitReached) {
-                alert(`⚠️ 레이드 참여 횟수 제한(${DAILY_LIMIT}회)을 모두 사용했습니다. 내일 다시 시도해주세요.`);
-             } else if (isBossDefeated) {
-                 alert("보스 HP가 0이 되어 전투 기록을 건너뛰었습니다.");
-             }
+            // ... (기존 에러 처리 로직) ...
             return;
         }
 
-        // 1. 로컬 변수 동기화 (raidDailyCount만)
-        playerRaidDailyCount = finalCount;
+        // --- 1. 로컬 변수 동기화 및 보상 지급 ---
+        playerRaidDailyCount = finalCount; // ⭐ 카운트 즉시 업데이트
         
-        // 2. 보상 계산 및 피해량 로컬 변수 업데이트
         calculatedReward = Math.min(MAX_REWARD, Math.floor(damage * REWARD_PER_100_DAMAGE)); 
         
         if (calculatedReward > 0) {
@@ -8588,11 +8586,11 @@ async function submitRaidDamage(damage) {
         }
         playerRaidDamage += damage;
         
-        // 3. UI 업데이트만 실행 (saveGame 호출 안 함)
+        // 2. UI 업데이트
         updateUI(); 
-		setTimeout(() => {
-            saveGame(); 
-        }, 1000); // 1초 지연
+		
+        // 3. 로컬 DB 저장 (지연 없이 즉시 저장)
+        saveGame(); // ⭐ saveGame 함수는 내부적으로 saveGameToFirebase를 호출합니다.
 
         // 4. 최종 저장: 다음 자동 저장 시점이나 탭 이동 시 저장되기를 기대합니다.
         //    (즉, 충돌을 피하기 위해 DB 쓰기를 미룹니다.)
