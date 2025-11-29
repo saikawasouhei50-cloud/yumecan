@@ -609,12 +609,17 @@ body.pointer-events-none {
                 <p id="raid-boss-hp-text" class="absolute inset-0 flex items-center justify-center text-xs md:text-sm font-bold text-white drop-shadow-md">Loading...</p>
             </div>
             
-            <p class="text-xs text-gray-400 mb-6">체력은 모든 유저에게 실시간 공유됩니다.</p>
+            <p class="text-xs text-gray-400 mb-2">체력은 모든 유저에게 실시간 공유됩니다.</p>
+            
+            <div id="raid-count-display" class="text-sm font-bold text-yellow-300 mb-6">
+                오늘의 레이드: 0 / 5회
+            </div>
 
-            <button id="btn-start-raid-combat" onclick="startRaidBattle()" class="gacha-button bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-10 rounded-full text-lg md:text-xl shadow-[0_0_15px_rgba(220,38,38,0.5)]">
+            <button id="raid-start-btn" onclick="startRaidBattle()" class="gacha-button bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-10 rounded-full text-lg md:text-xl shadow-[0_0_15px_rgba(220,38,38,0.5)]">
                 ⚔️ 전투 개시
             </button>
         </div>
+    </div>
     </div>
     
     <div class="mt-8 bg-black/40 p-4 rounded-xl border-2 border-gray-600 max-w-2xl mx-auto shadow-2xl">
@@ -1865,10 +1870,12 @@ async function saveGameToFirebase() {
 	await checkAndProcessSystemMails(uid);
     
     updateUI();
+	updateRaidDailyCountUI();
     checkEventStatus();
     switchTab('home');
     checkAchievements();
 	checkAndSpawnRaidBoss();
+
 	updateAchievementBadge(); // ✨ 추가: 로드 시 배지 갱
     document.getElementById('loading-overlay').classList.add('hidden');
     document.body.classList.remove('loading');
@@ -8490,6 +8497,12 @@ function updateRaidUI() {
 
 // 4. 전투 시작 트리거
 function startRaidBattle() {
+// 🔒 레이드 입장 제한
+    // ✅ [수정] 제한 체크를 여기서 먼저 실행합니다.
+    if (playerRaidDailyCount >= 5) { 
+        alert("⚠️ 오늘의 레이드 참여 횟수를 모두 사용했습니다.\n내일 다시 도전해주세요!");
+        return;
+    }
     if (!raidBossData || raidBossData.currentHp <= 0) return alert("전투 가능한 보스가 없습니다.");
     if (playerDeck.length < 5) return alert("덱에 5명의 탐정을 모두 편성해야 합니다.");
     
@@ -8577,6 +8590,8 @@ async function submitRaidDamage(damage) {
 
         // --- 1. 로컬 변수 동기화 및 보상 지급 ---
         playerRaidDailyCount = finalCount; // ⭐ 카운트 즉시 업데이트
+		// ✅ [추가] 레이드 횟수 UI 즉시 갱신
+        updateRaidDailyCountUI();
         
         calculatedReward = Math.min(MAX_REWARD, Math.floor(damage * REWARD_PER_100_DAMAGE)); 
         
@@ -8736,6 +8751,40 @@ async function checkAndSpawnRaidBoss() {
         }
     }
 }
+
+// ... (다른 함수들)
+
+// ✅ [추가] 레이드 횟수 UI를 업데이트하고 버튼을 활성화/비활성화하는 함수
+function updateRaidDailyCountUI() {
+    const maxCount = 5;
+    // playerRaidDailyCount는 loadGameFromFirebase에서 로드되거나 0으로 초기화됨
+    const currentCount = playerRaidDailyCount || 0; 
+    const remaining = Math.max(0, maxCount - currentCount);
+
+    const display = document.getElementById("raid-count-display");
+    // ✅ [수정] HTML에서 변경한 ID와 일치시켜야 합니다.
+    const btn = document.getElementById("raid-start-btn"); 
+
+    if (display) {
+        display.textContent = `오늘의 레이드: ${currentCount} / ${maxCount}회`;
+    }
+
+    if (btn) {
+        if (remaining <= 0) {
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed', 'bg-gray-600');
+            btn.classList.remove('bg-red-600', 'hover:bg-red-700');
+            btn.textContent = "횟수 제한";
+        } else {
+            btn.disabled = false;
+            btn.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-gray-600');
+            btn.classList.add('bg-red-600', 'hover:bg-red-700');
+            btn.textContent = "⚔️ 전투 개시";
+        }
+    }
+}
+
+// ... (다른 함수들)
 // ================== 👆 레이드 시스템 로직 끝 👆 ==================
 	
 
