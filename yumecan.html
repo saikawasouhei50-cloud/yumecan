@@ -749,13 +749,7 @@ body.pointer-events-none {
                 <div id="combat-log-container" class="mt-2 bg-black/30 p-4 rounded-lg h-40 overflow-y-auto">
                     <div id="combat-log"></div>
                 </div>
-                 <div id="combat-result-modal" class="hidden absolute inset-0 bg-black/70 flex justify-center items-center z-20">
-                    <div class="bg-gray-800 p-8 rounded-lg text-center">
-                        <h2 id="combat-result-title" class="text-4xl font-bold mb-4"></h2>
-                        <p id="combat-result-message" class="text-lg mb-6"></p>
-                        <button id="close-combat-result" class="gacha-button bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full">확인</button>
-                    </div>
-                </div>
+                 
             </div>
 
              <div id="collection-view" class="hidden">
@@ -1266,7 +1260,15 @@ body.pointer-events-none {
         <div class="flex gap-2 mt-4">
             <button onclick="saveMyRoomCharacters()" class="flex-1 gacha-button bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 rounded-lg shadow-lg">저장하기</button>
             <button onclick="document.getElementById('myroom-char-selector-modal').classList.add('hidden')" class="w-1/4 gacha-button bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 rounded-lg">취소</button>
-        </div> </div> </main> </div> <script src="yumecan_data.js"></script>
+        </div> </div> 
+		<div id="combat-result-modal" class="hidden absolute inset-0 bg-black/70 flex justify-center items-center z-20">
+                    <div class="bg-gray-800 p-8 rounded-lg text-center">
+                        <h2 id="combat-result-title" class="text-4xl font-bold mb-4"></h2>
+                        <p id="combat-result-message" class="text-lg mb-6"></p>
+                        <button id="close-combat-result" class="gacha-button bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full">확인</button>
+                    </div>
+                </div>
+		</main> </div> <script src="yumecan_data.js"></script>
 	
     <script>
 	
@@ -4708,7 +4710,7 @@ function displayEventStoryPart2() {
 }
 			
             // gacha3.html - endCombat 함수 (기존 코드 전체 교체)
-// ✅ [수정됨] 전투 종료 처리 함수 (이벤트 전투 후 목록으로 복귀)
+fu// ✅ [수정됨] 전투 종료 처리 함수 (이벤트 전투 후 목록으로 복귀)
 function endCombat(isVictory, combatInfo, totalDamageDealt = 0) { 
     lastCombatType = combatInfo.type;
     
@@ -8901,5 +8903,4 @@ function updateRaidDailyCountUI() {
     </script>
 </body>
 </html>
-
 
