@@ -8326,48 +8326,73 @@ async function submitRaidDamage(damage) {
 /// yumecan.html - <script> 태그 내부 (레이드 로직 부분)
 
 // ✨ [신규] 시트 데이터를 Firebase와 비교하여 보스가 없으면 스폰합니다.
+// yumecan.html - async function checkAndSpawnRaidBoss() 전체를 이 코드로 교체하세요.
 async function checkAndSpawnRaidBoss() {
-    // ⚠️ 전역 변수인 raidBossDataSheet가 yumecan_data.js에서 로드되었는지 확인합니다.
-    if (!raidBossDataSheet || !currentUser) {
-        // console.log("[Raid Spawn] 시트 데이터가 없거나 로그인 상태가 아닙니다.");
+    console.log("---------- [DEBUG: RAID SPAWN START] ----------");
+
+    if (!raidBossDataSheet) {
+        console.error("[DEBUG 1.1] 실패: raidBossDataSheet가 null입니다. yumecan_data.js와 시트 이름을 확인하세요.");
         return;
     }
+    if (!currentUser) {
+        console.warn("[DEBUG 1.2] 실패: currentUser가 null입니다. 로그인하지 않았습니다.");
+        return;
+    }
+    
+    console.log(`[DEBUG 2.0] 시트 레벨: ${raidBossDataSheet.level}, 시트 이름: ${raidBossDataSheet.name}`);
 
     const bossRef = db.collection('system').doc('raid_boss');
     
-    // 1. Firebase에서 현재 보스 문서를 가져옵니다.
-    const doc = await bossRef.get();
-
-    // 조건 1: Firebase에 보스 문서가 아예 없다면 OR
-    // 조건 2: 시트의 level이 Firebase의 level과 다르다면 (강제 리셋/업데이트 필요)
-    if (!doc.exists || doc.data().level !== raidBossDataSheet.level) {
+    try {
+        const doc = await bossRef.get();
         
-        console.log(`[Raid] 새 보스 스폰 시작: Lv.${raidBossDataSheet.level} ${raidBossDataSheet.name}`);
-
-        // 2. 시트 데이터를 기반으로 새로운 보스 데이터를 생성합니다.
-        const newBossData = {
-            ...raidBossDataSheet, // 시트에서 로드된 모든 기본 정보 복사
-            currentHp: raidBossDataSheet.maxHp, // 현재 HP는 MAX HP로 설정
-            isDead: false,
-            spawnedAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
+        if (!doc.exists) {
+            console.log("[DEBUG 3.1] 성공: 보스 문서가 Firebase에 없습니다. 새로 생성합니다.");
+            
+            // --- SET 명령 실행 ---
+            const newBossData = {
+                ...raidBossDataSheet, 
+                currentHp: raidBossDataSheet.maxHp, 
+                isDead: false,
+                spawnedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            await bossRef.set(newBossData);
+            console.log("---------- [DEBUG 4.0] 보스 문서 생성 완료 ----------");
+            
+            raidBossData = newBossData;
+            updateRaidUI();
+            return;
+        } 
         
-        // 3. Firebase에 덮어쓰기 (스폰)
-        await bossRef.set(newBossData);
-        
-        console.log(`[Raid] 새 보스 스폰 완료.`);
-        
-        // 전역 변수 업데이트 (UI 실시간 반영을 위해 필요)
-        raidBossData = newBossData;
-        
-        // 만약 레이드 화면에 있다면 즉시 UI 업데이트를 위해 리스너를 다시 연결합니다.
-        if (!document.getElementById('event-raid-view').classList.contains('hidden')) {
-             if (raidUnsubscribe) { raidUnsubscribe(); raidUnsubscribe = null; }
-             initRaidListener();
+        // 문서가 존재할 경우 레벨 체크
+        if (doc.data().level !== raidBossDataSheet.level) {
+             console.log(`[DEBUG 3.2] 성공: Firebase 레벨 (${doc.data().level})이 시트 레벨과 다릅니다. 강제 업데이트 시작.`);
+             
+             // --- SET 명령 실행 (덮어쓰기) ---
+             const newBossData = {
+                ...raidBossDataSheet, 
+                currentHp: raidBossDataSheet.maxHp, 
+                isDead: false,
+                spawnedAt: firebase.firestore.FieldValue.serverTimestamp()
+             };
+             await bossRef.set(newBossData);
+             console.log("---------- [DEBUG 4.0] 보스 문서 업데이트 완료 ----------");
+             
+             raidBossData = newBossData;
+             updateRaidUI();
+             return;
         }
-        
-    } else {
-        console.log("[Raid] 현재 보스 레벨이 시트와 일치합니다. 스폰 스킵.");
+
+        // 모든 조건이 통과되어 스폰을 건너뛴 경우
+        console.log(`[DEBUG 3.3] 건너뜀: 보스가 이미 존재하며 레벨 (${doc.data().level})이 일치합니다.`);
+        raidBossData = doc.data(); // 기존 데이터 로드
+        updateRaidUI();
+
+    } catch (error) {
+        console.error("---------- [DEBUG 5.0] FATAL ERROR (Firebase):", error);
+        if (error.code === 'permission-denied') {
+            console.error("⚠️ 에러 원인: Firebase 보안 규칙에 /system 컬렉션이 허용되지 않았습니다.");
+        }
     }
 }
 // ================== 👆 레이드 시스템 로직 끝 👆 ==================
