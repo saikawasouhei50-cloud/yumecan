@@ -13,6 +13,7 @@ let gachaPool = {};
 let characterProfiles = {};
 let interactionDialogues = {};
 let systemMails = [];
+let raidBossDataSheet = null;
 
 // ✨ [변경] 인연 데이터는 이제 시트에서 불러오므로 초기값은 빈 배열입니다.
 let synergies = []; 
@@ -22,8 +23,7 @@ let CURRENT_EVENT_ID = null;
 // ==========================================
 // 1. 웹 앱 URL (여기에만 최신 주소를 적으세요!)
 // ==========================================
-const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbx8f8YOFF4s5bSIc2t8bSXyw1KsRSMjPdPG5JwnDH_81YRDRfJmhzy-zXnCuWp7cPqMpQ/exec"; 
-
+const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbxTqdUDioNQwEUwJS7Qp5K6GJMKUAHg6CHzA7DXL0fTj_SnChxKvPuYUzq9gnpJ6bTjoQ/exec
 
 // 2. 데이터를 가져와서 변수에 채워넣는 함수
 async function loadGameData() {
@@ -361,6 +361,21 @@ const end = parseDate(info.endDate);
                 };
             });
         }
+		// ✨ [추가] 2.5 레이드 보스 데이터 로드
+if (data.raidBoss && data.raidBoss.length > 0) {
+    // 레이드 보스는 하나만 사용한다고 가정하고 첫 번째 행만 가져옵니다.
+    const bossRow = data.raidBoss[0]; 
+    raidBossDataSheet = {
+        name: bossRow.name,
+        level: Number(bossRow.level) || 1,
+        maxHp: Number(bossRow.maxHp) || 1000000,
+        atk: Number(bossRow.atk) || 100,
+        def: Number(bossRow.def) || 50,
+        imageUrl: bossRow.imageUrl,
+        isAoE: (bossRow.isAoE === true || bossRow.isAoE === 'TRUE' || bossRow.isAoE === 1)
+    };
+    console.log("레이드 보스 시트 데이터 로드 완료:", raidBossDataSheet.name);
+}
 
         // 13. 인연(Synergy) 데이터 조립
         if (data.synergies) {
