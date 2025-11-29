@@ -1263,6 +1263,8 @@ const COLLECTION_GROUPS = ['히어로 대 빌런: 각축전', '히어로 대 빌
                 
                 // ✨ [추가] 친구 요청 실시간 감시 시작
                 startFriendListener(user.uid);
+				startMailListener(user.uid);
+				startPeriodicMailCheck(user.uid);
 
             } else {
                 // --- 유저가 로그아웃했을 때 ---
@@ -1276,7 +1278,8 @@ const COLLECTION_GROUPS = ['히어로 대 빌런: 각축전', '히어로 대 빌
                 document.getElementById('loading-overlay').classList.add('hidden');
                 document.body.classList.remove('loading');
                 // ===============================================================
-				startMailListener(user.uid);
+				
+				if (window.mailCheckInterval) clearInterval(window.mailCheckInterval);
             }
         });
 		
@@ -7922,6 +7925,48 @@ async function checkAndProcessSystemMails(uid) {
             console.error("시스템 우편 동기화 실패:", e);
         }
     }
+}
+// ✅ [신규] 1분마다 구글 시트를 확인해서 새 우편이 있으면 배달하는 함수
+function startPeriodicMailCheck(uid) {
+    // 이미 타이머가 돌고 있다면 중복 실행 방지
+    if (window.mailCheckInterval) clearInterval(window.mailCheckInterval);
+
+    console.log("📮 자동 우편 체크 시스템이 가동되었습니다. (1분 주기)");
+
+    window.mailCheckInterval = setInterval(async () => {
+        if (!uid) return;
+        
+        try {
+            // 1. 구글 시트 데이터 몰래 새로고침
+            const response = await fetch(GOOGLE_SHEET_URL);
+            const data = await response.json();
+            
+            // 날짜 변환 헬퍼 (내부용)
+            const parseDate = (dateStr) => {
+                if (!dateStr) return null;
+                return new Date(String(dateStr).replace(' ', 'T'));
+            };
+
+            // 2. 전역 변수 업데이트
+            if (data.systemMails) {
+                systemMails = data.systemMails.map(row => ({
+                    id: row.id,
+                    target: row.target,
+                    title: row.title,
+                    content: row.content,
+                    rewards: row.rewards ? JSON.parse(row.rewards) : {},
+                    startDate: parseDate(row.startDate),
+                    endDate: parseDate(row.endDate)
+                }));
+            }
+
+            // 3. 내 우편함과 비교해서 안 받은 거 넣기
+            await checkAndProcessSystemMails(uid);
+            
+        } catch (e) {
+            console.warn("자동 우편 체크 중 오류(네트워크 등):", e);
+        }
+    }, 60 * 1000); // 60초(1분) 마다 실행
 }
 	
 
