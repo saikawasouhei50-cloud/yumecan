@@ -1705,11 +1705,6 @@ async function saveGameToFirebase() {
 		cumulativeEventPoints: playerCumulativeEventPoints || 0,
 		raidCumulativeDamage: playerRaidDamage || 0,
 		raidDailyCount: playerRaidDailyCount || 0,
-        if (playerRaidLastResetDate instanceof Date && !isNaN(playerRaidLastResetDate)) {
-    rawSaveData.raidLastResetDate = playerRaidLastResetDate;
-}
-   
-        
         clearedEventDungeons: clearedEventDungeons || [],
         purchasedEventItems: purchasedEventItems || {},
         bookmarks: playerBookmarks || 0,
@@ -1726,6 +1721,9 @@ async function saveGameToFirebase() {
         // 프로필 데이터
         profile: safeProfile
     };
+	if (playerRaidLastResetDate instanceof Date && !isNaN(playerRaidLastResetDate)) {
+    rawSaveData.raidLastResetDate = playerRaidLastResetDate;
+}
 
     // ✨ [핵심 수정] 여기서 undefined를 null로 싹 변환합니다.
     const finalSaveData = removeUndefined(rawSaveData);
