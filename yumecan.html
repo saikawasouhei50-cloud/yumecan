@@ -4712,10 +4712,11 @@ function displayEventStoryPart2() {
             // gacha3.html - endCombat 함수 (기존 코드 전체 교체)
 // ✅ [수정됨] 전투 종료 처리 함수 (모달 표시 버그 수정)
 // ✅ [수정됨] 전투 종료 처리 함수 (모달 표시 보장)
+// ✅ [수정됨] 전투 종료 처리 함수 (결과창 강제 표시 기능 추가)
 function endCombat(isVictory, combatInfo, totalDamageDealt = 0) { 
     lastCombatType = combatInfo.type;
     
-    // 모달 요소 찾기
+    // 모달 요소 직접 찾기 (안전장치)
     const resultModal = document.getElementById('combat-result-modal');
     const resultTitle = document.getElementById('combat-result-title');
     const resultMessage = document.getElementById('combat-result-message');
@@ -4781,15 +4782,16 @@ function endCombat(isVictory, combatInfo, totalDamageDealt = 0) {
     checkAchievements();
     isCombatRunning = false;
 
-    // ✨ 일단 모달 띄우기 (여기서 1차로 띄움)
+    // ✨ 1차 표시: 일단 모달을 띄웁니다.
     if(resultModal) resultModal.classList.remove('hidden');
     
     // 3. 화면 전환 로직
     if (combatInfo.type === 'event') {
-        // 모든 뷰 숨김
+        // (1) 모든 뷰 숨기기 (여기서 결과창도 같이 숨겨질 수 있음)
         allViews.forEach(v => v.classList.add('hidden'));
         
-        // ✨✨ [핵심 수정] 뷰를 다 숨긴 뒤, 결과창만 다시 확실하게 켭니다! ✨✨
+        // ✨✨ [핵심 수정] 뷰를 끈 직후에, 결과창만 다시 확실하게 켭니다! ✨✨
+        // 이 줄이 없으면 결과창이 번쩍하고 사라집니다.
         if(resultModal) resultModal.classList.remove('hidden'); 
 
         allTabs.forEach(t => t.classList.remove('active'));
@@ -4820,8 +4822,9 @@ function endCombat(isVictory, combatInfo, totalDamageDealt = 0) {
             btnBattle.classList.add('active');
         }
     } else {
+        // 일반 전투
         switchTab('combat');
-        // 일반 전투 때도 혹시 모르니 다시 켬
+        // 여기서도 혹시 모르니 다시 켬
         if(resultModal) resultModal.classList.remove('hidden'); 
     }
 }
