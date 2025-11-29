@@ -4709,96 +4709,118 @@ function displayEventStoryPart2() {
     });
 }
 			
-           function endCombat(isVictory, combatInfo, totalDamageDealt = 0) { 
-    console.log("전투 종료 함수 진입");
-    isCombatRunning = false; // 전투 상태 해제
+           // ✅ [초강력 안전 버전] 전투 종료 처리 함수
+function endCombat(isVictory, combatInfo, totalDamageDealt = 0) { 
+    console.log("1. 전투 종료 진입:", combatInfo);
 
-    // 1. 레이드 종료 처리 (기존 로직 유지)
-    if (combatInfo.type === 'raid') {
+    // [1] 강제 UI 초기화 (멈춤 방지용 최우선 실행)
+    isCombatRunning = false; 
+    
+    const resultModal = document.getElementById('combat-result-modal');
+    const resultTitle = document.getElementById('combat-result-title');
+    const resultMessage = document.getElementById('combat-result-message');
+
+    // ✨ [핵심] 계산하기 전에 결과창부터 무조건 띄웁니다!
+    if (resultModal) {
+        resultModal.classList.remove('hidden');
+        resultModal.style.zIndex = '9999';
+        console.log("2. 결과창 강제 표시 완료");
+    } else {
+        console.error("❌ 결과 모달(combat-result-modal)을 찾을 수 없습니다! HTML을 확인하세요.");
+        alert("전투 결과창을 찾을 수 없습니다.");
+        return; // 모달이 없으면 더 진행 불가
+    }
+
+    // [2] 레이드 예외 처리
+    if (combatInfo && combatInfo.type === 'raid') {
+        // 레이드는 결과창 대신 별도 화면으로 이동
+        resultModal.classList.add('hidden'); // 다시 숨김
         const inProgressView = document.getElementById('combat-in-progress-view');
         if(inProgressView) inProgressView.classList.add('hidden');
-        submitRaidDamage(totalDamageDealt);
+        
+        if (typeof submitRaidDamage === 'function') submitRaidDamage(totalDamageDealt);
+        
         document.getElementById('event-view').classList.remove('hidden');
         document.getElementById('event-raid-view').classList.remove('hidden');
+        
         const btnRaid = document.getElementById('event-sub-tab-raid');
         if (btnRaid) btnRaid.classList.add('active');
         return; 
     }
 
-    // [중요] 변수 선언
-    lastCombatType = combatInfo.type;
-    const resultModal = document.getElementById('combat-result-modal');
-    const resultTitle = document.getElementById('combat-result-title');
-    const resultMessage = document.getElementById('combat-result-message');
-
-    // ✨ [핵심 수정] 결과창을 로직 계산보다 '먼저' 띄웁니다.
-    // 이렇게 하면 뒤에서 에러가 나도 최소한 결과창은 보입니다.
-    if (resultModal) {
-        resultModal.classList.remove('hidden');
-        resultModal.style.zIndex = '9999';
-    }
-
-    // 2. 보상 계산 및 텍스트 설정 (에러가 나도 멈추지 않도록 try-catch로 감쌉니다)
+    // [3] 안전한 보상 계산 (try-catch로 감싸서 에러가 나도 결과창 내용은 뜸)
     try {
-        if (isVictory) {
-            let rewardMsg = '';
-            
-            // 승리 타이틀 설정
-            if(resultTitle) {
-                resultTitle.textContent = "승리!";
-                resultTitle.className = "text-4xl font-bold mb-4 text-green-400";
-            }
+        lastCombatType = combatInfo ? combatInfo.type : 'main'; // 안전장치
 
-            // 보상 계산 로직
+        let rewardMsg = "전투 종료";
+        let titleText = isVictory ? "승리!" : "패배...";
+        let titleColor = isVictory ? "text-green-400" : "text-red-400";
+
+        if (isVictory) {
+            // 이벤트 전투 보상
             if (combatInfo.type === 'event') {
-                if (eventDungeons && eventDungeons[combatInfo.indices]) {
+                // eventDungeons 변수가 존재하는지 안전하게 확인
+                if (typeof eventDungeons !== 'undefined' && eventDungeons[combatInfo.indices]) {
                     const dungeon = eventDungeons[combatInfo.indices];
-                    const reward = dungeon.eventPointReward;
-                    playerEventPoints += reward;            
-                    playerCumulativeEventPoints += reward;  
-                    if (!clearedEventDungeons.includes(dungeon.name)) clearedEventDungeons.push(dungeon.name);
-                    rewardMsg = `이벤트 스테이지 클리어! ${reward} P를 획득했습니다.`;
-                }
-            } else if (combatInfo.type === 'main_stage') {
-                const chapterData = mainChapters[combatInfo.indices.chapter];
-                if (chapterData && chapterData.stages[combatInfo.indices.stage]) {
-                    const stage = chapterData.stages[combatInfo.indices.stage];
-                    const stageId = `${combatInfo.indices.chapter + 1}-${combatInfo.indices.stage + 1}`;
-                    if (!clearedStages.includes(stageId)) clearedStages.push(stageId);
+                    const reward = dungeon.eventPointReward || 0;
                     
-                    let rewardsEarned = [];
-                    if (stage.rewards && stage.rewards.fountainPens) {
-                        playerFountainPens += stage.rewards.fountainPens;
-                        rewardsEarned.push(`🖋️${stage.rewards.fountainPens}`);
+                    // 변수 존재 여부 확인 후 더하기
+                    if (typeof playerEventPoints !== 'undefined') playerEventPoints += reward;
+                    if (typeof playerCumulativeEventPoints !== 'undefined') playerCumulativeEventPoints += reward;
+                    
+                    if (typeof clearedEventDungeons !== 'undefined' && !clearedEventDungeons.includes(dungeon.name)) {
+                        clearedEventDungeons.push(dungeon.name);
                     }
-                    if (stage.rewards && stage.rewards.currency) {
-                        playerCurrency += stage.rewards.currency;
-                        rewardsEarned.push(`💎${stage.rewards.currency}`);
+                    rewardMsg = `이벤트 스테이지 클리어! ${reward} P를 획득했습니다.`;
+                } else {
+                    rewardMsg = "이벤트 데이터(eventDungeons)를 찾을 수 없습니다.";
+                    console.error("오류: eventDungeons가 정의되지 않았거나 인덱스가 잘못되었습니다.");
+                }
+            } 
+            // 일반 스테이지 보상
+            else if (combatInfo.type === 'main_stage') {
+                if (typeof mainChapters !== 'undefined' && mainChapters[combatInfo.indices.chapter]) {
+                    const stage = mainChapters[combatInfo.indices.chapter].stages[combatInfo.indices.stage];
+                    const stageId = `${combatInfo.indices.chapter + 1}-${combatInfo.indices.stage + 1}`;
+                    
+                    if (typeof clearedStages !== 'undefined' && !clearedStages.includes(stageId)) {
+                        clearedStages.push(stageId);
+                    }
+                    
+                    // 보상 텍스트 생성
+                    let rewardsEarned = [];
+                    if (stage.rewards) {
+                        if (stage.rewards.fountainPens) {
+                            if (typeof playerFountainPens !== 'undefined') playerFountainPens += stage.rewards.fountainPens;
+                            rewardsEarned.push(`🖋️${stage.rewards.fountainPens}`);
+                        }
+                        if (stage.rewards.currency) {
+                            if (typeof playerCurrency !== 'undefined') playerCurrency += stage.rewards.currency;
+                            rewardsEarned.push(`💎${stage.rewards.currency}`);
+                        }
                     }
                     rewardMsg = `스테이지 클리어! ${rewardsEarned.join(', ')} 획득!`;
                 }
             }
-            if(resultMessage) resultMessage.textContent = rewardMsg;
-
         } else {
-            // 패배 처리
-            if(resultTitle) {
-                resultTitle.textContent = "패배...";
-                resultTitle.className = "text-4xl font-bold mb-4 text-red-400";
-            }
-            if(resultMessage) resultMessage.textContent = `전투에서 패배했습니다...`;
+            rewardMsg = "전투에서 패배했습니다...";
         }
 
-        // UI 및 업적 업데이트 (여기가 에러 발생 가능성이 높음)
-        updateUI();
-        checkAchievements();
+        // [4] 결과 텍스트 적용
+        if(resultTitle) {
+            resultTitle.textContent = titleText;
+            resultTitle.className = `text-4xl font-bold mb-4 ${titleColor}`;
+        }
+        if(resultMessage) resultMessage.textContent = rewardMsg;
+
+        // [5] UI 및 업적 업데이트 (에러 무시)
+        try { if(typeof updateUI === 'function') updateUI(); } catch(e) {}
+        try { if(typeof checkAchievements === 'function') checkAchievements(); } catch(e) {}
 
     } catch (error) {
-        console.error("결과 처리 중 오류 발생:", error);
-        // 에러가 났음을 결과창에 표시
-        if(resultMessage) {
-            resultMessage.innerHTML += `<br><span class="text-xs text-red-400">(데이터 처리 중 오류가 발생했으나 게임은 계속됩니다: ${error.message})</span>`;
-        }
+        console.error("보상 계산 중 에러 발생:", error);
+        if(resultTitle) resultTitle.textContent = "오류 발생";
+        if(resultMessage) resultMessage.textContent = `결과 처리 중 문제가 생겼습니다.\n(${error.message})`;
     }
 }
 
