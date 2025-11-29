@@ -294,7 +294,8 @@ body.pointer-events-none {
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
-<button id="global-home-button" onclick="switchTab('home')" 
+
+    <button id="global-home-button" onclick="switchTab('home')" 
         class="hidden fixed top-4 left-4 z-[9999] bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-2 px-4 rounded-full shadow-lg border-2 border-white flex items-center gap-2 transition-transform hover:scale-105">
         <span>🏠</span>
         <span class="hidden md:inline">로비로 복귀</span> 
@@ -304,6 +305,7 @@ body.pointer-events-none {
         <div class="text-yellow-300 text-2xl font-bold animate-pulse">YUMECAN!_</div>
         <p class="text-white mt-2">데이터를 불러오는 중입니다...</p>
     </div>
+
     <div class="w-full max-w-5xl bg-white/10 backdrop-blur-md rounded-2xl shadow-xl text-white p-6 md:p-8">
         
         <header id="global-header" class="text-center mb-2 md:mb-4">
@@ -327,7 +329,6 @@ body.pointer-events-none {
         </div>
         
         <div id="global-currency-bar" class="flex flex-wrap items-center justify-center md:justify-end gap-1.5 md:gap-3 mb-4 md:mb-6">
-            
             <button onclick="openMailbox()" class="relative gacha-button bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1 px-3 md:py-2 md:px-4 rounded-full text-xs md:text-sm flex items-center gap-1">
                 <span>📩</span>
                 <span class="hidden md:inline">우편함</span>
@@ -355,12 +356,6 @@ body.pointer-events-none {
             </button>
         </div>
         
-    
-    
-    
-
-
-        <!-- 메인 컨텐츠 영역 -->
         <main>
 			<div id="message-area" class="text-center text-lg h-8 mb-4 transition-opacity duration-300"></div>
 
