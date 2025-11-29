@@ -4434,60 +4434,71 @@ function endCombat(isVictory, combatInfo) { // dungeon, type 대신 combatInfo �
 
             // ✅ 이 코드로 기존 createCard 함수를 통째로 교체해주세요.
             function createCard(character, options = {}) {
-                // 이전에 사용했던 isSameCharacterInDeck 옵션은 이제 필요 없으므로 선언부에서 완전히 제거합니다.
                 const { animationIndex, mode = 'default', isCardInDeck, isDeckFull, isCollected } = options;
+                
+                // 카드 외형 컨테이너
                 const card = document.createElement('div');
                 card.className = `rarity-${character.rarity} relative text-center rounded-lg shadow-md p-2 transform transition-transform duration-300 hover:scale-105 cursor-pointer`;
                 card.title = character.name;
+                
                 const rarityColor = { 'N': 'text-gray-600', 'R': 'text-blue-800', 'SR': 'text-white', 'SSR': 'text-black' }[character.rarity];
                 const factionColors = {
                     '탐정': 'bg-blue-500 text-white',
                     '조수': 'bg-green-500 text-white',
                     '범인': 'bg-red-500 text-white',
-					'히어로': 'bg-indigo-600 text-white',   // 진한 남색
-        '빌런': 'bg-gray-800 text-white',     // 아주 어두운 회색 (검정 계열)
-        '마법사': 'bg-purple-600 text-white', // 보라색
-        '초대객': 'bg-orange-400 text-white', // 주황색 (따뜻한 느낌)
-        '도박사': 'bg-yellow-600 text-white', // 금색/황토색
-        '사제': 'bg-teal-500 text-white',     // 청록색 (신성한 느낌)
-        '악마': 'bg-rose-900 text-white'      // 핏빛 붉은색
+                    '히어로': 'bg-indigo-600 text-white',
+                    '빌런': 'bg-gray-800 text-white',
+                    '마법사': 'bg-purple-600 text-white',
+                    '초대객': 'bg-orange-400 text-white',
+                    '도박사': 'bg-yellow-600 text-white',
+                    '사제': 'bg-teal-500 text-white',
+                    '악마': 'bg-rose-900 text-white'
                 };
                 const cardInstance = options.instance;
 
+                // 1. 레벨 배지
                 let levelBadgeHTML = '';
                 if (cardInstance && cardInstance.level > 0) {
                     levelBadgeHTML = `<div class="level-badge">+${cardInstance.level}</div>`;
                 }
                 
-                // ✨ '개정' 단계를 별 아이콘으로 표시하는 HTML을 새로 만듭니다.
+                // 2. 개정(별) 표시
                 let revisionStarsHTML = '';
                 if (cardInstance && cardInstance.revision > 0) {
                     revisionStarsHTML = `<div class="revision-stars">${'⭐'.repeat(cardInstance.revision)}</div>`;
                 }
                 
+                // 3. 하단 액션 버튼 생성 (여기에 '편찬 해제' 추가!)
                 let actionButtonsHTML = '';
+                
                 if (mode === 'deckBuilder' && cardInstance) {
-                    // 동일 인물(isSameCharacterInDeck) 체크 로직을 완전히 제거합니다.
+                    // [편찬 탭 - 하단 인벤토리] 덱에 넣기 버튼
                     const disabled = isDeckFull || isCardInDeck;
                     const buttonText = isCardInDeck ? '편찬됨' : '추가';
                     const buttonColor = isCardInDeck ? 'bg-gray-500' : 'bg-green-500 hover:bg-green-600';
                     actionButtonsHTML = `<button data-action="add-to-deck" data-card-id="${cardInstance.id}" class="w-full mt-2 py-1 rounded-md text-white font-bold text-sm ${buttonColor}" ${disabled ? 'disabled' : ''}>${buttonText}</button>`;
+                    
                 } else if (mode === 'inventory') {
+                    // [서고 탭] 대표 설정 버튼
                     const isRepresentative = representativeCharacter && representativeCharacter.name === character.name;
                     const repButtonText = isRepresentative ? '대표' : '대표 설정';
                     const repButtonColor = isRepresentative ? 'bg-yellow-500' : 'bg-gray-600 hover:bg-gray-700';
                     actionButtonsHTML = `<button data-action="set-representative" data-card-name="${character.name}" class="w-full mt-2 py-1 rounded-md text-white font-bold text-sm ${repButtonColor}" ${isRepresentative ? 'disabled' : ''}>${repButtonText}</button>`;
+                    
+                } else if (mode === 'deckSlot' && cardInstance) {
+                    // ✨ [수정됨] 덱 슬롯: 상단 X버튼 대신 하단에 '편찬 해제' 버튼 추가
+                    actionButtonsHTML = `<button data-action="remove-from-deck" data-card-id="${cardInstance.id}" class="w-full mt-2 py-1 rounded-md text-white font-bold text-sm bg-red-600 hover:bg-red-700 shadow-md">편찬 해제</button>`;
                 }
                 
-                let deckSlotButton = '';
-                if(mode === 'deckSlot' && cardInstance) {
-                    deckSlotButton = `<button data-action="remove-from-deck" data-card-id="${cardInstance.id}" class="absolute top-1 right-1 bg-red-600 text-white rounded-full w-6 h-6 text-sm font-bold flex items-center justify-center z-10">X</button>`;
-                }
+                // ❌ [삭제됨] 기존의 상단 X 버튼 코드 (deckSlotButton) 제거됨
 
+                // 진영 배지
                 const factionBadge = `<span class="absolute top-2 right-2 text-xs font-bold px-2 py-1 rounded-full ${factionColors[character.faction]} z-10">${character.faction}</span>`;
 
+                // HTML 조립
                 card.innerHTML = `
-                    ${deckSlotButton} ${factionBadge} ${levelBadgeHTML} ${revisionStarsHTML} <div class="relative pointer-events-none">
+                    ${factionBadge} ${levelBadgeHTML} ${revisionStarsHTML} 
+                    <div class="relative pointer-events-none">
                         <img src="${character.cardImageUrl}" alt="${character.name}" class="w-full h-auto rounded-md mb-2 border-2 border-white/50">
                         <p class="font-bold text-sm ${rarityColor} truncate">${character.name}</p>
                         <p class="font-black text-lg ${rarityColor}" style="text-shadow: 1px 1px 2px rgba(255,255,255,0.5);">${character.rarity}</p>
@@ -4505,7 +4516,6 @@ function endCombat(isVictory, combatInfo) { // dungeon, type 대신 combatInfo �
                     card.classList.add('card-animation');
                 }
                 
-                // 동일 인물(isSameCharacterInDeck) 체크 로직을 완전히 제거합니다.
                 if(mode === 'deckBuilder' && isCardInDeck) {
                     card.classList.add('opacity-50');
                 }
