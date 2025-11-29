@@ -23,7 +23,7 @@ let CURRENT_EVENT_ID = null;
 // ==========================================
 // 1. 웹 앱 URL (여기에만 최신 주소를 적으세요!)
 // ==========================================
-const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbxTqdUDioNQwEUwJS7Qp5K6GJMKUAHg6CHzA7DXL0fTj_SnChxKvPuYUzq9gnpJ6bTjoQ/exec
+const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbxTqdUDioNQwEUwJS7Qp5K6GJMKUAHg6CHzA7DXL0fTj_SnChxKvPuYUzq9gnpJ6bTjoQ/exec"
 
 // 2. 데이터를 가져와서 변수에 채워넣는 함수
 async function loadGameData() {
@@ -605,6 +605,7 @@ const genericInteractions = [
     ['안녕하세요!', '반갑습니다.'],
     ['잠시 쉬었다 갈까요?', '좋은 생각입니다.']
 ];
+
 
 
 
