@@ -1821,7 +1821,7 @@ async function saveGameToFirebase() {
     switchTab('home');
     checkAchievements();
 	checkAndSpawnRaidBoss();
-	updateAchievementBadge(); // ✨ 추가: 로드 시 배지 갱신
+	updateAchievementBadge(); // ✨ 추가: 로드 시 배지 갱
     document.getElementById('loading-overlay').classList.add('hidden');
     document.body.classList.remove('loading');
 }	
@@ -8319,30 +8319,51 @@ async function submitRaidDamage(damage) {
 
 // yumecan.html - <script> 태그 내부
 
-// ✨ [신규] 시트 데이터를 기반으로 Firebase에 보스가 있는지 확인하고 없으면 스폰
+/// yumecan.html - <script> 태그 내부 (레이드 로직 부분)
+
+// ✨ [신규] 시트 데이터를 Firebase와 비교하여 보스가 없으면 스폰합니다.
 async function checkAndSpawnRaidBoss() {
-    if (!raidBossDataSheet || !currentUser) return;
+    // ⚠️ 전역 변수인 raidBossDataSheet가 yumecan_data.js에서 로드되었는지 확인합니다.
+    if (!raidBossDataSheet || !currentUser) {
+        // console.log("[Raid Spawn] 시트 데이터가 없거나 로그인 상태가 아닙니다.");
+        return;
+    }
 
     const bossRef = db.collection('system').doc('raid_boss');
+    
+    // 1. Firebase에서 현재 보스 문서를 가져옵니다.
     const doc = await bossRef.get();
 
-    // 1. Firebase에 보스 문서가 없다면 (혹은 레벨이 다르다면)
+    // 조건 1: Firebase에 보스 문서가 아예 없다면 OR
+    // 조건 2: 시트의 level이 Firebase의 level과 다르다면 (강제 리셋/업데이트 필요)
     if (!doc.exists || doc.data().level !== raidBossDataSheet.level) {
         
-        // 2. 시트 데이터를 기반으로 보스를 생성
+        console.log(`[Raid] 새 보스 스폰 시작: Lv.${raidBossDataSheet.level} ${raidBossDataSheet.name}`);
+
+        // 2. 시트 데이터를 기반으로 새로운 보스 데이터를 생성합니다.
         const newBossData = {
-            ...raidBossDataSheet, // 시트에서 로드된 모든 기본 정보
+            ...raidBossDataSheet, // 시트에서 로드된 모든 기본 정보 복사
             currentHp: raidBossDataSheet.maxHp, // 현재 HP는 MAX HP로 설정
             isDead: false,
             spawnedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
         
+        // 3. Firebase에 덮어쓰기 (스폰)
         await bossRef.set(newBossData);
-        console.log(`[Raid] Firebase에 새 보스 [Lv.${raidBossDataSheet.level} ${raidBossDataSheet.name}] 스폰 완료.`);
         
-        // 스폰 후 전역 변수 업데이트 (혹시 모를 Race condition 방지)
+        console.log(`[Raid] 새 보스 스폰 완료.`);
+        
+        // 전역 변수 업데이트 (UI 실시간 반영을 위해 필요)
         raidBossData = newBossData;
-        updateRaidUI();
+        
+        // 만약 레이드 화면에 있다면 즉시 UI 업데이트를 위해 리스너를 다시 연결합니다.
+        if (!document.getElementById('event-raid-view').classList.contains('hidden')) {
+             if (raidUnsubscribe) { raidUnsubscribe(); raidUnsubscribe = null; }
+             initRaidListener();
+        }
+        
+    } else {
+        console.log("[Raid] 현재 보스 레벨이 시트와 일치합니다. 스폰 스킵.");
     }
 }
 // ================== 👆 레이드 시스템 로직 끝 👆 ==================
