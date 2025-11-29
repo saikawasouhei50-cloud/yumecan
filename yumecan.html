@@ -1808,14 +1808,13 @@ async function saveGameToFirebase() {
                 ? lastResetTimestamp.toDate().toDateString() 
                 : ''; // 유효하지 않으면 빈 문자열로 처리
             
+            // 날짜가 바뀌었으면 0으로 초기화
             if (savedLastRaidDate !== today) {
-                // 날짜가 다르면 0으로 초기화
                 playerRaidDailyCount = 0; 
-                playerRaidLastResetDate = null; 
-            
-                } else {
+                playerRaidLastResetDate = null; // null 유지
+            } else {
                 // 날짜가 같으면 DB 카운트 로드
-                playerRaidDailyCount = savedData.raidDailyCount ?? 0; // ⭐⭐
+                playerRaidDailyCount = savedData.raidDailyCount ?? 0;
                 playerRaidLastResetDate = savedData.raidLastResetDate;
             }
             clearedEventDungeons = savedData.clearedEventDungeons || [];
@@ -8499,100 +8498,104 @@ async function submitRaidDamage(damage) {
     if (damage <= 0) return;
     if (!currentUser) return alert("로그인 상태를 확인해주세요.");
 
-    // 보상 설정
-    const REWARD_PER_100_DAMAGE = 1; 
-    const MAX_REWARD = 50;           
-    const DAILY_LIMIT = 5;           // ⚠️ 하루 최대 참여 횟수
-    
-    // ✨ [핵심 수정] bossRef와 userRef를 함수 내부에서 정의합니다.
+    const DAILY_LIMIT = 5;           
     const bossRef = db.collection('system').doc('raid_boss');
     const userRef = db.collection('users').doc(currentUser.uid);
-
+    
+    let isLimitReached = false;
+    let isBossDefeated = false;
+    let finalCount = null;
+    let calculatedReward = 0;
+    const REWARD_PER_100_DAMAGE = 1; 
+    const MAX_REWARD = 50;           
+    
     try {
-        let isLimitReached = false;
-        
-        // ✨ [핵심 수정] 트랜잭션의 반환 값을 finalCount에 직접 할당
-        const finalCount = await db.runTransaction(async (t) => {
-            const doc = await t.get(bossRef);
-            if (!doc.exists) throw "보스가 사라졌습니다.";
+        // 트랜잭션 시작 (DB 쓰기를 원자적으로 보장)
+        finalCount = await db.runTransaction(async (t) => {
+            const bossDoc = await t.get(bossRef);
+            const userDoc = await t.get(userRef);
             
-            // --- 1. 유저 참여 횟수 확인 및 초기화 로직 ---
-            const userDoc = await t.get(userRef); // DB에서 유저 데이터 읽기
-            const userData = userDoc.data();
+            if (!bossDoc.exists) throw new Error("보스가 사라졌습니다.");
+            if (!userDoc.exists) throw new Error("유저 데이터가 없습니다.");
 
-            const today = new Date().toDateString(); // 오늘 날짜 문자열
-            
+            const bossData = bossDoc.data();
+            const userData = userDoc.data();
+            const today = new Date().toDateString();
+
+            // --- 1. 날짜 체크 및 카운트 초기화 ---
             let countBeforeIncrement = userData.raidDailyCount || 0; 
-            
-            // 날짜 데이터 유효성 검사
             const lastResetTimestamp = userData.raidLastResetDate;
             const lastDate = (lastResetTimestamp && typeof lastResetTimestamp.toDate === 'function')
                 ? lastResetTimestamp.toDate().toDateString() 
                 : '';
             
-            // 날짜가 바뀌었으면 카운트 초기화 (이것이 핵심)
             if (lastDate !== today) {
                 countBeforeIncrement = 0;
             }
             
+            // --- 2. 제한 체크 ---
             if (countBeforeIncrement >= DAILY_LIMIT) {
                 isLimitReached = true; 
-                return null; // 제한 도달 시 트랜잭션 성공 후 null 반환
+                return null; 
             }
             
-            const countAfterIncrement = countBeforeIncrement + 1; // 다음 카운트 계산
+            if (bossData.currentHp <= 0) {
+                isBossDefeated = true;
+                return null; 
+            }
 
-            const currentHp = doc.data().currentHp;
-            if (currentHp <= 0) return null; // 보스 HP가 없으면 트랜잭션 성공 후 null 반환
-
-            // 2. DB 업데이트: 보스 체력 감소
+            const countAfterIncrement = countBeforeIncrement + 1; 
+            const currentHp = bossData.currentHp;
             const newHp = Math.max(0, currentHp - damage);
+
+            // 3. DB 업데이트 예약 (보스 HP 감소)
             t.update(bossRef, { currentHp: newHp });
             
-            // 3. DB 업데이트: 유저 카운트 증가 및 날짜 기록
+            // 4. DB 업데이트 예약 (유저 카운트 증가 및 날짜 기록)
             t.update(userRef, {
-                // ✅ DB의 유저 문서에 최종 카운트와 오늘 날짜를 기록
                 raidDailyCount: countAfterIncrement, 
-                raidLastResetDate: firebase.firestore.FieldValue.serverTimestamp()
+                raidLastResetDate: firebase.firestore.FieldValue.serverTimestamp() // DB에 저장되는 날짜
             });
 
-            return countAfterIncrement; // ✨ 최종 계산된 카운트 값을 반환합니다.
+            return countAfterIncrement; // 트랜잭션 성공 시 최종 카운트 반환
         });
         
-        // --- 트랜잭션 성공 후 보상 지급 및 UI 업데이트 ---
-        
-        // finalCount가 null이면 제한 도달 혹은 보스 사망으로 트랜잭션이 중단됨
+        // --- 트랜잭션 성공 후 (Commit) 로컬 업데이트 및 보상 지급 ---
+
+        // finalCount가 null이면 (제한 초과 또는 보스 사망) 처리 후 종료
         if (finalCount === null) {
              if (isLimitReached) {
                 alert(`⚠️ 레이드 참여 횟수 제한(${DAILY_LIMIT}회)을 모두 사용했습니다. 내일 다시 시도해주세요.`);
-             } else {
-                 // 보스 HP가 0이 되어 중단된 경우
+             } else if (isBossDefeated) {
                  alert("보스 HP가 0이 되어 전투 기록을 건너뛰었습니다.");
              }
+             // 여기서 UI 업데이트 및 저장은 하지 않습니다. (DB에 반영된 것이 없으므로)
             return;
         }
 
-        // 1. 로컬 변수 동기화
+        // 1. 로컬 변수 동기화 및 보상 계산
         playerRaidDailyCount = finalCount;
-        playerRaidLastResetDate = new Date(); // 새로운 날짜 객체를 할당
-         
+        // playerRaidLastResetDate는 다음 트랜잭션이 DB에서 읽도록 맡기고 로컬에서는 건드리지 않습니다.
         
-        const calculatedReward = Math.min(MAX_REWARD, Math.floor(damage / REWARD_PER_100_DAMAGE)); 
+        calculatedReward = Math.min(MAX_REWARD, Math.floor(damage * REWARD_PER_100_DAMAGE)); 
         
         if (calculatedReward > 0) {
             playerCurrency += calculatedReward;
-			playerRaidDamage += damage;
-			updateUI();
-            saveGame(); // 로컬 데이터 (currency, damage, raidDailyCount)를 Firebase에 저장
-            // ✨ [핵심 수정] 반환된 finalCount 변수를 사용
-            alert(`보스에게 ${damage} 피해를 입혔습니다! (오늘 ${finalCount}회 참여)\n기여 보상: 💎${calculatedReward}`);
-        } else {
-             alert(`보스에게 ${damage}의 피해를 입혔습니다!`);
         }
+        playerRaidDamage += damage;
+
+        // 2. 최종 저장 및 UI 업데이트
+        updateUI();
+        saveGame(); // ⭐⭐ 트랜잭션 외부에서 로컬 변경사항 최종 저장! (충돌 가능성 낮춤)
+
+        // 3. 성공 알림
+        const rewardMsg = calculatedReward > 0 ? `기여 보상: 💎${calculatedReward}` : `(보상 없음)`;
+        alert(`🎉 보스에게 ${damage} 피해를 입혔습니다! (오늘 ${finalCount}회 참여)\n${rewardMsg}`);
         
     } catch (error) {
-        console.error("레이드 데미지 전송 실패:", error);
-        alert("전투 결과 처리 중 오류가 발생했습니다. (콘솔 확인)");
+        // 트랜잭션 실패 시 명확한 알림
+        console.error("레이드 데미지 전송 실패 (트랜잭션 실패):", error);
+        alert(`❌ 전투 결과 처리 중 오류가 발생했습니다.\n원인: ${error.message || "트랜잭션 충돌 또는 DB 접근 오류"}`);
     }
 }
 
