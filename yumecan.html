@@ -4709,85 +4709,74 @@ function displayEventStoryPart2() {
     });
 }
 			
-           // ✅ [초강력 안전 버전] 전투 종료 처리 함수
-function endCombat(isVictory, combatInfo, totalDamageDealt = 0) { 
+           function endCombat(isVictory, combatInfo, totalDamageDealt = 0) { 
     console.log("1. 전투 종료 진입:", combatInfo);
 
-    // [1] 강제 UI 초기화 (멈춤 방지용 최우선 실행)
     isCombatRunning = false; 
-    
+
+    // [1] 방해되는 전투 화면(combat-in-progress-view) 강제로 숨기기
+    const combatView = document.getElementById('combat-in-progress-view');
+    if (combatView) {
+        combatView.classList.add('hidden'); // ✨ 이게 없어서 화면이 안 바뀌고 멈춘 것처럼 보인 것입니다.
+        console.log("전투 화면(combat-in-progress-view) 숨김 처리 완료");
+    }
+
+    // [2] 결과창 모달 가져오기
     const resultModal = document.getElementById('combat-result-modal');
     const resultTitle = document.getElementById('combat-result-title');
     const resultMessage = document.getElementById('combat-result-message');
 
-    // ✨ [핵심] 계산하기 전에 결과창부터 무조건 띄웁니다!
+    // [3] 결과창을 HTML의 맨 끝(body 직계 자식)으로 이동시켜서 가려짐 방지
     if (resultModal) {
+        document.body.appendChild(resultModal); // ✨ 모달을 화면 맨 앞으로 끄집어냄
         resultModal.classList.remove('hidden');
-        resultModal.style.zIndex = '9999';
-        console.log("2. 결과창 강제 표시 완료");
+        resultModal.style.zIndex = '99999'; // Z-index를 아주 높게 설정
+        resultModal.style.display = 'flex'; // 강제로 flex 적용 (혹시 CSS 꼬임 방지)
+        console.log("2. 결과창 강제 표시 완료 (Body Append)");
     } else {
-        console.error("❌ 결과 모달(combat-result-modal)을 찾을 수 없습니다! HTML을 확인하세요.");
-        alert("전투 결과창을 찾을 수 없습니다.");
-        return; // 모달이 없으면 더 진행 불가
+        console.error("❌ 결과 모달을 찾을 수 없습니다.");
+        alert("결과창 로드 실패. (새로고침 하세요)");
+        return;
     }
 
-    // [2] 레이드 예외 처리
+    // [레이드 예외 처리]
     if (combatInfo && combatInfo.type === 'raid') {
-        // 레이드는 결과창 대신 별도 화면으로 이동
-        resultModal.classList.add('hidden'); // 다시 숨김
-        const inProgressView = document.getElementById('combat-in-progress-view');
-        if(inProgressView) inProgressView.classList.add('hidden');
-        
+        resultModal.classList.add('hidden'); 
         if (typeof submitRaidDamage === 'function') submitRaidDamage(totalDamageDealt);
-        
         document.getElementById('event-view').classList.remove('hidden');
         document.getElementById('event-raid-view').classList.remove('hidden');
-        
         const btnRaid = document.getElementById('event-sub-tab-raid');
         if (btnRaid) btnRaid.classList.add('active');
         return; 
     }
 
-    // [3] 안전한 보상 계산 (try-catch로 감싸서 에러가 나도 결과창 내용은 뜸)
+    // [4] 보상 계산 (기존 로직 유지)
     try {
-        lastCombatType = combatInfo ? combatInfo.type : 'main'; // 안전장치
+        lastCombatType = combatInfo ? combatInfo.type : 'main'; 
 
         let rewardMsg = "전투 종료";
         let titleText = isVictory ? "승리!" : "패배...";
         let titleColor = isVictory ? "text-green-400" : "text-red-400";
 
         if (isVictory) {
-            // 이벤트 전투 보상
             if (combatInfo.type === 'event') {
-                // eventDungeons 변수가 존재하는지 안전하게 확인
                 if (typeof eventDungeons !== 'undefined' && eventDungeons[combatInfo.indices]) {
                     const dungeon = eventDungeons[combatInfo.indices];
                     const reward = dungeon.eventPointReward || 0;
-                    
-                    // 변수 존재 여부 확인 후 더하기
                     if (typeof playerEventPoints !== 'undefined') playerEventPoints += reward;
                     if (typeof playerCumulativeEventPoints !== 'undefined') playerCumulativeEventPoints += reward;
-                    
                     if (typeof clearedEventDungeons !== 'undefined' && !clearedEventDungeons.includes(dungeon.name)) {
                         clearedEventDungeons.push(dungeon.name);
                     }
                     rewardMsg = `이벤트 스테이지 클리어! ${reward} P를 획득했습니다.`;
-                } else {
-                    rewardMsg = "이벤트 데이터(eventDungeons)를 찾을 수 없습니다.";
-                    console.error("오류: eventDungeons가 정의되지 않았거나 인덱스가 잘못되었습니다.");
                 }
-            } 
-            // 일반 스테이지 보상
-            else if (combatInfo.type === 'main_stage') {
+            } else if (combatInfo.type === 'main_stage') {
                 if (typeof mainChapters !== 'undefined' && mainChapters[combatInfo.indices.chapter]) {
                     const stage = mainChapters[combatInfo.indices.chapter].stages[combatInfo.indices.stage];
                     const stageId = `${combatInfo.indices.chapter + 1}-${combatInfo.indices.stage + 1}`;
-                    
                     if (typeof clearedStages !== 'undefined' && !clearedStages.includes(stageId)) {
                         clearedStages.push(stageId);
                     }
-                    
-                    // 보상 텍스트 생성
                     let rewardsEarned = [];
                     if (stage.rewards) {
                         if (stage.rewards.fountainPens) {
@@ -4806,21 +4795,18 @@ function endCombat(isVictory, combatInfo, totalDamageDealt = 0) {
             rewardMsg = "전투에서 패배했습니다...";
         }
 
-        // [4] 결과 텍스트 적용
         if(resultTitle) {
             resultTitle.textContent = titleText;
             resultTitle.className = `text-4xl font-bold mb-4 ${titleColor}`;
         }
         if(resultMessage) resultMessage.textContent = rewardMsg;
 
-        // [5] UI 및 업적 업데이트 (에러 무시)
         try { if(typeof updateUI === 'function') updateUI(); } catch(e) {}
         try { if(typeof checkAchievements === 'function') checkAchievements(); } catch(e) {}
 
     } catch (error) {
-        console.error("보상 계산 중 에러 발생:", error);
-        if(resultTitle) resultTitle.textContent = "오류 발생";
-        if(resultMessage) resultMessage.textContent = `결과 처리 중 문제가 생겼습니다.\n(${error.message})`;
+        console.error("보상 계산 에러:", error);
+        if(resultMessage) resultMessage.textContent = `결과 처리 중 오류: ${error.message}`;
     }
 }
 
