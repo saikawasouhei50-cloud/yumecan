@@ -1820,6 +1820,7 @@ async function saveGameToFirebase() {
     checkEventStatus();
     switchTab('home');
     checkAchievements();
+	checkAndSpawnRaidBoss();
 	updateAchievementBadge(); // ✨ 추가: 로드 시 배지 갱신
     document.getElementById('loading-overlay').classList.add('hidden');
     document.body.classList.remove('loading');
@@ -4134,7 +4135,7 @@ function startStageCombat(chapterIndex, stageIndex) {
 
             const delay = ms => new Promise(res => setTimeout(res, ms / combatSpeedMultiplier));
 
-            // ✅ 기존 runCombatLoop 함수를 이 코드로 통째로 교체하세요.
+            a// ✅ 기존 runCombatLoop 함수를 이 코드로 통째로 교체하세요.
 async function runCombatLoop(combatDeck, originalBonusDeck, monsterData, indices, type) { 
     const originalMonsterDef = monsterData.stats.def;
     
@@ -8315,6 +8316,35 @@ async function submitRaidDamage(damage) {
         console.error("레이드 데미지 전송 실패:", e);
     }
 }
+
+// yumecan.html - <script> 태그 내부
+
+// ✨ [신규] 시트 데이터를 기반으로 Firebase에 보스가 있는지 확인하고 없으면 스폰
+async function checkAndSpawnRaidBoss() {
+    if (!raidBossDataSheet || !currentUser) return;
+
+    const bossRef = db.collection('system').doc('raid_boss');
+    const doc = await bossRef.get();
+
+    // 1. Firebase에 보스 문서가 없다면 (혹은 레벨이 다르다면)
+    if (!doc.exists || doc.data().level !== raidBossDataSheet.level) {
+        
+        // 2. 시트 데이터를 기반으로 보스를 생성
+        const newBossData = {
+            ...raidBossDataSheet, // 시트에서 로드된 모든 기본 정보
+            currentHp: raidBossDataSheet.maxHp, // 현재 HP는 MAX HP로 설정
+            isDead: false,
+            spawnedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        
+        await bossRef.set(newBossData);
+        console.log(`[Raid] Firebase에 새 보스 [Lv.${raidBossDataSheet.level} ${raidBossDataSheet.name}] 스폰 완료.`);
+        
+        // 스폰 후 전역 변수 업데이트 (혹시 모를 Race condition 방지)
+        raidBossData = newBossData;
+        updateRaidUI();
+    }
+}
 // ================== 👆 레이드 시스템 로직 끝 👆 ==================
 	
 
@@ -8323,4 +8353,3 @@ async function submitRaidDamage(damage) {
     </script>
 </body>
 </html>
-
