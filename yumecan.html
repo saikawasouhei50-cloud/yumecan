@@ -4830,7 +4830,7 @@ function endCombat(isVictory, combatInfo, totalDamageDealt = 0) {
 
         try { if(typeof updateUI === 'function') updateUI(); } catch(e) {}
         try { if(typeof checkAchievements === 'function') checkAchievements(); } catch(e) {}
-
+saveGame();
     } catch (error) {
         console.error("보상 계산 에러:", error);
         if(resultMessage) resultMessage.textContent = `결과 처리 중 오류: ${error.message}`;
