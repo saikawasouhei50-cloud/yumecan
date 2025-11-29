@@ -8527,7 +8527,11 @@ async function submitRaidDamage(damage) {
             const today = new Date().toDateString();
             
             currentCount = userData.raidDailyCount || 0;
-            const lastDate = userData.raidLastResetDate?.toDate().toDateString() || '';
+            // ✨ [핵심 수정] 날짜 데이터 유효성 검사 강화
+            const lastResetTimestamp = userData.raidLastResetDate;
+            const lastDate = (lastResetTimestamp && typeof lastResetTimestamp.toDate === 'function')
+                ? lastResetTimestamp.toDate().toDateString() 
+                : '';
             
             // 날짜가 바뀌었으면 카운트 초기화
             if (lastDate !== today) {
