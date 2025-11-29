@@ -301,14 +301,11 @@ body.pointer-events-none {
     </div>
     <div class="w-full max-w-5xl bg-white/10 backdrop-blur-md rounded-2xl shadow-xl text-white p-6 md:p-8">
         
-        <!-- 제목 부분 -->
-        
-        
-        <header class="text-center mb-2 md:mb-4">
+        <header id="global-header" class="text-center mb-2 md:mb-4">
             <h1 class="text-3xl md:text-5xl font-bold tracking-wider text-yellow-300" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">YUMECAN!_</h1>
         </header>
 
-        <div class="bg-black/20 p-2 md:p-3 rounded-lg mb-2 md:mb-4 flex flex-wrap justify-between items-center gap-2">
+        <div id="global-info-bar" class="bg-black/20 p-2 md:p-3 rounded-lg mb-2 md:mb-4 flex flex-wrap justify-between items-center gap-2">
             <div id="login-view" class="flex flex-wrap items-center gap-2 justify-center w-full md:w-auto">
                 <input type="text" id="nickname-input" placeholder="닉네임" class="bg-gray-700 text-white px-2 py-1 rounded-md text-xs md:text-sm w-20 md:w-24">
                 <input type="email" id="email-input" placeholder="이메일" class="bg-gray-700 text-white px-2 py-1 rounded-md text-xs md:text-sm w-20 md:w-24">
@@ -324,7 +321,7 @@ body.pointer-events-none {
             </div>
         </div>
         
-        <div class="flex flex-wrap items-center justify-center md:justify-end gap-1.5 md:gap-3 mb-4 md:mb-6">
+        <div id="global-currency-bar" class="flex flex-wrap items-center justify-center md:justify-end gap-1.5 md:gap-3 mb-4 md:mb-6">
             
             <button onclick="openMailbox()" class="relative gacha-button bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1 px-3 md:py-2 md:px-4 rounded-full text-xs md:text-sm flex items-center gap-1">
                 <span>📩</span>
@@ -2126,19 +2123,21 @@ let currentTab = 'home';
 
 // yumecan.html - switchTab 함수 (2137행 근처)
 
-let currentTab = 'home';
+// ========================================================
+// ✅ [수정됨] 탭 전환 함수 (중복 선언 제거 & 상단바 제어 강화)
+// ========================================================
+
+let currentTab = 'home'; // ✨ 이 변수는 스크립트 전체에서 딱 한 번만 선언되어야 합니다!
 
 function switchTab(newTab) {
-    // -------------------------------------------------------------
-    // ⭐ [핵심 수정 1] 상단 공통 영역을 제어할 변수 추가
-    const commonHeaderEl = document.querySelector('header');
-    const commonInfoEl = document.querySelector('.bg-black\\/20.p-2.md\\:p-3.rounded-lg.mb-2.md\\:mb-4');
-    const commonCurrencyEl = document.querySelector('.flex.flex-wrap.items-center.justify-center.md\\:justify-end.gap-1\\.5.md\\:gap-3.mb-4.md\\:mb-6');
-    // -------------------------------------------------------------
-    
     if (currentTab === newTab) return;
 
-    // 모든 뷰 DOM 요소 리스트
+    // 1. 상단 공통 영역 요소 가져오기 (1단계에서 추가한 ID 사용)
+    const commonHeader = document.getElementById('global-header');
+    const commonInfo = document.getElementById('global-info-bar');
+    const commonCurrency = document.getElementById('global-currency-bar');
+
+    // 2. 모든 뷰 DOM 요소 리스트
     const allViews = [
         document.getElementById('home-view'),
         document.getElementById('gacha-view'),
@@ -2157,55 +2156,53 @@ function switchTab(newTab) {
         document.getElementById('story-view'),
     ];
 
-    // 홈뷰의 오버레이 요소 셀렉터 (홈 뷰가 아닌 곳으로 이동할 때 항상 숨겨야 함)
+    // 3. 홈 화면 전용 오버레이 요소들 (버튼, 배너 등)
     const homeOverlaySelectors = [
-        '#home-view > .absolute.z-20.pointer-events-none', // 버튼 메뉴 영역
-        '#home-view > .absolute.bottom-4.left-0.w-full.px-4', // 이벤트 배너, 유틸리티 메뉴 영역
+        '#home-view > .absolute.z-20.pointer-events-none', 
+        '#home-view > .absolute.bottom-4.left-0.w-full.px-4', 
     ];
     
-    // 1. 모든 메인 뷰 숨기기
+    // --- [로직 수행] ---
+
+    // A. 모든 메인 뷰 숨기기
     allViews.forEach(view => {
         if (view) view.classList.add('hidden');
     });
 
-    // 2. 홈 뷰의 오버레이 요소 숨기기 (새 탭이 'home'이 아닐 경우)
+    // B. 상단 공통 영역 제어 (홈 화면이 아니면 숨김)
     if (newTab !== 'home') {
+        // 홈 오버레이 숨기기
         homeOverlaySelectors.forEach(sel => {
             const el = document.querySelector(sel);
             if (el) el.classList.add('hidden');
         });
         
-        // -------------------------------------------------------------
-        // ⭐ [핵심 수정 2] 홈 뷰가 아니면 상단 공통 영역 숨기기
-        if (commonHeaderEl) commonHeaderEl.classList.add('hidden');
-        if (commonInfoEl) commonInfoEl.classList.add('hidden');
-        if (commonCurrencyEl) commonCurrencyEl.classList.add('hidden');
-        // -------------------------------------------------------------
-    }
+        // ✨ 상단바(제목, 정보, 재화) 숨기기
+        if (commonHeader) commonHeader.classList.add('hidden');
+        if (commonInfo) commonInfo.classList.add('hidden');
+        if (commonCurrency) commonCurrency.classList.add('hidden');
 
-    // 3. 새 탭 열기
-    const newViewId = newTab + "-view";
-    const newView = document.getElementById(newViewId);
-    if (newView) newView.classList.remove('hidden');
-
-    // 4. 홈뷰에 돌아가는 경우 → 오버레이 및 상단 공통 영역 다시 표시
-    if (newTab === 'home') {
+    } else {
+        // C. 홈 화면으로 돌아온 경우 -> 다시 보이기
         homeOverlaySelectors.forEach(sel => {
             const el = document.querySelector(sel);
             if (el) el.classList.remove('hidden');
         });
         
-        // -------------------------------------------------------------
-        // ⭐ [핵심 수정 3] 홈 뷰로 돌아오면 상단 공통 영역 다시 보이기
-        if (commonHeaderEl) commonHeaderEl.classList.remove('hidden');
-        if (commonInfoEl) commonInfoEl.classList.remove('hidden');
-        if (commonCurrencyEl) commonCurrencyEl.classList.remove('hidden');
-        // -------------------------------------------------------------
+        // ✨ 상단바 다시 보이기
+        if (commonHeader) commonHeader.classList.remove('hidden');
+        if (commonInfo) commonInfo.classList.remove('hidden');
+        if (commonCurrency) commonCurrency.classList.remove('hidden');
     }
-    
-    // 5. 전역 '로비로 복귀' 버튼 상태 업데이트
+
+    // D. 선택한 새 탭 보이기
+    const newView = document.getElementById(newTab + "-view");
+    if (newView) newView.classList.remove('hidden');
+
+    // E. '로비로 복귀' 버튼 상태 업데이트
     const globalHomeBtn = document.getElementById('global-home-button');
     if (globalHomeBtn) {
+        // 홈이면 숨기고, 다른 탭이면 보이기
         if (newTab === 'home') {
             globalHomeBtn.classList.add('hidden');
         } else {
@@ -2215,26 +2212,17 @@ function switchTab(newTab) {
 
     currentTab = newTab;
 
-    // 6. 탭 이동 후 추가 UI 업데이트 (필요 시)
-    if (newTab === 'inventory') {
-        displayInventory();
-    } else if (newTab === 'deck') {
-        displayDeckManagement();
-    } else if (newTab === 'combat') {
-        displayCombatView();
-    } else if (newTab === 'collection') {
-        displayCollectionView();
-    } else if (newTab === 'event') {
-        displayEventHomeView();
-    } else if (newTab === 'achievements') {
-        displayAchievements();
-    } else if (newTab === 'profile') {
-        displayProfileView();
-    } else if (newTab === 'friends') {
-        loadFriendList();
-    } else if (newTab === 'story') {
-        displayStoryView();
-    } else if (newTab === 'myroom') {
+    // F. 탭별 추가 로직 실행
+    if (newTab === 'inventory') displayInventory();
+    else if (newTab === 'deck') displayDeckManagement();
+    else if (newTab === 'combat') displayCombatView();
+    else if (newTab === 'collection') displayCollectionView();
+    else if (newTab === 'event') displayEventHomeView();
+    else if (newTab === 'achievements') displayAchievements();
+    else if (newTab === 'profile') displayProfileView();
+    else if (newTab === 'friends') loadFriendList();
+    else if (newTab === 'story') displayStoryView();
+    else if (newTab === 'myroom') {
         displayMyRoom();
         if (typeof isEditMode !== 'undefined' && isEditMode) toggleEditMode();
     }
