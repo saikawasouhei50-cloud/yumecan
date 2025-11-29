@@ -8514,24 +8514,21 @@ async function submitRaidDamage(damage) {
 
     try {
         let isLimitReached = false;
-        let nextParticipationCount = 0; // ✨ [핵심 수정] 최종 카운트를 담을 바깥 변수
         
-        await db.runTransaction(async (t) => {
+        // ✨ [핵심 수정] 트랜잭션의 반환 값을 finalCount에 직접 할당
+        const finalCount = await db.runTransaction(async (t) => {
             const doc = await t.get(bossRef);
             if (!doc.exists) throw "보스가 사라졌습니다.";
             
             // --- 1. 유저 참여 횟수 확인 및 초기화 로직 ---
             const userDoc = await t.get(userRef);
             const userData = userDoc.data();
-            
-            // ✨ [진단용 로그] DB에서 읽은 실제 값 확인
-            console.log(`[RAID DEBUG - READ] DB에 저장된 count: ${userData.raidDailyCount || 0}`);
-            
+
             const today = new Date().toDateString();
             
-            let countBeforeIncrement = userData.raidDailyCount || 0; // DB에서 읽은 값
+            let countBeforeIncrement = userData.raidDailyCount || 0; 
             
-            // 날짜 데이터 유효성 검사 강화
+            // 날짜 데이터 유효성 검사
             const lastResetTimestamp = userData.raidLastResetDate;
             const lastDate = (lastResetTimestamp && typeof lastResetTimestamp.toDate === 'function')
                 ? lastResetTimestamp.toDate().toDateString() 
@@ -8544,15 +8541,13 @@ async function submitRaidDamage(damage) {
             
             if (countBeforeIncrement >= DAILY_LIMIT) {
                 isLimitReached = true; 
-                return; // 트랜잭션 중단
+                return null; // 제한 도달 시 트랜잭션 성공 후 null 반환
             }
-            // --- 유저 참여 횟수 확인 로직 끝 ---
             
-            // ✨ 성공 시 다음 카운트 계산
-            nextParticipationCount = countBeforeIncrement + 1;
+            const countAfterIncrement = countBeforeIncrement + 1; // 다음 카운트 계산
 
             const currentHp = doc.data().currentHp;
-            if (currentHp <= 0) return; 
+            if (currentHp <= 0) return null; // 보스 HP가 없으면 트랜잭션 성공 후 null 반환
 
             // 2. DB 업데이트: 보스 체력 감소
             const newHp = Math.max(0, currentHp - damage);
@@ -8560,19 +8555,28 @@ async function submitRaidDamage(damage) {
             
             // 3. DB 업데이트: 유저 카운트 증가 및 날짜 기록
             t.update(userRef, {
-                raidDailyCount: nextParticipationCount, // 계산된 다음 카운트 사용
+                raidDailyCount: countAfterIncrement, // 계산된 다음 카운트 사용
                 raidLastResetDate: firebase.firestore.FieldValue.serverTimestamp()
             });
+
+            return countAfterIncrement; // ✨ 최종 계산된 카운트 값을 반환합니다.
         });
         
         // --- 트랜잭션 성공 후 보상 지급 및 UI 업데이트 ---
-        if (isLimitReached) {
-            alert(`⚠️ 레이드 참여 횟수 제한(${DAILY_LIMIT}회)을 모두 사용했습니다. 내일 다시 시도해주세요.`);
+        
+        // finalCount가 null이면 제한 도달 혹은 보스 사망으로 트랜잭션이 중단됨
+        if (finalCount === null) {
+             if (isLimitReached) {
+                alert(`⚠️ 레이드 참여 횟수 제한(${DAILY_LIMIT}회)을 모두 사용했습니다. 내일 다시 시도해주세요.`);
+             } else {
+                 // 보스 HP가 0이 되어 중단된 경우
+                 alert("보스 HP가 0이 되어 전투 기록을 건너뛰었습니다.");
+             }
             return;
         }
 
-        // ✨ [로컬 동기화]
-        playerRaidDailyCount = nextParticipationCount; // 로컬 변수 업데이트
+        // 1. 로컬 변수 동기화
+        playerRaidDailyCount = finalCount; // DB와 동일한 값으로 로컬 업데이트
         playerRaidLastResetDate = new Date();    
         
         const calculatedReward = Math.min(MAX_REWARD, Math.floor(damage / REWARD_PER_100_DAMAGE)); 
@@ -8582,18 +8586,13 @@ async function submitRaidDamage(damage) {
 			playerRaidDamage += damage;
 			updateUI();
             saveGame(); // 로컬 데이터 (currency, damage, raidDailyCount)를 Firebase에 저장
-            // ✨ [핵심 수정] 다음 카운트를 사용
-            alert(`보스에게 ${damage} 피해를 입혔습니다! (오늘 ${nextParticipationCount}회 참여)\n기여 보상: 💎${calculatedReward}`);
+            // ✨ [핵심 수정] 반환된 finalCount 변수를 사용
+            alert(`보스에게 ${damage} 피해를 입혔습니다! (오늘 ${finalCount}회 참여)\n기여 보상: 💎${calculatedReward}`);
         } else {
              alert(`보스에게 ${damage}의 피해를 입혔습니다!`);
         }
         
     } catch (error) {
-        // limit-reached 오류는 UI에서 처리했으므로, 다른 오류만 처리합니다.
-        if (typeof error === 'object' && error.code === 'limit-reached') {
-            return; 
-        }
-
         console.error("레이드 데미지 전송 실패:", error);
         alert("전투 결과 처리 중 오류가 발생했습니다. (콘솔 확인)");
     }
