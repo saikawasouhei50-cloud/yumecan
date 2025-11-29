@@ -1812,7 +1812,7 @@ async function saveGameToFirebase() {
                 // 날짜가 다르면 0으로 초기화
                 playerRaidDailyCount = 0; 
                 playerRaidLastResetDate = null; 
-            } else {
+            
                 } else {
                 // 날짜가 같으면 DB 카운트 로드
                 playerRaidDailyCount = savedData.raidDailyCount ?? 0; // ⭐⭐
@@ -8735,4 +8735,5 @@ async function checkAndSpawnRaidBoss() {
     </script>
 </body>
 </html>
+
 
