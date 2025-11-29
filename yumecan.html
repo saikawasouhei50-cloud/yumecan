@@ -8500,10 +8500,13 @@ async function submitRaidDamage(damage) {
     const MAX_REWARD = 50;           
     const DAILY_LIMIT = 5;           // ⚠️ 하루 최대 참여 횟수
     
+    // ✨ [핵심 수정] bossRef와 userRef를 함수 내부에서 정의합니다.
+    const bossRef = db.collection('system').doc('raid_boss');
     const userRef = db.collection('users').doc(currentUser.uid);
 
     try {
         let isLimitReached = false;
+        let currentCount = 0; // 트랜잭션 성공 후 메시지 출력을 위해 변수 정의
         
         await db.runTransaction(async (t) => {
             const doc = await t.get(bossRef);
@@ -8513,9 +8516,9 @@ async function submitRaidDamage(damage) {
             const userDoc = await t.get(userRef);
             const userData = userDoc.data();
 
-            const today = new Date().toDateString(); // 예: 'Sat Nov 29 2025'
+            const today = new Date().toDateString();
             
-            let currentCount = userData.raidDailyCount || 0;
+            currentCount = userData.raidDailyCount || 0;
             const lastDate = userData.raidLastResetDate?.toDate().toDateString() || '';
             
             // 날짜가 바뀌었으면 카운트 초기화
@@ -8524,9 +8527,8 @@ async function submitRaidDamage(damage) {
             }
             
             if (currentCount >= DAILY_LIMIT) {
-                isLimitReached = true; // 제한 도달 플래그 설정
-                // 트랜잭션을 멈추지만, 롤백하지는 않습니다.
-                return; 
+                isLimitReached = true; 
+                return; // 트랜잭션 중단
             }
             // --- 유저 참여 횟수 확인 로직 끝 ---
 
@@ -8562,9 +8564,13 @@ async function submitRaidDamage(damage) {
              alert(`보스에게 ${damage}의 피해를 입혔습니다!`);
         }
         
-    } catch (e) {
-        console.error("레이드 데미지 전송 실패:", e);
-        // 트랜잭션 오류 처리 (권한, 보스 사망 등)
+    } catch (error) {
+        // limit-reached 오류는 UI에서 처리했으므로, 다른 오류만 처리합니다.
+        if (typeof error === 'object' && error.code === 'limit-reached') {
+            return; 
+        }
+
+        console.error("레이드 데미지 전송 실패:", error);
         alert("전투 결과 처리 중 오류가 발생했습니다. (콘솔 확인)");
     }
 }
