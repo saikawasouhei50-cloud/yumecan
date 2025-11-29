@@ -1056,20 +1056,38 @@ body.pointer-events-none {
                 </div>
                 
                 <div id="revision-container" class="mt-4 bg-black/20 p-4 rounded-lg">
-                    <h3 class="font-bold text-lg mb-2 text-yellow-300">개정판 제작</h3>
-                    <div class="flex items-start justify-between gap-4">
-                        <div class="flex-grow">
-                            <p>현재: <span id="detail-card-revision" class="font-bold text-xl"></span></p>
-                            <p id="revision-preview" class="text-sm text-green-400"></p>
-                            <select id="revision-material-select" class="mt-2 w-full bg-gray-700 text-white p-2 rounded border border-gray-600">
-                                <option value="">원본으로 사용할 카드를 선택하세요</option>
-                            </select>
-                        </div>
-                        <button id="revise-card-button" class="gacha-button bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 px-6 rounded-full shadow-lg flex-shrink-0">
-                            개정하기
-                        </button>
-                    </div>
-                </div>
+    <h3 class="font-bold text-lg mb-2 text-yellow-300">개정판 제작</h3>
+    
+    <div class="flex justify-between items-center mb-2">
+        <p>현재 단계: <span id="detail-card-revision" class="font-bold text-xl text-white"></span></p>
+        <p id="revision-preview" class="text-sm text-green-400"></p>
+    </div>
+
+    <div class="mb-3 border-b border-gray-600 pb-3">
+        <p class="text-xs text-gray-400 mb-1">방법 1: 동일한 원고(카드) 사용</p>
+        <div class="flex gap-2">
+            <select id="revision-material-select" class="flex-1 bg-gray-700 text-white p-2 rounded border border-gray-600 text-sm">
+                <option value="">원본 카드 선택</option>
+            </select>
+            <button id="revise-card-button" class="gacha-button bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-1 px-4 rounded shadow-lg text-sm whitespace-nowrap">
+                합치기
+            </button>
+        </div>
+    </div>
+
+    <div>
+        <p class="text-xs text-gray-400 mb-1">방법 2: 특수 잉크 사용</p>
+        <div class="flex justify-between items-center bg-fuchsia-900/30 p-2 rounded border border-fuchsia-500/30">
+            <div class="text-sm">
+                <span class="text-fuchsia-300 font-bold">💧 잉크병</span>
+                <span id="inkwell-cost-display" class="text-white ml-1">0 / 0</span>
+            </div>
+            <button id="revise-with-inkwell-button" class="gacha-button bg-fuchsia-600 hover:bg-fuchsia-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-1 px-4 rounded shadow-lg text-sm whitespace-nowrap">
+                사용하기
+            </button>
+        </div>
+    </div>
+</div>
 
 				<div id="publication-container" class="hidden mt-4 bg-gradient-to-r from-indigo-900 to-purple-900 p-4 rounded-lg border border-yellow-400/30">
     <div class="flex justify-between items-center">
@@ -1386,6 +1404,14 @@ const GRID_SIZE = 100;
             
 
             // --- 게임 상태 ---
+	// ✨ [신규] 등급별 잉크병 개정 비용 (잉크병 몇 개로 개정할 수 있는지)
+const INKWELL_REVISION_COSTS = {
+    'N': 1,    // N 등급은 1개
+    'R': 3,    // R 등급은 3개
+    'SR': 5,   // SR 등급은 5개
+    'SSR': 10  // SSR 등급은 10개 (가장 비쌈)
+};
+	
 			const DISMANTLE_REWARDS = {
     'N': { fountainPens: 10, inkwells: 0 },
     'R': { fountainPens: 30, inkwells: 0 },
@@ -4667,43 +4693,67 @@ function endCombat(isVictory, combatInfo) { // dungeon, type 대신 combatInfo �
                     enhanceButton.disabled = playerFountainPens < cost;
                 }
 
-                // --- 5. ✨ '개정' UI 업데이트 로직 (새로 추가된 부분) ✨ ---
-                const revisionContainer = document.getElementById('revision-container');
-                const revisionLevelDisplay = document.getElementById('detail-card-revision');
-                const revisionPreviewDisplay = document.getElementById('revision-preview');
-                const revisionMaterialSelect = document.getElementById('revision-material-select');
-                const reviseButton = document.getElementById('revise-card-button');
+                // --- 5. ✨ '개정' UI 업데이트 로직 (잉크병 기능 추가됨) ✨ ---
+    const revisionLevelDisplay = document.getElementById('detail-card-revision');
+    const revisionPreviewDisplay = document.getElementById('revision-preview');
+    const revisionMaterialSelect = document.getElementById('revision-material-select');
+    const reviseButton = document.getElementById('revise-card-button');
+    
+    // [신규 요소 가져오기]
+    const inkwellCostDisplay = document.getElementById('inkwell-cost-display');
+    const reviseInkButton = document.getElementById('revise-with-inkwell-button');
 
-                revisionLevelDisplay.innerHTML = '⭐'.repeat(cardInstance.revision) + ` ${cardInstance.revision}차 개정`;
-                revisionMaterialSelect.innerHTML = '<option value="">개정에 사용할 원본을 선택하세요</option>';
+    // 현재 상태 표시
+    revisionLevelDisplay.innerHTML = '⭐'.repeat(cardInstance.revision) + ` ${cardInstance.revision}차 개정`;
+    revisionMaterialSelect.innerHTML = '<option value="">개정에 사용할 원본을 선택하세요</option>';
 
-                if (cardInstance.revision >= MAX_REVISION_LEVEL) {
-                    revisionPreviewDisplay.textContent = '최종 개정판입니다.';
-                    reviseButton.disabled = true;
-                    revisionMaterialSelect.disabled = true;
-                } else {
-                    const materialCards = playerInventory.filter(c => c.name === cardInstance.name && c.id !== cardInstance.id);
-                    const nextRevisionBonus = (cardInstance.revision + 1) * STAT_INCREASE_PER_REVISION * 100;
-                    revisionPreviewDisplay.textContent = `다음 개정 시 기본 능력치 +${nextRevisionBonus}%`;
+    // 최대 레벨 체크
+    if (cardInstance.revision >= MAX_REVISION_LEVEL) {
+        revisionPreviewDisplay.textContent = '최종 개정판입니다.';
+        
+        // 버튼 비활성화
+        reviseButton.disabled = true;
+        revisionMaterialSelect.disabled = true;
+        reviseInkButton.disabled = true;
+        reviseInkButton.textContent = "최대 레벨";
+        inkwellCostDisplay.textContent = "-";
+    } else {
+        // 다음 단계 보너스 미리보기
+        const nextRevisionBonus = (cardInstance.revision + 1) * STAT_INCREASE_PER_REVISION * 100;
+        revisionPreviewDisplay.textContent = `다음 개정 시 기본 능력치 +${nextRevisionBonus}%`;
 
-                    if (materialCards.length > 0) {
-                        materialCards.forEach(mat => {
-                            const option = document.createElement('option');
-                            option.value = mat.id;
-                            option.textContent = `Lv.${mat.level} ${mat.name}`;
-                            revisionMaterialSelect.appendChild(option);
-                        });
-                        reviseButton.disabled = false;
-                        revisionMaterialSelect.disabled = false;
-                    } else {
-                        const option = document.createElement('option');
-                        option.textContent = '사용할 수 있는 원본이 없습니다.';
-                        option.disabled = true;
-                        revisionMaterialSelect.appendChild(option);
-                        reviseButton.disabled = true;
-                        revisionMaterialSelect.disabled = true;
-                    }
-                }
+        // [옵션 1: 카드 사용] 로직
+        const materialCards = playerInventory.filter(c => c.name === cardInstance.name && c.id !== cardInstance.id);
+        if (materialCards.length > 0) {
+            materialCards.forEach(mat => {
+                const option = document.createElement('option');
+                option.value = mat.id;
+                option.textContent = `Lv.${mat.level} ${mat.name}`;
+                revisionMaterialSelect.appendChild(option);
+            });
+            reviseButton.disabled = false;
+            revisionMaterialSelect.disabled = false;
+        } else {
+            const option = document.createElement('option');
+            option.textContent = '사용할 수 있는 원본이 없습니다.';
+            option.disabled = true;
+            revisionMaterialSelect.appendChild(option);
+            reviseButton.disabled = true;
+            revisionMaterialSelect.disabled = true;
+        }
+
+        // [옵션 2: 잉크병 사용] 로직 ✨
+        const inkCost = INKWELL_REVISION_COSTS[character.rarity] || 999;
+        const canAffordInk = playerInkwells >= inkCost;
+        
+        inkwellCostDisplay.innerHTML = `<span class="${canAffordInk ? 'text-green-400' : 'text-red-400'} font-bold">${playerInkwells}</span> / ${inkCost}`;
+        
+        reviseInkButton.disabled = !canAffordInk;
+        reviseInkButton.textContent = canAffordInk ? "사용하기" : "부족함";
+        
+        // 버튼 클릭 이벤트 연결 (중복 방지를 위해 onclick 속성 덮어쓰기)
+        reviseInkButton.onclick = reviseCardWithInkwell;
+    }
 				// yumecan.html - showCardDetails 함수 내부의 맨 끝부분
 
                 // ... (기존 개정판 제작 UI 로직 끝) ...
@@ -5295,6 +5345,49 @@ function enhanceCard() {
     currentInteractiveStory = null;
     // 일반적인 스토리 뷰에서 닫는 경우 콜백은 실행하지 않습니다.
    
+}
+
+// ✨ [신규] 잉크병을 사용하여 개정하는 함수
+function reviseCardWithInkwell() {
+    if (!currentDetailCardId) return;
+
+    const cardInstance = playerInventory.find(c => c.id === currentDetailCardId);
+    if (!cardInstance) return;
+
+    // 1. 비용 계산
+    const character = findCharacter(cardInstance.name);
+    const cost = INKWELL_REVISION_COSTS[character.rarity] || 999;
+
+    // 2. 유효성 검사
+    if (cardInstance.revision >= MAX_REVISION_LEVEL) {
+        alert("이미 최종 개정판입니다.");
+        return;
+    }
+    if (playerInkwells < cost) {
+        alert(`잉크병이 부족합니다. (필요: ${cost}, 보유: ${playerInkwells})`);
+        return;
+    }
+
+    if (!confirm(`잉크병 ${cost}개를 사용하여 [${cardInstance.name}]의 개정판을 제작하시겠습니까?`)) {
+        return;
+    }
+
+    // 3. 자원 소모 및 레벨업
+    playerInkwells -= cost;
+    cardInstance.revision++;
+
+    // 4. 성공 메시지 및 저장
+    const successDialogue = character.enhancementSuccessDialogue || "특수 잉크의 힘으로 새로운 가능성이 열렸습니다!";
+    alert(`[잉크병 사용 성공]\n${successDialogue}`);
+
+    updateUI();
+    saveGame();
+    showCardDetails(currentDetailCardId); // UI 갱신
+
+    // 인벤토리창 갱신
+    if (!document.getElementById('inventory-view').classList.contains('hidden')) {
+        displayInventory();
+    }
 }
             function reviseCard() {
     if (!currentDetailCardId) return;
