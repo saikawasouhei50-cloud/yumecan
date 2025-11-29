@@ -4473,12 +4473,20 @@ function updateCombatUI(deck, originalBonusDeck, monster) {
         }
     });
 
-    // 2. 몬스터 HP 업데이트
-    // ✨ [수정] 몬스터 데이터가 없는 경우를 대비해 monsters 전역 변수에서 확인합니다.
-    const baseMonsterData = monsters[monster.name];
+    // 2. 몬스터 HP 업데이트 (이 부분을 아래 코드로 교체하세요)
+    let monsterMaxHp;
 
-    if (baseMonsterData) {
-        const monsterMaxHp = baseMonsterData.stats.hp;
+    // A. 레이드 보스 데이터 사용 (전역 변수 raidBossDataSheet와 이름 일치 확인)
+    if (typeof raidBossDataSheet !== 'undefined' && monster.name === raidBossDataSheet.name) {
+        monsterMaxHp = raidBossDataSheet.maxHp;
+    } 
+    // B. 일반 몬스터 데이터 사용
+    else {
+        // 일반 몬스터 목록에서 Max HP를 가져옵니다.
+        monsterMaxHp = monsters[monster.name]?.stats.hp;
+    }
+
+    if (monsterMaxHp) { // Max HP를 찾았다면
         const monsterHpPercent = (monster.stats.hp / monsterMaxHp) * 100;
         
         const monsterHpBar = document.getElementById('monster-hp-bar');
@@ -4491,7 +4499,7 @@ function updateCombatUI(deck, originalBonusDeck, monster) {
             monsterHpText.textContent = `${monster.stats.hp} / ${monsterMaxHp}`;
         }
     } else {
-        console.error("몬스터 원본 데이터를 찾을 수 없어 HP 업데이트를 건너뜁니다.");
+        console.error("몬스터 원본 데이터를 찾을 수 없어 HP 업데이트를 건너뜁니다");
     }
 }
 
@@ -4576,31 +4584,43 @@ function displayEventStoryPart2() {
 }
 			
             // gacha3.html - endCombat 함수 (기존 코드 전체 교체)
-function endCombat(isVictory, combatInfo) { // dungeon, type 대신 combatInfo 객체 받기
+function endCombat(isVictory, combatInfo, totalDamageDealt = 0) { 
     lastCombatType = combatInfo.type;
+	
+    // Raid Tab Element (전역 변수로 가정하지만 안전하게 다시 찾습니다)
+    const eventSubTabRaid = document.getElementById('event-sub-tab-raid');
+
+	// ▼▼▼ [수정됨] 레이드 종료 로직 ▼▼▼
 	if (combatInfo.type === 'raid') {
         isCombatRunning = false;
         combatResultModal.classList.add('hidden');
         combatInProgressView.classList.add('hidden');
         
-        // 서버로 데미지 전송
+        // ✨ [핵심] 누적된 데미지를 서버로 전송
         submitRaidDamage(totalDamageDealt);
         
         // 이벤트 뷰의 레이드 탭으로 복귀
         document.getElementById('event-view').classList.remove('hidden');
         document.getElementById('event-raid-view').classList.remove('hidden');
+        
         // 탭 활성화 상태 유지
-        switchSubTab(document.getElementById('event-view'), eventSubTabRaid);
+        if (eventSubTabRaid) {
+            // switchSubTab 함수는 여기서 정의되지 않았을 수 있으므로, 단순 클래스 조작으로 대체
+            eventSubTabRaid.classList.add('active'); 
+        }
         
         return; // 레이드는 여기서 함수 종료
     }
+    // ▲▲▲ [수정 끝] ▲▲▲
+
+    // --- 기존 일반/이벤트 던전 승패 로직 ---
     if (isVictory) {
         let rewardMsg = '';
         if (combatInfo.type === 'event') {
             const dungeon = eventDungeons[combatInfo.indices];
             const reward = dungeon.eventPointReward;
-			playerEventPoints += reward;            // 지갑에 추가 (상점에서 씀)
-    playerCumulativeEventPoints += reward;  // ✨ 점수판에 추가 (랭킹용, 절대 안 깎임)
+			playerEventPoints += reward;            
+            playerCumulativeEventPoints += reward;  
             
             if (!clearedEventDungeons.includes(dungeon.name)) {
                 clearedEventDungeons.push(dungeon.name);
@@ -4619,7 +4639,6 @@ function endCombat(isVictory, combatInfo) { // dungeon, type 대신 combatInfo �
                 playerFountainPens += stage.rewards.fountainPens;
                 rewardsEarned.push(`🖋️${stage.rewards.fountainPens}`);
             }
-            // ✨ 추가: 보석(currency) 보상 지급 로직 ✨
             if (stage.rewards.currency) {
                 playerCurrency += stage.rewards.currency;
                 rewardsEarned.push(`💎${stage.rewards.currency}`);
@@ -4641,6 +4660,18 @@ function endCombat(isVictory, combatInfo) { // dungeon, type 대신 combatInfo �
     checkAchievements();
     combatResultModal.classList.remove('hidden');
     isCombatRunning = false;
+    
+    // ✨ [추가] 이벤트 전투에서 복귀 시 UI를 새로고침하여 탭을 '전투'로 되돌립니다.
+    if (combatInfo.type === 'event') {
+        switchTab('event');
+        // '전투' 탭 버튼을 찾아 활성화 (EventSubTabBattle 변수가 필요함)
+        const eventSubTabBattle = document.getElementById('event-sub-tab-battle');
+        if (eventSubTabBattle) {
+            // switchSubTab 함수가 전역에 없다면 이 방식으로 클래스를 조작합니다.
+            document.getElementById('event-battle-view').classList.remove('hidden');
+            eventSubTabBattle.classList.add('active');
+        }
+    }
 }
 
             // ✅ 이 코드로 기존 createCard 함수를 통째로 교체해주세요.
