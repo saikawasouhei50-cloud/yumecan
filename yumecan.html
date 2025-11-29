@@ -1710,8 +1710,10 @@ async function saveGameToFirebase() {
         playerInventory = loadedInventory.map(card => ({
             ...card,
             revision: (card.revision !== undefined && card.revision !== null) ? card.revision : 0,
-            level: (card.level !== undefined && card.level !== null) ? card.level : 0
-        }));
+    level: (card.level !== undefined && card.level !== null) ? card.level : 0,
+    // ✨ [추가] 잠금 상태 초기화 (없으면 false)
+    isLocked: (card.isLocked !== undefined) ? card.isLocked : false 
+}));
 
         // ✨ [핵심 수정] 수집 도감 데이터 로드 + 동기화
         collectedCardNames = new Set(savedData.collectedCardNames || []);
@@ -4550,17 +4552,21 @@ function endCombat(isVictory, combatInfo) { // dungeon, type 대신 combatInfo �
 
                 // 진영 배지
                 const factionBadge = `<span class="absolute top-2 right-2 text-xs font-bold px-2 py-1 rounded-full ${factionColors[character.faction]} z-10">${character.faction}</span>`;
+				let lockIconHTML = '';
+    if (cardInstance && cardInstance.isLocked) {
+        lockIconHTML = `<div class="absolute top-1 left-1 z-20 text-lg">🔒</div>`;
+    }
 
-                // HTML 조립
-                card.innerHTML = `
-                    ${factionBadge} ${levelBadgeHTML} ${revisionStarsHTML} 
-                    <div class="relative pointer-events-none">
-                        <img src="${character.cardImageUrl}" alt="${character.name}" class="w-full h-auto rounded-md mb-2 border-2 border-white/50">
-                        <p class="font-bold text-sm ${rarityColor} truncate">${character.name}</p>
-                        <p class="font-black text-lg ${rarityColor}" style="text-shadow: 1px 1px 2px rgba(255,255,255,0.5);">${character.rarity}</p>
-                    </div>
-                    ${actionButtonsHTML}
-                `;
+                // HTML 조립 (lockIconHTML 추가됨)
+    card.innerHTML = `
+        ${lockIconHTML} ${factionBadge} ${levelBadgeHTML} ${revisionStarsHTML} 
+        <div class="relative pointer-events-none">
+            <img src="${character.cardImageUrl}" alt="${character.name}" class="w-full h-auto rounded-md mb-2 border-2 border-white/50">
+            <p class="font-bold text-sm ${rarityColor} truncate">${character.name}</p>
+            <p class="font-black text-lg ${rarityColor}" style="text-shadow: 1px 1px 2px rgba(255,255,255,0.5);">${character.rarity}</p>
+        </div>
+        ${actionButtonsHTML}
+    `;
 
                 if (cardInstance && mode !== 'collection') { 
                     card.dataset.uniqueId = cardInstance.id;
@@ -4705,6 +4711,36 @@ function endCombat(isVictory, combatInfo) { // dungeon, type 대신 combatInfo �
                     costDisplay.textContent = `🖋️ ${cost}`;
                     enhanceButton.disabled = playerFountainPens < cost;
                 }
+				
+				// --- 6. ✨ 잠금 버튼 및 파쇄 버튼 로직 수정 ---
+    const dismantleContainer = document.getElementById('dismantle-container');
+    
+    // 기존 내용을 지우고 새로 구성
+    dismantleContainer.innerHTML = ''; 
+    dismantleContainer.className = "mt-4 flex gap-2 justify-end"; // 스타일 변경
+
+    // [잠금 버튼 생성]
+    const lockBtn = document.createElement('button');
+    const isLocked = cardInstance.isLocked;
+    lockBtn.className = `flex-1 gacha-button font-bold py-2 px-4 rounded-full shadow-lg text-sm ${isLocked ? 'bg-gray-600 text-yellow-300' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'}`;
+    lockBtn.innerHTML = isLocked ? '🔒 잠금 해제' : '🔓 잠금 설정';
+    lockBtn.onclick = () => toggleCardLock(cardId);
+    
+    // [파쇄 버튼 생성]
+    const dismantleBtn = document.createElement('button');
+    dismantleBtn.className = "flex-1 gacha-button bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-full shadow-lg text-sm";
+    dismantleBtn.textContent = "파쇄하기";
+    
+    // 잠겨있으면 파쇄 버튼 비활성화
+    if (isLocked) {
+        dismantleBtn.disabled = true;
+        dismantleBtn.title = "잠긴 카드는 파쇄할 수 없습니다.";
+    } else {
+        dismantleBtn.onclick = () => dismantleCard(cardId);
+    }
+
+    dismantleContainer.appendChild(lockBtn);
+    dismantleContainer.appendChild(dismantleBtn);
 
                 // --- 5. ✨ '개정' UI 업데이트 로직 (잉크병 기능 추가됨) ✨ ---
     const revisionLevelDisplay = document.getElementById('detail-card-revision');
@@ -4735,8 +4771,14 @@ function endCombat(isVictory, combatInfo) { // dungeon, type 대신 combatInfo �
         const nextRevisionBonus = (cardInstance.revision + 1) * STAT_INCREASE_PER_REVISION * 100;
         revisionPreviewDisplay.textContent = `다음 개정 시 기본 능력치 +${nextRevisionBonus}%`;
 
-        // [옵션 1: 카드 사용] 로직
-        const materialCards = playerInventory.filter(c => c.name === cardInstance.name && c.id !== cardInstance.id);
+        // [옵션 1: 카드 사용] 로직 수정
+        // ✨ 자신 제외 + 잠기지 않은(!isLocked) 카드만 재료로 사용 가능
+        const materialCards = playerInventory.filter(c => 
+            c.name === cardInstance.name && 
+            c.id !== cardInstance.id && 
+            !c.isLocked 
+        );
+
         if (materialCards.length > 0) {
             materialCards.forEach(mat => {
                 const option = document.createElement('option');
@@ -4956,26 +4998,37 @@ function updateMultiSelectUI() {
 }
 			
 			function dismantleCard(cardId) {
-    if (!confirm('이 카드를 파쇄하고 재료를 회수하시겠습니까? 카드는 영구히 사라집니다.')) {
-        return;
-    }
-
+    // 1. 카드를 먼저 찾습니다.
     const indexToRemove = playerInventory.findIndex(c => c.id === cardId);
+    
     if (indexToRemove === -1) {
         alert('카드를 찾을 수 없습니다.');
         return;
     }
 
     const cardInstance = playerInventory[indexToRemove];
-    const character = findCharacter(cardInstance.name);
-    const rarity = character.rarity;
-    const rewards = DISMANTLE_REWARDS[rarity];
 
-    // 덱에 포함된 카드는 삭제 불가능
+    // ✨ [추가] 잠금 상태 체크 (가장 먼저 확인)
+    if (cardInstance.isLocked) {
+        alert('잠금 설정된 카드는 파쇄할 수 없습니다.');
+        return;
+    }
+
+    // 2. 덱 포함 여부 체크
     if (playerDeck.some(deckCard => deckCard.id === cardId)) {
         alert('편찬에 포함된 카드는 파쇄할 수 없습니다. 덱에서 먼저 제거해주세요.');
         return;
     }
+
+    // 3. 사용자 최종 확인 (잠금도 안 되어있고, 덱에도 없을 때 물어봄)
+    if (!confirm('이 카드를 파쇄하고 재료를 회수하시겠습니까? 카드는 영구히 사라집니다.')) {
+        return;
+    }
+
+    // --- 파쇄 로직 진행 ---
+    const character = findCharacter(cardInstance.name);
+    const rarity = character.rarity;
+    const rewards = DISMANTLE_REWARDS[rarity];
     
     // 인벤토리에서 카드 제거
     playerInventory.splice(indexToRemove, 1);
@@ -5250,6 +5303,7 @@ function dismantleMultipleCards() {
     selectedCardsToDismantle.forEach(cardId => {
         const cardInstance = playerInventory.find(c => c.id === cardId);
         if (!cardInstance) return;
+		if (cardInstance.isLocked) return;
 
         if (playerDeck.some(deckCard => deckCard.id === cardId)) {
             cardsInDeck.push(cardInstance.name);
@@ -5789,10 +5843,13 @@ document.getElementById('select-all-filtered-button').addEventListener('click', 
     // 덱에 포함되지 않은 카드만 선택 목록에 추가합니다.
     currentlyVisibleCards.forEach(cardInstance => {
         const isInDeck = playerDeck.some(deckCard => deckCard.id === cardInstance.id);
-        if (!isInDeck) {
+        if (!isInDeck && !cardInstance.isLocked) {
             selectedCardsToDismantle.add(cardInstance.id);
         }
     });
+
+    displayInventory();
+});
 
     // 선택 상태를 화면에 즉시 반영합니다.
     displayInventory();
@@ -6310,6 +6367,8 @@ function loadTradeInventory() {
     let tradableCards = playerInventory.filter(card => {
         // 덱에 있는 카드는 제외
         if (playerDeck.some(d => d.id === card.id)) return false;
+		// ✨ 잠긴 카드 제외
+        if (card.isLocked) return false;
         
         // ✨ 등급 필터 적용
         if (currentTradeRarityFilter !== 'All') {
@@ -8115,6 +8174,22 @@ function startPeriodicMailCheck(uid) {
             console.warn("자동 우편 체크 중 오류(네트워크 등):", e);
         }
     }, 60 * 1000); // 60초(1분) 마다 실행
+}
+
+function toggleCardLock(cardId) {
+    const cardInstance = playerInventory.find(c => c.id === cardId);
+    if (!cardInstance) return;
+
+    // 상태 토글
+    cardInstance.isLocked = !cardInstance.isLocked;
+    
+    // 저장 및 UI 갱신
+    saveGame();
+    showCardDetails(cardId); // 버튼 상태 갱신
+    
+    if (!document.getElementById('inventory-view').classList.contains('hidden')) {
+        displayInventory(); // 자물쇠 아이콘 갱신
+    }
 }
 	
 
