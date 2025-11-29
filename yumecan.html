@@ -8478,9 +8478,10 @@ function startPeriodicMailCheck(uid) {
 }
 // yumecan.html - <script> 섹션 (loadRaidRankingData 함수 근처에 추가)
 
+// ✅ [수정됨] 레이드 랭킹 프리뷰 (Top 5, 현재 보스 시즌 필터링)
 async function loadRaidRankingPreview() {
-    // ⚠️ 현재 이벤트 ID가 없으면 중단
-    if (!CURRENT_EVENT_ID) return;
+    // 현재 이벤트 ID가 없거나, 보스 데이터가 로드되지 않았으면 중단
+    if (!CURRENT_EVENT_ID || !raidBossData) return;
     
     const container = document.getElementById('raid-ranking-preview-container');
     if (!container) return;
@@ -8488,9 +8489,10 @@ async function loadRaidRankingPreview() {
     container.innerHTML = '<p class="text-center text-gray-500 py-2">순위 불러오는 중...</p>';
 
     try {
-        // Firebase에서 레이드 누적 피해량(raidCumulativeDamage) 기준으로 Top 5를 가져옵니다.
+        // ✨ [핵심] 현재 보스 ID(lastRaidSpawnId)와 일치하는 기록만 가져옴
         const snapshot = await db.collection('users')
             .where('currentEventId', '==', CURRENT_EVENT_ID)
+            .where('lastRaidSpawnId', '==', raidBossData.spawnId) // 필터 추가
             .orderBy('raidCumulativeDamage', 'desc')
             .limit(5) 
             .get();
@@ -8532,7 +8534,13 @@ async function loadRaidRankingPreview() {
 
     } catch (e) {
         console.error("레이드 랭킹 프리뷰 로드 실패:", e);
-        container.innerHTML = '<p class="text-center text-red-400 text-xs py-2">로딩 실패 (F12 콘솔 확인)</p>';
+        
+        // 인덱스 에러가 발생해도 프리뷰 영역은 조용히 실패 메시지만 띄움
+        if (e.message.includes('index')) {
+            container.innerHTML = '<p class="text-center text-red-400 text-xs py-2">시스템: 인덱스 생성 필요 (F12 확인)</p>';
+        } else {
+            container.innerHTML = '<p class="text-center text-red-400 text-xs py-2">로딩 실패</p>';
+        }
     }
 }
 
@@ -8720,8 +8728,7 @@ async function distributeRaidRewards(bossName) {
     }
 }
 
-// ✅ async function submitRaidDamage(damage) 함수 전체를 이 코드로 교체하세요.
-// ✅ [수정됨] 레이드 데미지 제출 함수 (보상 분배 로직 연결)
+// ✅ [수정됨] 레이드 공격 함수 (새 보스면 점수 리셋)
 async function submitRaidDamage(damage) {
     if (damage <= 0) return;
     if (!currentUser) return alert("로그인 상태를 확인해주세요.");
@@ -8735,12 +8742,10 @@ async function submitRaidDamage(damage) {
     const REWARD_PER_100_DAMAGE = 1; 
     const MAX_REWARD = 50;           
     
-    // ✨ 보상 분배 트리거용 변수
     let triggerRewardDistribution = false;
     let bossNameForReward = "Unknown Boss";
 
     try {
-        // 트랜잭션 시작
         finalCount = await db.runTransaction(async (t) => {
             const bossDoc = await t.get(bossRef);
             const userDoc = await t.get(userRef);
@@ -8752,81 +8757,88 @@ async function submitRaidDamage(damage) {
             const userData = userDoc.data();
             const today = new Date().toDateString();
 
-            // 날짜 체크
+            // 1. 날짜 체크 (일일 횟수 초기화)
             let countBeforeIncrement = userData.raidDailyCount || 0; 
-            const lastResetTimestamp = userData.raidLastResetDate;
-            const lastDate = (lastResetTimestamp && typeof lastResetTimestamp.toDate === 'function')
-                ? lastResetTimestamp.toDate().toDateString() 
-                : '';
+            const lastDate = (userData.raidLastResetDate && userData.raidLastResetDate.toDate)
+                ? userData.raidLastResetDate.toDate().toDateString() : '';
             
-            if (lastDate !== today) {
-                countBeforeIncrement = 0;
-            }
-            
-            if (countBeforeIncrement >= DAILY_LIMIT) throw new Error("LIMIT_REACHED"); // 제한 초과 시 에러 던짐
-            if (bossData.currentHp <= 0) throw new Error("BOSS_DEAD"); // 이미 죽음
+            if (lastDate !== today) countBeforeIncrement = 0;
+            if (countBeforeIncrement >= DAILY_LIMIT) throw new Error("LIMIT_REACHED");
+            if (bossData.currentHp <= 0) throw new Error("BOSS_DEAD");
 
+            // 2. ✨ [핵심] 기여도(데미지) 초기화 체크
+            // 내가 마지막으로 친 보스 ID와 현재 보스 ID가 다르면 -> 새 시즌이므로 0부터 시작
+            let myCurrentTotalDamage = userData.raidCumulativeDamage || 0;
+            const currentBossId = bossData.spawnId || 0; // 보스 고유 ID
+            const myLastBossId = userData.lastRaidSpawnId || 0; // 내가 마지막으로 친 보스 ID
+
+            if (currentBossId !== myLastBossId) {
+                myCurrentTotalDamage = 0; // 리셋!
+            }
+
+            // 3. 데미지 계산 및 적용
             const countAfterIncrement = countBeforeIncrement + 1; 
-            const currentHp = bossData.currentHp;
-            const newHp = Math.max(0, currentHp - damage);
+            const newHp = Math.max(0, bossData.currentHp - damage);
+            const newTotalDamage = myCurrentTotalDamage + damage; // 리셋된 점수 + 이번 데미지
             
-            // ✨ [핵심] 보스가 죽었는지, 그리고 아직 보상이 미지급 상태인지 체크
+            // 4. 막타 체크
             if (newHp <= 0 && !bossData.isRewardDistributed) {
                 triggerRewardDistribution = true;
                 bossNameForReward = bossData.name;
-                
-                // 보스 데이터에 '보상 지급됨' 플래그 설정 (중복 실행 방지)
                 t.update(bossRef, { 
                     currentHp: newHp,
-                    isRewardDistributed: true, // 🚩 플래그 추가
+                    isRewardDistributed: true,
                     defeatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
             } else {
-                // 평범한 데미지 갱신
                 t.update(bossRef, { currentHp: newHp });
             }
             
-            // 유저 카운트 증가
+            // 5. 유저 정보 업데이트 (데미지 누적 + 현재 보스 ID 기록)
             t.update(userRef, {
                 raidDailyCount: countAfterIncrement, 
-                raidLastResetDate: firebase.firestore.FieldValue.serverTimestamp()
+                raidLastResetDate: firebase.firestore.FieldValue.serverTimestamp(),
+                raidCumulativeDamage: newTotalDamage, // 갱신된 데미지
+                lastRaidSpawnId: currentBossId        // ✨ "나 이 보스 때렸음" 도장 찍기
             });
 
             return countAfterIncrement; 
         });
         
-        // --- 트랜잭션 성공 후 로직 ---
-
-        // ✨ 막타를 친 경우, 보상 분배 함수 실행 (비동기)
+        // --- 트랜잭션 성공 후 ---
         if (triggerRewardDistribution) {
-            distributeRaidRewards(bossNameForReward); // await 안 함 (유저를 기다리게 하지 않음)
-            alert(`🎉 결정타!! 당신이 [${bossNameForReward}]를 쓰러뜨렸습니다!\n잠시 후 참가자 전원에게 보상 우편이 발송됩니다.`);
+            // 막타 보상 분배 (이전 함수 그대로 사용)
+            distributeRaidRewards(bossNameForReward); 
+            alert(`🎉 결정타!! [${bossNameForReward}] 처치!\n잠시 후 보상 우편이 발송됩니다.`);
+            
+            // ✨ [추가] 보스가 죽었으니 바로 다음 보스(또는 부활) 체크 로직 실행 가능
+            // setTimeout(() => checkAndSpawnRaidBoss(), 3000); 
         } else {
-            // 일반 공격 성공
             const rewardMsg = calculatedReward > 0 ? `기여 보상: 💎${calculatedReward}` : `(보상 없음)`;
-            alert(`🎉 보스에게 ${damage} 피해를 입혔습니다! (오늘 ${finalCount}회 참여)\n${rewardMsg}`);
+            alert(`🎉 ${damage} 피해를 입혔습니다! (오늘 ${finalCount}회)\n${rewardMsg}`);
         }
 
-        // 로컬 변수 및 UI 갱신
         playerRaidDailyCount = finalCount;
         updateRaidDailyCountUI();
         
         calculatedReward = Math.min(MAX_REWARD, Math.floor(damage * REWARD_PER_100_DAMAGE)); 
         if (calculatedReward > 0) playerCurrency += calculatedReward;
         
-        playerRaidDamage += damage;
+        // 화면에 보이는 누적 데미지도 즉시 갱신 (리셋된 로직 반영)
+        // (트랜잭션 결과를 정확히 반영하려면 DB를 다시 읽는 게 좋지만, 여기선 약식으로 더함)
+        // 리셋 여부를 모르므로 UI에는 일단 더해주고, 다음 로딩 때 정확해짐
+        playerRaidDamage += damage; 
+        
         updateUI(); 
 
     } catch (error) {
-        if (error.message === "LIMIT_REACHED") {
-            // 조용히 리턴하거나 UI 업데이트 (이미 startRaidBattle에서 체크하지만 이중 안전장치)
-            return;
-        } else if (error.message === "BOSS_DEAD") {
+        if (error.message === "LIMIT_REACHED") return;
+        if (error.message === "BOSS_DEAD") {
             alert("이미 토벌된 보스입니다.");
-            updateRaidUI(); // UI 최신화
+            updateRaidUI();
         } else {
-            console.error("레이드 트랜잭션 실패:", error);
-            alert(`오류 발생: ${error.message}`);
+            console.error(error);
+            alert(`오류: ${error.message}`);
         }
     }
 }
@@ -8834,47 +8846,80 @@ window.startRaidBattle = startRaidBattle;
 
 // yumecan.html - loadEventRankingData 함수 근처에 추가
 
+// ✅ [수정됨] 메인 레이드 랭킹 로드 (현재 보스 시즌만 필터링)
 async function loadRaidRankingData() {
     const listContainer = document.getElementById('ranking-list');
     
-    // 랭킹 모달이 없으면 함수 종료 (이벤트 탭에서 열었을 경우만 실행)
-    if (!listContainer) return;
+    // 랭킹 모달이 없거나, 아직 보스 데이터가 로드되지 않았으면 중단
+    if (!listContainer || !raidBossData) return;
     
     listContainer.innerHTML = '<p class="text-center text-gray-500 py-4">랭킹 데이터를 불러오는 중...</p>';
     
     try {
-        // ✨ [핵심] 쿼리 기준을 raidCumulativeDamage로 변경합니다.
+        // ✨ [핵심] 현재 이벤트 + 현재 보스 ID(시즌) + 데미지 순 정렬
         const snapshot = await db.collection('users')
-            // 현재 활성화된 이벤트 참가자만 필터링합니다. (기존 이벤트 포인트 랭킹 로직 유지)
             .where('currentEventId', '==', CURRENT_EVENT_ID) 
-            .orderBy('raidCumulativeDamage', 'desc') // ✨ 이 필드를 기준으로 정렬
+            .where('lastRaidSpawnId', '==', raidBossData.spawnId) // 현재 보스를 친 사람만
+            .orderBy('raidCumulativeDamage', 'desc')
             .limit(20)
             .get();
 
         listContainer.innerHTML = '';
         
         if (snapshot.empty) {
-            listContainer.innerHTML = '<p class="col-span-full text-center text-gray-500">아직 레이드 참여자가 없습니다.</p>';
+            listContainer.innerHTML = '<p class="col-span-full text-center text-gray-500 py-4">아직 이 보스를 공격한 탐정이 없습니다.</p>';
             return;
         }
 
-        // --- 랭킹 UI 렌더링 로직 (기존과 동일) ---
-        const medals = ['🥇', '🥈', '🥉'];
         let rank = 1;
         
         snapshot.forEach(doc => {
             const data = doc.data();
             const isMe = (currentUser && doc.id === currentUser.uid);
             
-            // ✨ [수정] 점수 표시를 raidCumulativeDamage로 변경
+            // 점수 포맷팅
             const score = (data.raidCumulativeDamage || 0).toLocaleString();
             
-            // ... (기존 UI 스타일 및 클릭 로직 유지) ...
-            
             const div = document.createElement('div');
-            // ... (rankStyle, rankBadge 설정 로직) ...
+            
+            // 랭킹별 스타일 설정
+            let rankStyle = 'bg-gray-700 border-gray-600';
+            let rankBadge = `<span class="font-bold w-6 text-center text-gray-400">${rank}</span>`;
+            
+            if (rank === 1) {
+                rankStyle = 'bg-yellow-900/40 border-yellow-500';
+                rankBadge = '🥇';
+            } else if (rank === 2) {
+                rankStyle = 'bg-gray-400/20 border-gray-400';
+                rankBadge = '🥈';
+            } else if (rank === 3) {
+                rankStyle = 'bg-orange-900/40 border-orange-500';
+                rankBadge = '🥉';
+            }
+
+            // 내 순위 강조
+            if (isMe) rankStyle += ' ring-2 ring-blue-500';
+
+            // 대표 캐릭터 이미지
+            let repImg = "https://placehold.co/50x50/333/fff?text=?";
+            if (data.representative) {
+                const charData = findCharacter(data.representative);
+                if (charData) repImg = charData.imageUrl;
+            }
+
+            // 클릭 가능하도록 스타일 및 이벤트 추가
+            div.className = `flex items-center gap-3 p-2 rounded border ${rankStyle} cursor-pointer hover:bg-white/10 transition-colors relative group`;
+            div.onclick = () => openOtherUserProfile({ ...data, uid: doc.id });
             
             div.innerHTML = `
+                <div class="text-xl">${rankBadge}</div>
+                <img src="${repImg}" class="w-10 h-10 rounded object-cover bg-black">
+                <div class="flex-grow">
+                    <p class="text-sm font-bold text-white truncate max-w-[120px]">
+                        ${data.nickname || '익명의 탐정'}
+                    </p>
+                    ${isMe ? '<span class="text-[10px] bg-blue-600 text-white px-1 rounded">ME</span>' : ''}
+                </div>
                 <div class="text-right">
                     <p class="text-red-300 font-bold text-sm">${score} DAMAGE</p> 
                 </div>
@@ -8885,7 +8930,18 @@ async function loadRaidRankingData() {
 
     } catch (error) {
         console.error("레이드 랭킹 로드 실패:", error);
-        listContainer.innerHTML = '<p class="text-red-400 text-center">랭킹을 불러오지 못했습니다.</p>';
+        
+        // ⚠️ 인덱스 에러 처리 (콘솔 링크 안내)
+        if (error.message.includes('index')) {
+             listContainer.innerHTML = `
+                <div class="text-red-400 text-center text-sm p-2">
+                    <p class="font-bold">⚠️ 시스템 설정 필요</p>
+                    <p>개발자 콘솔(F12)을 열어 Firestore 인덱스 생성 링크를 클릭해주세요.</p>
+                </div>
+            `;
+        } else {
+             listContainer.innerHTML = '<p class="text-red-400 text-center">랭킹을 불러오지 못했습니다.</p>';
+        }
     }
 }
 
@@ -8894,73 +8950,50 @@ async function loadRaidRankingData() {
 /// yumecan.html - <script> 태그 내부 (레이드 로직 부분)
 
 // ✨ [신규] 시트 데이터를 Firebase와 비교하여 보스가 없으면 스폰합니다.
-// yumecan.html - async function checkAndSpawnRaidBoss() 전체를 이 코드로 교체하세요.
+// ✅ [수정됨] 보스 생성/확인 함수 (고유 spawnId 부여)
 async function checkAndSpawnRaidBoss() {
     console.log("---------- [DEBUG: RAID SPAWN START] ----------");
 
-    if (!raidBossDataSheet) {
-        console.error("[DEBUG 1.1] 실패: raidBossDataSheet가 null입니다. yumecan_data.js와 시트 이름을 확인하세요.");
-        return;
-    }
-    if (!currentUser) {
-        console.warn("[DEBUG 1.2] 실패: currentUser가 null입니다. 로그인하지 않았습니다.");
-        return;
-    }
-    
-    console.log(`[DEBUG 2.0] 시트 레벨: ${raidBossDataSheet.level}, 시트 이름: ${raidBossDataSheet.name}`);
+    if (!raidBossDataSheet) return;
+    if (!currentUser) return;
 
     const bossRef = db.collection('system').doc('raid_boss');
     
     try {
         const doc = await bossRef.get();
         
-        if (!doc.exists) {
-            console.log("[DEBUG 3.1] 성공: 보스 문서가 Firebase에 없습니다. 새로 생성합니다.");
-            
-            // --- SET 명령 실행 ---
-            const newBossData = {
-                ...raidBossDataSheet, 
-                currentHp: raidBossDataSheet.maxHp, 
-                isDead: false,
-                spawnedAt: firebase.firestore.FieldValue.serverTimestamp()
-            };
-            await bossRef.set(newBossData);
-            console.log("---------- [DEBUG 4.0] 보스 문서 생성 완료 ----------");
-            
-            raidBossData = newBossData;
-            updateRaidUI();
-            return;
-        } 
-        
-        // 문서가 존재할 경우 레벨 체크
-        if (doc.data().level !== raidBossDataSheet.level) {
-             console.log(`[DEBUG 3.2] 성공: Firebase 레벨 (${doc.data().level})이 시트 레벨과 다릅니다. 강제 업데이트 시작.`);
+        // 1. 보스가 아예 없거나, 레벨이 다르면 새로 생성
+        if (!doc.exists || doc.data().level !== raidBossDataSheet.level) {
+             console.log("[DEBUG] 새로운 레이드 보스 데이터를 생성합니다.");
              
-             // --- SET 명령 실행 (덮어쓰기) ---
              const newBossData = {
                 ...raidBossDataSheet, 
                 currentHp: raidBossDataSheet.maxHp, 
                 isDead: false,
-                spawnedAt: firebase.firestore.FieldValue.serverTimestamp()
+                isRewardDistributed: false, // 보상 초기화
+                spawnedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                spawnId: Date.now() // ✨ [핵심] 이번 보스의 고유 주민번호 (생성 시간)
              };
-             await bossRef.set(newBossData);
-             console.log("---------- [DEBUG 4.0] 보스 문서 업데이트 완료 ----------");
              
+             await bossRef.set(newBossData);
              raidBossData = newBossData;
              updateRaidUI();
              return;
         }
 
-        // 모든 조건이 통과되어 스폰을 건너뛴 경우
-        console.log(`[DEBUG 3.3] 건너뜀: 보스가 이미 존재하며 레벨 (${doc.data().level})이 일치합니다.`);
-        raidBossData = doc.data(); // 기존 데이터 로드
+        // 2. 이미 존재하는 경우 데이터 로드
+        raidBossData = doc.data();
+        
+        // (안전장치) 옛날 데이터라 spawnId가 없으면 강제로 넣어줌
+        if (!raidBossData.spawnId) {
+            await bossRef.update({ spawnId: Date.now() });
+            raidBossData.spawnId = Date.now();
+        }
+        
         updateRaidUI();
 
     } catch (error) {
-        console.error("---------- [DEBUG 5.0] FATAL ERROR (Firebase):", error);
-        if (error.code === 'permission-denied') {
-            console.error("⚠️ 에러 원인: Firebase 보안 규칙에 /system 컬렉션이 허용되지 않았습니다.");
-        }
+        console.error("보스 스폰 체크 중 오류:", error);
     }
 }
 
