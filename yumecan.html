@@ -519,19 +519,22 @@ body.pointer-events-none {
                 </button>
             </div>
 
-            <div class="bg-black/20 p-4 rounded-lg shadow-lg flex-col">
-                <p id="event-home-description" class="text-gray-200 mb-4 text-center"></p>
-                
-                <button id="goto-event-shop" class="gacha-button bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg text-lg w-full mb-3">
-                    이벤트 상점
-                </button>
-                
-                <button id="goto-event-battle" class="gacha-button bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-black font-bold py-5 px-6 rounded-lg shadow-lg text-xl w-full animate-pulse">
-                    이벤트 전투
-                </button>
-            </div>
-
-        </div>
+            <<div class="bg-black/20 p-4 rounded-lg shadow-lg flex-col">
+    <p id="event-home-description" class="text-gray-200 mb-4 text-center"></p>
+    
+    <button id="goto-event-shop" class="gacha-button bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg text-lg w-full mb-3">
+        이벤트 상점
+    </button>
+    
+    <div class="flex gap-2">
+        <button id="goto-event-battle" class="flex-1 gacha-button bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-black font-bold py-5 px-6 rounded-lg shadow-lg text-xl">
+            이벤트 전투
+        </button>
+        <button id="goto-event-raid" class="flex-1 gacha-button bg-gradient-to-r from-red-600 to-rose-800 hover:from-red-700 hover:to-rose-900 text-white font-bold py-5 px-6 rounded-lg shadow-lg text-xl animate-pulse">
+            👹 레이드
+        </button>
+    </div>
+</div>
 
         <div class="md:w-1/2 flex flex-col gap-4">
 
@@ -568,11 +571,14 @@ body.pointer-events-none {
 
 <div id="event-view" class="hidden">
 				
-                 <div class="bg-black/20 rounded-full p-1 flex justify-center items-center mb-4 max-w-md mx-auto">
-                    <button id="event-sub-tab-battle" class="sub-tab-button active w-1/3 font-bold py-2 px-4 rounded-full">전투</button>
-                    <button id="event-sub-tab-story" class="sub-tab-button w-1/3 font-bold py-2 px-4 rounded-full">스토리</button>
-                    <button id="event-sub-tab-shop" class="sub-tab-button w-1/3 font-bold py-2 px-4 rounded-full">상점</button>
-                </div>
+                 <div class="bg-black/20 rounded-full p-1 flex justify-center items-center mb-4 max-w-2xl mx-auto">
+    <button id="event-sub-tab-battle" class="sub-tab-button active w-1/4 font-bold py-2 px-2 md:px-4 rounded-full text-sm md:text-base">전투</button>
+    
+    <button id="event-sub-tab-raid" class="sub-tab-button w-1/4 font-bold py-2 px-2 md:px-4 rounded-full text-sm md:text-base text-red-400">레이드</button>
+    
+    <button id="event-sub-tab-story" class="sub-tab-button w-1/4 font-bold py-2 px-2 md:px-4 rounded-full text-sm md:text-base">스토리</button>
+    <button id="event-sub-tab-shop" class="sub-tab-button w-1/4 font-bold py-2 px-2 md:px-4 rounded-full text-sm md:text-base">상점</button>
+</div>
 
 				<div class="flex justify-center mb-4">
                     <div id="event-point-display" class="hidden text-xl font-bold text-pink-300 bg-black/20 py-2 px-4 rounded-full">EVENT P: <span id="event-points">0</span></div>
@@ -582,6 +588,47 @@ body.pointer-events-none {
                     <p class="text-center text-gray-200 mb-4">이벤트 스테이지에 도전하여 이벤트 포인트를 획득하세요!</p>
                     <div id="event-dungeon-list-container" class="grid grid-cols-2 md:grid-cols-5 gap-4"></div>
                 </div>
+				
+				<div id="event-raid-view" class="hidden">
+    <div class="text-center mb-4">
+        <h2 class="text-2xl font-bold text-red-500 mb-2">⚠ 긴급 토벌 작전 ⚠</h2>
+        <p class="text-gray-300 text-sm">모든 탐정과 협력하여 거대한 위협을 제거하세요.</p>
+    </div>
+
+    <div id="raid-boss-container" class="bg-black/40 p-4 rounded-xl border-2 border-red-600 relative overflow-hidden max-w-2xl mx-auto">
+        <div class="absolute inset-0 bg-red-900/20 animate-pulse pointer-events-none"></div>
+        
+        <div class="relative z-10 flex flex-col items-center">
+            <h3 id="raid-boss-name" class="text-2xl font-bold text-white mb-1">UNKNOWN</h3>
+            <div class="text-sm text-yellow-300 mb-2">Level <span id="raid-boss-level">??</span></div>
+            
+            <img id="raid-boss-image" src="" class="w-48 h-48 object-contain drop-shadow-[0_0_15px_rgba(255,0,0,0.5)] mb-2">
+            
+            <div class="w-full max-w-md bg-gray-800 h-5 rounded-full border border-gray-600 relative overflow-hidden mb-1">
+                <div id="raid-boss-hp-bar" class="h-full bg-gradient-to-r from-red-600 to-red-400 transition-all duration-500" style="width: 100%"></div>
+                <p id="raid-boss-hp-text" class="absolute inset-0 flex items-center justify-center text-xs font-bold text-white drop-shadow-md">Loading...</p>
+            </div>
+            <p class="text-[10px] text-gray-400 mb-4">전체 탐정들이 입힌 총 피해량 공유 중</p>
+
+            <button id="btn-start-raid" onclick="startRaidBattle()" class="gacha-button bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-8 rounded-full text-lg shadow-[0_0_20px_rgba(220,38,38,0.6)] disabled:opacity-50 disabled:cursor-not-allowed">
+                ⚔️ 전투 개시
+            </button>
+        </div>
+    </div>
+
+    <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
+        <div class="bg-black/20 p-3 rounded-lg text-center">
+            <h4 class="text-yellow-300 font-bold text-sm mb-1">나의 기여도</h4>
+            <p class="text-xs">누적 피해량: <span id="my-raid-damage" class="text-white font-bold">0</span></p>
+        </div>
+        
+        <div class="bg-black/20 p-3 rounded-lg flex items-center justify-between">
+            <span class="text-gray-500 text-xs">관리자 메뉴</span>
+            <button onclick="adminSpawnRaidBoss()" class="bg-gray-700 text-[10px] px-2 py-1 rounded text-white hover:bg-gray-600">보스 소환</button>
+        </div>
+    </div>
+</div>
+				
                 <div id="event-story-view" class="hidden">
                     <p class="text-center text-gray-200 mb-4">이벤트 스테이지를 클리어하고 스토리를 해금하세요.</p>
 
@@ -4466,6 +4513,22 @@ function displayEventStoryPart2() {
 			
             // gacha3.html - endCombat 함수 (기존 코드 전체 교체)
 function endCombat(isVictory, combatInfo) { // dungeon, type 대신 combatInfo 객체 받기
+if (type === 'raid') {
+        isCombatRunning = false;
+        combatResultModal.classList.add('hidden');
+        combatInProgressView.classList.add('hidden');
+        
+        // 서버로 데미지 전송
+        submitRaidDamage(totalDamageDealt);
+        
+        // ✨ [수정] 이벤트 뷰를 켜고 레이드 탭으로 복귀
+        document.getElementById('event-view').classList.remove('hidden');
+        // 'home'이나 'combat' 탭이 아니라 현재 탭 유지
+        // switchSubTab을 다시 호출하여 레이드 뷰만 보이게 확실히 처리
+        switchSubTab(document.getElementById('event-view'), eventSubTabRaid);
+        
+        return; 
+    }
     lastCombatType = combatInfo.type;
     if (isVictory) {
         let rewardMsg = '';
@@ -5875,6 +5938,19 @@ document.getElementById('goto-event-gacha').addEventListener('click', () => {
                 // '상점' 탭을 활성화하기 위해 eventSubTabShop 변수(DOM 요소)를 전달
                 switchSubTab(document.getElementById('event-view'), eventSubTabShop); 
             });
+			// 6. [신규] '이벤트 홈'의 '레이드' 버튼 클릭 시
+document.getElementById('goto-event-raid').addEventListener('click', () => {
+    // 1. 이벤트 홈 숨기고 상세 뷰 보이기
+    document.getElementById('event-home-view').classList.add('hidden');
+    document.getElementById('event-view').classList.remove('hidden');
+    
+    // 2. 레이드 탭 활성화 함수 호출
+    displayEventView(); 
+    switchSubTab(document.getElementById('event-view'), eventSubTabRaid);
+    
+    // 3. 리스너 시작
+    initRaidListener();
+});
 
 // ======================================================================
 
@@ -6153,13 +6229,21 @@ speed1xButton.addEventListener('click', () => setCombatSpeed(1));
 speed2xButton.addEventListener('click', () => setCombatSpeed(2));
 speed4xButton.addEventListener('click', () => setCombatSpeed(4));
 
-		
+		const eventSubTabRaid = document.getElementById('event-sub-tab-raid');
 
 // ✨ 이벤트 뷰의 서브 탭 (수정됨)
         eventSubTabBattle.addEventListener('click', () => {
             displayEventView(); 
             switchSubTab(document.getElementById('event-view'), eventSubTabBattle); 
         });
+		eventSubTabRaid.addEventListener('click', () => {
+    // 1. 화면 전환 (뷰 보이기)
+    displayEventView(); 
+    // 2. 탭 활성화 스타일 적용 및 컨텐츠 표시
+    switchSubTab(document.getElementById('event-view'), eventSubTabRaid);
+    // 3. 레이드 데이터 실시간 리스너 실행 (필요할 때만 켜기 위해)
+    initRaidListener();
+});
         eventSubTabStory.addEventListener('click', () => {
             displayEventView(); 
             switchSubTab(document.getElementById('event-view'), eventSubTabStory); 
