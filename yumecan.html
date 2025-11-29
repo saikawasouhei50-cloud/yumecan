@@ -1449,6 +1449,15 @@ const INKWELL_REVISION_COSTS = {
     'SR': 5,   // SR 등급은 5개
     'SSR': 10  // SSR 등급은 10개 (가장 비쌈)
 };
+
+// ✨ [신규] 레이드 토벌 보상 설정
+const RAID_RANK_REWARDS = {
+    1: { currency: 1000, fountainPens: 500, title: "레이드 기여도 1위 보상" },
+    2: { currency: 700, fountainPens: 300, title: "레이드 기여도 2위 보상" },
+    3: { currency: 500, fountainPens: 200, title: "레이드 기여도 3위 보상" },
+    top5: { currency: 300, fountainPens: 100, title: "레이드 기여도 Top 5 보상" }, // 4~5위
+    participation: { currency: 100, fountainPens: 50, title: "레이드 토벌 참가 보상" } // 그 외
+};
 	
 			const DISMANTLE_REWARDS = {
     'N': { fountainPens: 10, inkwells: 0 },
@@ -8636,7 +8645,70 @@ function startRaidBattle() {
 }
 window.startRaidBattle = startRaidBattle;
 
+// ✨ [신규] 레이드 보상 일괄 지급 함수 (막타 친 사람이 트리거)
+async function distributeRaidRewards(bossName) {
+    console.log("🎁 레이드 보상 분배 시작...");
+    
+    try {
+        // 1. 현재 이벤트의 레이드 참여자 명단 가져오기 (데미지 높은 순)
+        // (안전장치: 최대 500명까지만 처리 - Firebase 배치 쓰기 한계 고려)
+        const snapshot = await db.collection('users')
+            .where('currentEventId', '==', CURRENT_EVENT_ID)
+            .orderBy('raidCumulativeDamage', 'desc')
+            .limit(500) 
+            .get();
+
+        if (snapshot.empty) return;
+
+        const batch = db.batch();
+        let count = 0;
+
+        // 2. 순위별 보상 우편 생성
+        snapshot.forEach((doc, index) => {
+            const userData = doc.data();
+            // 데미지가 0인 사람은 제외 (혹시 모를 오류 방지)
+            if (!userData.raidCumulativeDamage || userData.raidCumulativeDamage <= 0) return;
+
+            const rank = index + 1;
+            let rewardData = null;
+
+            // 순위별 보상 결정
+            if (rank === 1) rewardData = RAID_RANK_REWARDS[1];
+            else if (rank === 2) rewardData = RAID_RANK_REWARDS[2];
+            else if (rank === 3) rewardData = RAID_RANK_REWARDS[3];
+            else if (rank <= 5) rewardData = RAID_RANK_REWARDS.top5;
+            else rewardData = RAID_RANK_REWARDS.participation;
+
+            // 우편 문서 생성
+            const mailRef = db.collection('users').doc(doc.id).collection('mailbox').doc();
+            batch.set(mailRef, {
+                title: `[토벌 성공] ${bossName}`,
+                content: `${bossName} 토벌에 성공했습니다!\n당신의 기여도 순위는 ${rank}위 입니다.\n(누적 피해량: ${userData.raidCumulativeDamage.toLocaleString()})`,
+                rewards: {
+                    currency: rewardData.currency,
+                    fountainPens: rewardData.fountainPens
+                },
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                fromSystem: true
+            });
+            count++;
+        });
+
+        // 3. 일괄 전송
+        await batch.commit();
+        console.log(`✅ 총 ${count}명에게 레이드 보상 우편 발송 완료.`);
+        
+        // (선택) 알림 메시지
+        showMessage("보스 토벌 확인! 모든 참가자에게 보상이 발송됩니다.", "text-yellow-300", messageArea);
+
+    } catch (e) {
+        console.error("보상 분배 중 오류 발생:", e);
+        // 여기서 에러가 나도 보스는 이미 죽은 상태이므로 재시도하진 않음 (무한 루프 방지)
+    }
+}
+
 // ✅ async function submitRaidDamage(damage) 함수 전체를 이 코드로 교체하세요.
+// ✅ [수정됨] 레이드 데미지 제출 함수 (보상 분배 로직 연결)
 async function submitRaidDamage(damage) {
     if (damage <= 0) return;
     if (!currentUser) return alert("로그인 상태를 확인해주세요.");
@@ -8645,13 +8717,15 @@ async function submitRaidDamage(damage) {
     const bossRef = db.collection('system').doc('raid_boss');
     const userRef = db.collection('users').doc(currentUser.uid);
     
-    let isLimitReached = false;
-    let isBossDefeated = false;
     let finalCount = null;
     let calculatedReward = 0;
     const REWARD_PER_100_DAMAGE = 1; 
     const MAX_REWARD = 50;           
     
+    // ✨ 보상 분배 트리거용 변수
+    let triggerRewardDistribution = false;
+    let bossNameForReward = "Unknown Boss";
+
     try {
         // 트랜잭션 시작
         finalCount = await db.runTransaction(async (t) => {
@@ -8665,7 +8739,7 @@ async function submitRaidDamage(damage) {
             const userData = userDoc.data();
             const today = new Date().toDateString();
 
-            // --- 1. 날짜 체크 및 카운트 초기화 ---
+            // 날짜 체크
             let countBeforeIncrement = userData.raidDailyCount || 0; 
             const lastResetTimestamp = userData.raidLastResetDate;
             const lastDate = (lastResetTimestamp && typeof lastResetTimestamp.toDate === 'function')
@@ -8676,72 +8750,71 @@ async function submitRaidDamage(damage) {
                 countBeforeIncrement = 0;
             }
             
-            // --- 2. 제한 체크 ---
-            if (countBeforeIncrement >= DAILY_LIMIT) {
-                isLimitReached = true; 
-                return null; 
-            }
-            
-            if (bossData.currentHp <= 0) {
-                isBossDefeated = true;
-                return null; 
-            }
+            if (countBeforeIncrement >= DAILY_LIMIT) throw new Error("LIMIT_REACHED"); // 제한 초과 시 에러 던짐
+            if (bossData.currentHp <= 0) throw new Error("BOSS_DEAD"); // 이미 죽음
 
             const countAfterIncrement = countBeforeIncrement + 1; 
             const currentHp = bossData.currentHp;
             const newHp = Math.max(0, currentHp - damage);
             
-            // 💡 보상과 피해량은 로컬에서 계산/처리할 것이므로, 트랜잭션이 아닌 필드는 건드리지 않습니다.
+            // ✨ [핵심] 보스가 죽었는지, 그리고 아직 보상이 미지급 상태인지 체크
+            if (newHp <= 0 && !bossData.isRewardDistributed) {
+                triggerRewardDistribution = true;
+                bossNameForReward = bossData.name;
+                
+                // 보스 데이터에 '보상 지급됨' 플래그 설정 (중복 실행 방지)
+                t.update(bossRef, { 
+                    currentHp: newHp,
+                    isRewardDistributed: true, // 🚩 플래그 추가
+                    defeatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            } else {
+                // 평범한 데미지 갱신
+                t.update(bossRef, { currentHp: newHp });
+            }
             
-            // 3. DB 업데이트 예약 (보스 HP 감소)
-            t.update(bossRef, { currentHp: newHp });
-            
-            // 4. DB 업데이트 예약 (유저 카운트 증가 및 날짜 기록)
+            // 유저 카운트 증가
             t.update(userRef, {
                 raidDailyCount: countAfterIncrement, 
                 raidLastResetDate: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            return countAfterIncrement; // 트랜잭션 성공 시 최종 카운트 반환
+            return countAfterIncrement; 
         });
         
-        // --- 트랜잭션 성공 후 (Commit) 로컬 업데이트 및 보상 지급 ---
+        // --- 트랜잭션 성공 후 로직 ---
 
-        // finalCount가 null이면 (제한 초과 또는 보스 사망) 처리 후 종료
-        if (finalCount === null) {
-            // ... (기존 에러 처리 로직) ...
-            return;
+        // ✨ 막타를 친 경우, 보상 분배 함수 실행 (비동기)
+        if (triggerRewardDistribution) {
+            distributeRaidRewards(bossNameForReward); // await 안 함 (유저를 기다리게 하지 않음)
+            alert(`🎉 결정타!! 당신이 [${bossNameForReward}]를 쓰러뜨렸습니다!\n잠시 후 참가자 전원에게 보상 우편이 발송됩니다.`);
+        } else {
+            // 일반 공격 성공
+            const rewardMsg = calculatedReward > 0 ? `기여 보상: 💎${calculatedReward}` : `(보상 없음)`;
+            alert(`🎉 보스에게 ${damage} 피해를 입혔습니다! (오늘 ${finalCount}회 참여)\n${rewardMsg}`);
         }
 
-        // --- 1. 로컬 변수 동기화 및 보상 지급 ---
-        playerRaidDailyCount = finalCount; // ⭐ 카운트 즉시 업데이트
-		// ✅ [추가] 레이드 횟수 UI 즉시 갱신
+        // 로컬 변수 및 UI 갱신
+        playerRaidDailyCount = finalCount;
         updateRaidDailyCountUI();
         
         calculatedReward = Math.min(MAX_REWARD, Math.floor(damage * REWARD_PER_100_DAMAGE)); 
+        if (calculatedReward > 0) playerCurrency += calculatedReward;
         
-        if (calculatedReward > 0) {
-            playerCurrency += calculatedReward;
-        }
         playerRaidDamage += damage;
-        
-        // 2. UI 업데이트
         updateUI(); 
-		
-        // 3. 로컬 DB 저장 (지연 없이 즉시 저장)
-        
 
-        // 4. 최종 저장: 다음 자동 저장 시점이나 탭 이동 시 저장되기를 기대합니다.
-        //    (즉, 충돌을 피하기 위해 DB 쓰기를 미룹니다.)
-
-        // 5. 성공 알림
-        const rewardMsg = calculatedReward > 0 ? `기여 보상: 💎${calculatedReward}` : `(보상 없음)`;
-        alert(`🎉 보스에게 ${damage} 피해를 입혔습니다! (오늘 ${finalCount}회 참여)\n${rewardMsg}`);
-        
     } catch (error) {
-        // 트랜잭션 실패 시 알림을 강화
-        console.error("레이드 데미지 전송 실패 (트랜잭션 실패):", error);
-        alert(`❌ 전투 결과 처리 중 오류가 발생했습니다.\n원인: ${error.message || "트랜잭션 충돌"}\n(DB 저장 실패)`);
+        if (error.message === "LIMIT_REACHED") {
+            // 조용히 리턴하거나 UI 업데이트 (이미 startRaidBattle에서 체크하지만 이중 안전장치)
+            return;
+        } else if (error.message === "BOSS_DEAD") {
+            alert("이미 토벌된 보스입니다.");
+            updateRaidUI(); // UI 최신화
+        } else {
+            console.error("레이드 트랜잭션 실패:", error);
+            alert(`오류 발생: ${error.message}`);
+        }
     }
 }
 window.startRaidBattle = startRaidBattle;
