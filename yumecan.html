@@ -4447,24 +4447,53 @@ async function runCombatLoop(combatDeck, originalBonusDeck, monsterData, indices
     });
 }
 
-             function updateCombatUI(deck, originalBonusDeck, monster) {
-				deck.forEach((card, index) => {
-					const originalCardWithBonus = originalBonusDeck[index];
-					if(!originalCardWithBonus) return;
+             // yumecan.html 파일의 function updateCombatUI 함수 전체를 이 코드로 교체하세요.
+function updateCombatUI(deck, originalBonusDeck, monster) {
+    // 1. 플레이어 덱 HP 업데이트
+    deck.forEach((card, index) => {
+        const originalCardWithBonus = originalBonusDeck[index];
+        
+        // ✨ [핵심 수정] 원본 덱 데이터가 존재하고 stats 속성도 있는지 확인합니다.
+        if(!originalCardWithBonus || !originalCardWithBonus.stats) return; 
 
-					const maxHp = originalCardWithBonus.stats.hp; // 전투 시작 시점의 최대 HP
-					const currentHp = card.stats.hp;
+        const maxHp = originalCardWithBonus.stats.hp; // 전투 시작 시점의 최대 HP
+        const currentHp = card.stats.hp;
 
-					const hpPercent = maxHp > 0 ? (currentHp / maxHp) * 100 : 0;
-					document.getElementById(`player-hp-bar-${index}`).style.width = `${hpPercent}%`;
-					document.getElementById(`player-hp-text-${index}`).textContent = `${currentHp} / ${maxHp}`;
-				});
+        const hpPercent = maxHp > 0 ? (currentHp / maxHp) * 100 : 0;
+        
+        // HP 바 업데이트 (null 체크 추가)
+        const hpBarEl = document.getElementById(`player-hp-bar-${index}`);
+        const hpTextEl = document.getElementById(`player-hp-text-${index}`);
 
-				const monsterMaxHp = monsters[monster.name].stats.hp;
-				const monsterHpPercent = (monster.stats.hp / monsterMaxHp) * 100;
-				document.getElementById('monster-hp-bar').style.width = `${monsterHpPercent}%`;
-				document.getElementById('monster-hp-text').textContent = `${monster.stats.hp} / ${monsterMaxHp}`;
-			}
+        if (hpBarEl) {
+            hpBarEl.style.width = `${hpPercent}%`;
+        }
+        if (hpTextEl) {
+            hpTextEl.textContent = `${currentHp} / ${maxHp}`;
+        }
+    });
+
+    // 2. 몬스터 HP 업데이트
+    // ✨ [수정] 몬스터 데이터가 없는 경우를 대비해 monsters 전역 변수에서 확인합니다.
+    const baseMonsterData = monsters[monster.name];
+
+    if (baseMonsterData) {
+        const monsterMaxHp = baseMonsterData.stats.hp;
+        const monsterHpPercent = (monster.stats.hp / monsterMaxHp) * 100;
+        
+        const monsterHpBar = document.getElementById('monster-hp-bar');
+        const monsterHpText = document.getElementById('monster-hp-text');
+
+        if (monsterHpBar) {
+            monsterHpBar.style.width = `${monsterHpPercent}%`;
+        }
+        if (monsterHpText) {
+            monsterHpText.textContent = `${monster.stats.hp} / ${monsterMaxHp}`;
+        }
+    } else {
+        console.error("몬스터 원본 데이터를 찾을 수 없어 HP 업데이트를 건너뜁니다.");
+    }
+}
 
 
 			function displayEventStories() {
