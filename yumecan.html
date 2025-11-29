@@ -323,7 +323,17 @@ body.pointer-events-none {
         </div>
         
         <div class="flex flex-wrap items-center justify-center md:justify-end gap-1.5 md:gap-3 mb-4 md:mb-6">
-            <div class="text-xs md:text-xl font-bold text-cyan-300 bg-black/20 py-1 px-2 md:py-2 md:px-4 rounded-full inline-flex items-center">
+            <div class="flex flex-wrap items-center justify-center md:justify-end gap-1.5 md:gap-3 mb-4 md:mb-6">
+    <button onclick="openMailbox()" class="relative gacha-button bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1 px-3 md:py-2 md:px-4 rounded-full text-xs md:text-sm flex items-center gap-1">
+        <span>📩</span>
+        <span class="hidden md:inline">우편함</span>
+        <span id="mail-badge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center border border-white animate-bounce">N</span>
+    </button>
+
+    <button id="reset-game" ...>초기화</button>
+</div>
+			
+			<div class="text-xs md:text-xl font-bold text-cyan-300 bg-black/20 py-1 px-2 md:py-2 md:px-4 rounded-full inline-flex items-center">
                 🔖 <span id="bookmark-display" class="ml-1">10</span>/<span id="max-bookmark-display">10</span><span id="bookmark-timer-container" class="ml-1"></span>
             </div>
             
@@ -1108,6 +1118,24 @@ body.pointer-events-none {
         </div>
     </div>
 </div>
+
+<div id="mailbox-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+    <div class="bg-gray-800 p-6 rounded-lg max-w-2xl w-full relative border border-indigo-400 h-[80vh] flex flex-col">
+        <button onclick="document.getElementById('mailbox-modal').classList.add('hidden')" class="absolute top-3 right-4 text-gray-400 hover:text-white text-2xl">&times;</button>
+        
+        <div class="flex justify-between items-center mb-4 border-b border-gray-600 pb-2">
+            <h3 class="text-2xl font-bold text-indigo-300">📩 우편함</h3>
+            <button onclick="claimAllMails()" class="gacha-button bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-1 px-4 rounded-full text-sm shadow-md">
+                모두 받기
+            </button>
+        </div>
+
+        <p class="text-gray-400 text-xs mb-2 text-center">* 우편은 최대 30일간 보관됩니다.</p>
+        
+        <div id="mailbox-list" class="flex-1 overflow-y-auto space-y-2 bg-black/20 p-2 rounded-lg pr-2">
+            </div>
+    </div>
+</div>
             
             <div id="dismantle-result-modal" class="hidden fixed inset-0 bg-black/70 flex justify-center items-center z-40">
                 <div class="bg-gray-800 p-8 rounded-lg text-center max-w-sm w-full">
@@ -1242,9 +1270,199 @@ const COLLECTION_GROUPS = ['히어로 대 빌런: 각축전', '히어로 대 빌
                 document.getElementById('loading-overlay').classList.add('hidden');
                 document.body.classList.remove('loading');
                 // ===============================================================
+				startMailListener(user.uid);
             }
         });
-		// gacha3.html - downloadSaveData 함수 (기존 함수 전체 교체)
+		
+		// ✨ [신규 함수] 우편함 실시간 감시 (배지 표시용)
+function startMailListener(uid) {
+    db.collection('users').doc(uid).collection('mailbox')
+      .onSnapshot(snapshot => {
+          const count = snapshot.size;
+          const badge = document.getElementById('mail-badge');
+          if (badge) {
+              if (count > 0) {
+                  badge.classList.remove('hidden');
+                  badge.textContent = count > 99 ? '99+' : count;
+              } else {
+                  badge.classList.add('hidden');
+              }
+          }
+          
+          // 우편함 창이 열려있다면 목록도 갱신
+          const modal = document.getElementById('mailbox-modal');
+          if (modal && !modal.classList.contains('hidden')) {
+              loadMailboxList(); 
+          }
+      });
+}
+
+// ✨ [신규 함수] 우편함 열기
+function openMailbox() {
+    if (!currentUser) return alert("로그인이 필요합니다.");
+    document.getElementById('mailbox-modal').classList.remove('hidden');
+    loadMailboxList();
+}
+
+// ✨ [신규 함수] 우편 목록 로드
+async function loadMailboxList() {
+    const listContainer = document.getElementById('mailbox-list');
+    listContainer.innerHTML = '<p class="text-center text-gray-500 mt-10">우편을 불러오는 중...</p>';
+
+    try {
+        const snapshot = await db.collection('users').doc(currentUser.uid)
+            .collection('mailbox')
+            .orderBy('createdAt', 'desc')
+            .get();
+
+        listContainer.innerHTML = '';
+
+        if (snapshot.empty) {
+            listContainer.innerHTML = `
+                <div class="flex flex-col items-center justify-center h-full text-gray-500 gap-2">
+                    <span class="text-4xl">📭</span>
+                    <p>우편함이 비어있습니다.</p>
+                </div>`;
+            return;
+        }
+
+        snapshot.forEach(doc => {
+            const mail = doc.data();
+            const mailId = doc.id;
+            
+            // 보상 텍스트 생성
+            let rewardText = [];
+            if (mail.rewards) {
+                if (mail.rewards.currency) rewardText.push(`💎 ${mail.rewards.currency}`);
+                if (mail.rewards.fountainPens) rewardText.push(`🖋️ ${mail.rewards.fountainPens}`);
+                if (mail.rewards.inkwells) rewardText.push(`💧 ${mail.rewards.inkwells}`);
+                if (mail.rewards.cardName) rewardText.push(`🃏 ${mail.rewards.cardName}`);
+                if (mail.rewards.customItem) rewardText.push(`🎁 ${mail.rewards.customItem}`);
+            }
+            const rewardString = rewardText.join(' / ');
+
+            // 날짜 포맷
+            const date = mail.createdAt ? new Date(mail.createdAt.toDate()).toLocaleDateString() : '';
+
+            const div = document.createElement('div');
+            div.className = 'bg-gray-700/80 p-4 rounded-lg border border-gray-600 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-md hover:bg-gray-700 transition-colors';
+            div.innerHTML = `
+                <div class="flex-1">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="bg-indigo-500 text-white text-[10px] px-1.5 py-0.5 rounded font-bold">SYSTEM</span>
+                        <h4 class="font-bold text-white text-lg">${mail.title}</h4>
+                    </div>
+                    <p class="text-sm text-gray-300 mb-2 leading-relaxed">${mail.content}</p>
+                    <div class="bg-black/30 px-3 py-1.5 rounded inline-block">
+                        <span class="text-yellow-300 font-bold text-sm">보상: ${rewardString}</span>
+                    </div>
+                    <p class="text-[10px] text-gray-500 mt-1">${date}</p>
+                </div>
+                <button onclick="claimMail('${mailId}')" class="gacha-button bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-full shadow-lg whitespace-nowrap self-end sm:self-center">
+                    받기
+                </button>
+            `;
+            listContainer.appendChild(div);
+        });
+
+    } catch (e) {
+        console.error(e);
+        listContainer.innerHTML = '<p class="text-center text-red-400">목록 로드 실패</p>';
+    }
+}
+
+// ✨ [신규 함수] 우편 받기 (트랜잭션 처리)
+async function claimMail(mailId) {
+    if (!currentUser) return;
+
+    const userRef = db.collection('users').doc(currentUser.uid);
+    const mailRef = userRef.collection('mailbox').doc(mailId);
+
+    try {
+        await db.runTransaction(async (transaction) => {
+            const mailDoc = await transaction.get(mailRef);
+            if (!mailDoc.exists) throw "이미 받거나 삭제된 우편입니다.";
+            
+            const userData = (await transaction.get(userRef)).data();
+            const mailData = mailDoc.data();
+            const rewards = mailData.rewards || {};
+
+            // 1. 재화 지급
+            let newCurrency = (userData.currency || 0) + (rewards.currency || 0);
+            let newPens = (userData.fountainPens || 0) + (rewards.fountainPens || 0);
+            let newInk = (userData.inkwells || 0) + (rewards.inkwells || 0);
+            
+            // 2. 카드 지급
+            let newInventory = [...(userData.inventory || [])];
+            if (rewards.cardName) {
+                // 새 카드 객체 생성 (기존 함수 활용 불가하여 직접 생성)
+                const newCard = {
+                    id: Date.now().toString(36) + Math.random().toString(36).substr(2), // generateUniqueId 로직
+                    name: rewards.cardName,
+                    level: 0,
+                    revision: 0
+                };
+                newInventory.push(newCard);
+            }
+
+            // 3. DB 업데이트
+            transaction.update(userRef, {
+                currency: newCurrency,
+                fountainPens: newPens,
+                inkwells: newInk,
+                inventory: newInventory
+            });
+
+            // 4. 우편 삭제
+            transaction.delete(mailRef);
+
+            // 5. 로컬 데이터 동기화 (화면 즉시 갱신용)
+            playerCurrency = newCurrency;
+            playerFountainPens = newPens;
+            playerInkwells = newInk;
+            playerInventory = newInventory;
+            if (rewards.cardName) {
+                // 카드 받았으면 수집도감에도 추가
+                collectedCardNames.add(rewards.cardName);
+                saveGameToFirebase(); // 수집도감 저장을 위해 한번 더 호출
+            }
+        });
+
+        alert("보상을 수령했습니다!");
+        updateUI(); // 상단 재화바 갱신
+        loadMailboxList(); // 목록 갱신
+
+    } catch (e) {
+        console.error(e);
+        alert("수령 실패: " + e);
+    }
+}
+
+// ✨ [신규 함수] 모두 받기
+async function claimAllMails() {
+    const list = document.getElementById('mailbox-list');
+    const buttons = list.querySelectorAll('button');
+    
+    if (buttons.length === 0) return alert("수령할 우편이 없습니다.");
+    if (!confirm(`총 ${buttons.length}개의 우편을 모두 받으시겠습니까?`)) return;
+
+    // 편의상 하나씩 순차 실행 (트랜잭션 충돌 방지)
+    // *대량 처리는 Cloud Functions가 좋지만, 클라이언트 레벨에선 이게 안전함*
+    const snapshot = await db.collection('users').doc(currentUser.uid).collection('mailbox').get();
+    
+    let successCount = 0;
+    for (const doc of snapshot.docs) {
+        try {
+            await claimMail(doc.id);
+            successCount++;
+        } catch(e) {
+            console.error("개별 수령 실패", e);
+        }
+    }
+}
+
+
+	// gacha3.html - downloadSaveData 함수 (기존 함수 전체 교체)
 
 function downloadSaveData() {
     const saveDataString = localStorage.getItem(SAVE_DATA_KEY);
