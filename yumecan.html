@@ -1705,9 +1705,10 @@ async function saveGameToFirebase() {
 		cumulativeEventPoints: playerCumulativeEventPoints || 0,
 		raidCumulativeDamage: playerRaidDamage || 0,
 		raidDailyCount: playerRaidDailyCount || 0,
-        raidLastResetDate: (playerRaidLastResetDate instanceof Date && !isNaN(if (playerRaidLastResetDate instanceof Date && !isNaN(playerRaidLastResetDate)) {
+        if (playerRaidLastResetDate instanceof Date && !isNaN(playerRaidLastResetDate)) {
     rawSaveData.raidLastResetDate = playerRaidLastResetDate;
 }
+   
         
         clearedEventDungeons: clearedEventDungeons || [],
         purchasedEventItems: purchasedEventItems || {},
