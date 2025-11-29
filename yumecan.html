@@ -628,12 +628,17 @@ body.pointer-events-none {
             </div>
 
             <div id="inventory-view" class="hidden">
-     <div class="text-center mb-4">
-        <p class="text-gray-200">지금까지 수집한 등장인물입니다.</p>
-        <div class="mt-2 flex justify-center items-center gap-4">
-            <p id="inventory-status" class="text-lg font-bold bg-black/20 py-2 px-4 rounded-full"></p>
-            <button id="expand-inventory" class="gacha-button bg-yellow-500 hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed text-black font-bold py-2 px-4 rounded-full shadow-lg text-sm">칸 확장 (💎50)</button>
-        </div>
+     <div class="text-center mb-4 relative">
+    <p class="text-gray-200">지금까지 수집한 등장인물입니다.</p>
+    
+    <button onclick="switchTab('deck')" class="absolute right-0 top-0 gacha-button bg-gray-700 hover:bg-gray-600 text-white text-xs px-3 py-1 rounded-full border border-gray-500 flex items-center gap-1">
+        <span>📝</span> 편찬으로 이동
+    </button>
+
+    <div class="mt-2 flex justify-center items-center gap-4">
+        <p id="inventory-status" class="text-lg font-bold bg-black/20 py-2 px-4 rounded-full"></p>
+        <button id="expand-inventory" class="gacha-button bg-yellow-500 hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed text-black font-bold py-2 px-4 rounded-full shadow-lg text-sm">칸 확장 (💎50)</button>
+    </div>
 
 
 		<div id="dismantle-multi-ui" class="hidden mt-4 bg-black/30 p-3 rounded-lg space-y-2">
@@ -671,13 +676,18 @@ body.pointer-events-none {
 </div>
 
             <div id="deck-view" class="hidden">
-                <div class="text-center mb-4">
-                    <p class="text-gray-200">등장인물들과 함께 독서를 준비하세요. (5장 필수)</p>
-                    <div class="mt-2 flex justify-center items-center gap-4">
-                        <div id="deck-status" class="text-lg font-bold text-yellow-300"></div>
-                        <button id="auto-fill-deck" class="gacha-button bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-full shadow-lg text-sm">자동 편성</button>
-                    </div>
-                </div>
+                <div class="text-center mb-4 relative">
+    <p class="text-gray-200">등장인물들과 함께 독서를 준비하세요. (5장 필수)</p>
+    
+    <button onclick="switchTab('inventory')" class="absolute right-0 top-0 gacha-button bg-gray-700 hover:bg-gray-600 text-white text-xs px-3 py-1 rounded-full border border-gray-500 flex items-center gap-1">
+        <span>📚</span> 서고로 이동
+    </button>
+
+    <div class="mt-2 flex justify-center items-center gap-4">
+        <div id="deck-status" class="text-lg font-bold text-yellow-300"></div>
+        <button id="auto-fill-deck" class="gacha-button bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-full shadow-lg text-sm">자동 편성</button>
+    </div>
+</div>
                 <div id="deck-slots-container" class="grid grid-cols-5 gap-4 mb-6 bg-black/20 p-4 rounded-xl"></div>
                 <div class="text-center mb-4">
                     <h3 class="text-lg font-bold text-yellow-300">활성 인연 효과</h3>
@@ -1211,12 +1221,20 @@ body.pointer-events-none {
 
 <div id="myroom-char-selector-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50">
     <div class="bg-gray-800 p-6 rounded-lg max-w-2xl w-full h-[80vh] flex flex-col border border-pink-400">
-        <div class="flex justify-between items-center mb-4">
+        <div class="flex justify-between items-center mb-2">
             <h3 class="text-xl font-bold text-pink-300">마이룸 입주민 설정</h3>
             <span id="myroom-selected-count" class="text-white font-bold bg-pink-600 px-3 py-1 rounded-full text-sm">0 / 5</span>
         </div>
-        <p class="text-gray-400 text-sm mb-4 text-center">사무소에 머물게 할 등장인물을 선택하세요. (최대 5명)</p>
+        <p class="text-gray-400 text-sm mb-2 text-center">사무소에 머물게 할 등장인물을 선택하세요. (최대 5명)</p>
         
+        <div id="myroom-filter-container" class="flex justify-center gap-2 mb-4">
+            <button data-filter="All" class="myroom-filter-btn gacha-button bg-blue-500 text-white font-bold py-1 px-3 rounded-full text-xs hover:bg-blue-600">전체</button>
+            <button data-filter="SSR" class="myroom-filter-btn gacha-button bg-gray-600 text-white font-bold py-1 px-3 rounded-full text-xs hover:bg-gray-700">SSR</button>
+            <button data-filter="SR" class="myroom-filter-btn gacha-button bg-gray-600 text-white font-bold py-1 px-3 rounded-full text-xs hover:bg-gray-700">SR</button>
+            <button data-filter="R" class="myroom-filter-btn gacha-button bg-gray-600 text-white font-bold py-1 px-3 rounded-full text-xs hover:bg-gray-700">R</button>
+            <button data-filter="N" class="myroom-filter-btn gacha-button bg-gray-600 text-white font-bold py-1 px-3 rounded-full text-xs hover:bg-gray-700">N</button>
+        </div>
+
         <div id="myroom-char-list" class="grid grid-cols-4 sm:grid-cols-5 gap-3 overflow-y-auto p-2 bg-black/20 rounded-lg flex-grow">
             </div>
 
@@ -5654,6 +5672,29 @@ document.getElementById('profile-message-edit').addEventListener('input', functi
 			
             // --- 이벤트 리스너 ---
 
+// ✨ [신규] 마이룸 입주민 필터 버튼 클릭 이벤트
+document.getElementById('myroom-filter-container').addEventListener('click', (e) => {
+    const btn = e.target.closest('.myroom-filter-btn');
+    if (!btn) return;
+
+    // 1. 필터 상태 변경
+    currentMyRoomFilter = btn.dataset.filter;
+
+    // 2. 버튼 스타일 업데이트 (선택된 건 파란색, 나머진 회색)
+    document.querySelectorAll('.myroom-filter-btn').forEach(b => {
+        if (b.dataset.filter === currentMyRoomFilter) {
+            b.classList.remove('bg-gray-600', 'hover:bg-gray-700');
+            b.classList.add('bg-blue-500', 'hover:bg-blue-600');
+        } else {
+            b.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+            b.classList.add('bg-gray-600', 'hover:bg-gray-700');
+        }
+    });
+
+    // 3. 목록 다시 그리기
+    updateMyRoomSelectorUI();
+});
+
 // ✨ 계정 관련 버튼
 document.getElementById('register-button').addEventListener('click', registerUser);
 document.getElementById('login-button').addEventListener('click', loginUser);
@@ -7678,6 +7719,8 @@ function openMyRoomCharacterSelector() {
     modal.classList.remove('hidden');
 }
 
+let currentMyRoomFilter = 'All';
+
 // 2. 선택창 UI 그리기 (안전장치 추가 버전)
 function updateMyRoomSelectorUI() {
     const list = document.getElementById('myroom-char-selector-modal').querySelector('#myroom-char-list');
@@ -7686,28 +7729,37 @@ function updateMyRoomSelectorUI() {
     list.innerHTML = '';
     countSpan.textContent = `${tempMyRoomChars.size} / 5`;
 
-    // 인벤토리 정렬 (등급 > 레벨 > 이름)
-    const sortedInv = [...playerInventory].sort((a, b) => {
+    // 1. 필터링 (선택된 등급만 남기기)
+    const filteredInv = playerInventory.filter(cardInstance => {
+        if (currentMyRoomFilter === 'All') return true;
+        const charData = findCharacter(cardInstance.name);
+        // 데이터가 없거나 등급이 다르면 제외
+        return charData && charData.rarity === currentMyRoomFilter;
+    });
+
+    if (filteredInv.length === 0) {
+        list.innerHTML = `<p class="col-span-full text-center text-gray-500 py-10">해당 등급의 입주민이 없습니다.</p>`;
+        return;
+    }
+
+    // 2. 정렬 (등급 > 레벨 > 이름)
+    const sortedInv = [...filteredInv].sort((a, b) => {
         const charA = findCharacter(a.name);
         const charB = findCharacter(b.name);
         
-        // ✨ [안전장치 1] 데이터가 없는 카드는 맨 뒤로 보냄 (에러 방지)
         if (!charA) return 1;
         if (!charB) return -1;
 
         const rarityOrder = { 'SSR': 4, 'SR': 3, 'R': 2, 'N': 1 };
-        
-        // ✨ [안전장치 2] 등급 정보가 없으면 0점 처리
         const rA = rarityOrder[charA.rarity] || 0;
         const rB = rarityOrder[charB.rarity] || 0;
 
         return (rB - rA) || (b.level - a.level);
     });
 
+    // 3. 카드 생성 (기존 로직 유지)
     sortedInv.forEach(cardInstance => {
         const charData = findCharacter(cardInstance.name);
-        
-        // ✨ [안전장치 3] 데이터가 없는 카드는 목록에 표시하지 않음
         if (!charData) return;
 
         const isSelected = tempMyRoomChars.has(cardInstance.id);
@@ -7722,6 +7774,7 @@ function updateMyRoomSelectorUI() {
             <div class="aspect-[2/3] overflow-hidden rounded mb-1 relative pointer-events-none">
                 <img src="${charData.imageUrl}" class="w-full h-full object-cover ${isSelected ? '' : 'opacity-70'}">
                 ${isSelected ? '<div class="absolute inset-0 border-4 border-pink-500 rounded"></div><span class="absolute top-0 right-0 bg-pink-500 text-white text-xs font-bold px-1.5 py-0.5">V</span>' : ''}
+                <span class="absolute bottom-0 right-0 bg-black/60 text-white text-[10px] px-1 rounded-tl">${charData.rarity}</span>
             </div>
             <p class="text-[10px] text-center text-white truncate">${cardInstance.name}</p>
         `;
