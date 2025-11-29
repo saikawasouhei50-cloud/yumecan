@@ -8645,34 +8645,40 @@ function startRaidBattle() {
 }
 window.startRaidBattle = startRaidBattle;
 
-// ✨ [신규] 레이드 보상 일괄 지급 함수 (막타 친 사람이 트리거)
+// ✅ [수정됨] 레이드 보상 분배 함수 (NaN 오류 수정 + 안전한 랭킹 계산)
 async function distributeRaidRewards(bossName) {
     console.log("🎁 레이드 보상 분배 시작...");
     
     try {
-        // 1. 현재 이벤트의 레이드 참여자 명단 가져오기 (데미지 높은 순)
-        // (안전장치: 최대 500명까지만 처리 - Firebase 배치 쓰기 한계 고려)
+        // 1. 현재 이벤트의 레이드 참여자 명단 가져오기
         const snapshot = await db.collection('users')
             .where('currentEventId', '==', CURRENT_EVENT_ID)
             .orderBy('raidCumulativeDamage', 'desc')
             .limit(500) 
             .get();
 
-        if (snapshot.empty) return;
+        if (snapshot.empty) {
+            console.log("참여자가 없어 보상을 분배하지 않습니다.");
+            return;
+        }
 
         const batch = db.batch();
         let count = 0;
+        let currentRank = 1; // ✨ 순위를 직접 카운팅하는 변수 생성
 
         // 2. 순위별 보상 우편 생성
-        snapshot.forEach((doc, index) => {
+        snapshot.docs.forEach(doc => { // .docs를 명시적으로 사용
             const userData = doc.data();
-            // 데미지가 0인 사람은 제외 (혹시 모를 오류 방지)
+            
+            // 데미지가 없거나 0인 유저는 건너뜀
             if (!userData.raidCumulativeDamage || userData.raidCumulativeDamage <= 0) return;
 
-            const rank = index + 1;
+            // ✨ index 대신 직접 변수 사용 (NaN 방지)
+            const rank = currentRank++; 
+            
             let rewardData = null;
 
-            // 순위별 보상 결정
+            // 순위별 보상 결정 (설정된 변수 사용)
             if (rank === 1) rewardData = RAID_RANK_REWARDS[1];
             else if (rank === 2) rewardData = RAID_RANK_REWARDS[2];
             else if (rank === 3) rewardData = RAID_RANK_REWARDS[3];
@@ -8681,9 +8687,13 @@ async function distributeRaidRewards(bossName) {
 
             // 우편 문서 생성
             const mailRef = db.collection('users').doc(doc.id).collection('mailbox').doc();
+            
+            // 숫자 콤마 찍기 (예: 3502 -> 3,502)
+            const damageStr = (userData.raidCumulativeDamage || 0).toLocaleString();
+
             batch.set(mailRef, {
                 title: `[토벌 성공] ${bossName}`,
-                content: `${bossName} 토벌에 성공했습니다!\n당신의 기여도 순위는 ${rank}위 입니다.\n(누적 피해량: ${userData.raidCumulativeDamage.toLocaleString()})`,
+                content: `${bossName} 토벌에 성공했습니다!\n당신의 기여도 순위는 ${rank}위 입니다.\n(누적 피해량: ${damageStr})`,
                 rewards: {
                     currency: rewardData.currency,
                     fountainPens: rewardData.fountainPens
@@ -8698,12 +8708,15 @@ async function distributeRaidRewards(bossName) {
         await batch.commit();
         console.log(`✅ 총 ${count}명에게 레이드 보상 우편 발송 완료.`);
         
-        // (선택) 알림 메시지
-        showMessage("보스 토벌 확인! 모든 참가자에게 보상이 발송됩니다.", "text-yellow-300", messageArea);
+        showMessage(`보스 토벌 확인! ${count}명에게 보상이 지급되었습니다.`, "text-yellow-300", messageArea);
 
     } catch (e) {
         console.error("보상 분배 중 오류 발생:", e);
-        // 여기서 에러가 나도 보스는 이미 죽은 상태이므로 재시도하진 않음 (무한 루프 방지)
+        
+        // ⚠️ 여기서 인덱스 에러인지 확인하여 알림을 띄워줍니다.
+        if (e.message.includes('index')) {
+            alert("시스템 오류: Firebase 색인(Index) 설정이 필요합니다.\n개발자 도구(F12) 콘솔의 링크를 확인하세요.");
+        }
     }
 }
 
