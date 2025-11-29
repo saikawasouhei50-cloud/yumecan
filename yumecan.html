@@ -353,9 +353,11 @@ body.pointer-events-none {
     
     
     
-<button id="global-home-button" onclick="switchTab('home')" class="hidden fixed top-4 left-4 z-50 bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-2 px-4 rounded-full shadow-lg border-2 border-white flex items-center gap-2 transition-transform hover:scale-105">
+<button id="global-home-button" onclick="switchTab('home')" 
+    class="hidden fixed top-4 left-4 z-[9999] bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-2 px-4 rounded-full shadow-lg border-2 border-white flex items-center gap-2 transition-transform hover:scale-105">
     <span>🏠</span>
-    <span class="hidden md:inline">로비로 복귀</span> </button>
+    <span class="hidden md:inline">로비로 복귀</span> 
+</button>
 
         <!-- 메인 컨텐츠 영역 -->
         <main>
@@ -2248,7 +2250,7 @@ function switchTab(newTab) {
     else if (newTab === 'deck') displayDeckManagement();
     else if (newTab === 'combat') displayCombatView();
     else if (newTab === 'collection') displayCollectionView();
-    else if (newTab === 'event') displayEventHomeView();
+    else if (newTab === 'event-home') displayEventHomeView();
     else if (newTab === 'achievements') displayAchievements();
     else if (newTab === 'profile') displayProfileView();
     else if (newTab === 'friends') loadFriendList();
@@ -6166,13 +6168,14 @@ dismantleCardButton.addEventListener('click', () => {
 
 // ================ 👇 이벤트 홈 관련 리스너 (신규) 👇 ================
 
-// 1. '홈' 화면의 이벤트 배너 클릭 시 -> 이벤트 홈으로 이동
-const bannerElement = document.getElementById('event-banner'); // 요소를 다시 한번 찾습니다.
+// 1. '홈' 화면의 이벤트 배너 클릭 시 -> 이벤트 홈(안내 창)으로 이동
+const bannerElement = document.getElementById('event-banner'); 
 
-if (bannerElement) { // ✨ 만약 요소가 존재할 때만! 이벤트를 연결합니다.
-    bannerElement.addEventListener('click', () => {
-        switchTab('event'); 
-    });
+if (bannerElement) { 
+    // 기존 리스너 덮어쓰기
+    bannerElement.onclick = function() {
+        switchTab('event-home'); // ✨ 여기가 'event'에서 'event-home'으로 바뀝니다!
+    };
 }
 
 // 2. '이벤트 홈'의 '이벤트 전투' 버튼 클릭 시
