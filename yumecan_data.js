@@ -12,6 +12,7 @@ let mainChapters = [];
 let gachaPool = {}; 
 let characterProfiles = {};
 let interactionDialogues = {};
+let systemMails = [];
 
 // ✨ [변경] 인연 데이터는 이제 시트에서 불러오므로 초기값은 빈 배열입니다.
 let synergies = []; 
@@ -21,7 +22,7 @@ let CURRENT_EVENT_ID = null;
 // ==========================================
 // 1. 웹 앱 URL (여기에만 최신 주소를 적으세요!)
 // ==========================================
-const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbxdHdMuQzijKmEg0N62kNAYhI7OGN45k34BZczqMBnFVZ-WMSPSwihJNMmSO6PeQ1Oh1A/exec"; 
+const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbx8f8YOFF4s5bSIc2t8bSXyw1KsRSMjPdPG5JwnDH_81YRDRfJmhzy-zXnCuWp7cPqMpQ/exec"; 
 
 
 // 2. 데이터를 가져와서 변수에 채워넣는 함수
@@ -410,6 +411,20 @@ async function loadGameData() {
             interactionDialogues = tempMap; 
             console.log("상호작용 대사 로드 완료 (Map 구조 유지됨)");
         }
+		
+		// ✨ [추가] 시스템 메일 데이터 로드
+    if (data.systemMails) {
+        systemMails = data.systemMails.map(row => ({
+            id: row.id,
+            target: row.target, // 'ALL' or UID
+            title: row.title,
+            content: row.content,
+            rewards: row.rewards ? JSON.parse(row.rewards) : {}, // JSON 파싱
+            startDate: new Date(row.startDate),
+            endDate: new Date(row.endDate)
+        }));
+        console.log("시스템 우편 데이터 로드 완료:", systemMails.length);
+    }
         
         console.log("모든 데이터 로딩 완료!");
         
