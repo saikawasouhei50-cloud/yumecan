@@ -2128,6 +2128,8 @@ async function resetGame() {
         if (view) view.classList.add('hidden'); 
     });
     // (기존 탭 버튼 비활성화 코드는 이제 상단 메뉴가 없으므로 에러가 날 수 있어 제거하거나 무시해도 됩니다)
+	document.querySelector('.absolute.z-20.pointer-events-none').classList.add('hidden');
+    document.querySelector('.absolute.bottom-4.left-0.w-full.px-4').classList.add('hidden');
     
     // 2. 뷰 전환 로직
     let targetView;
@@ -2142,14 +2144,14 @@ async function resetGame() {
     
     if (targetView) targetView.classList.remove('hidden');
 
-    // ✨ [핵심 추가] 홈 화면이 아니면 '로비로 복귀' 버튼 표시
-    const homeBtn = document.getElementById('global-home-button');
-    if (homeBtn) {
-        if (tabName === 'home') {
-            homeBtn.classList.add('hidden'); // 홈에서는 숨김
-        } else {
-            homeBtn.classList.remove('hidden'); // 다른 곳에서는 보임
-        }
+    if (tabName === 'home') {
+        document.querySelector('.absolute.z-20.pointer-events-none').classList.remove('hidden');
+        document.querySelector('.absolute.bottom-4.left-0.w-full.px-4').classList.remove('hidden');
+        
+        homeBtn.classList.add('hidden'); 
+        displayHomeView();
+    } else {
+        homeBtn.classList.remove('hidden'); // 다른 곳에서는 보임
     }
     
     // 3. 탭별 함수 호출 (기존 유지)
