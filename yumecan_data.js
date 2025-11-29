@@ -14,6 +14,7 @@ let characterProfiles = {};
 let interactionDialogues = {};
 let systemMails = [];
 let raidBossDataSheet = null;
+let allEventInfos = []; // ✨ [추가] 모든 이벤트 목록 저장용
 
 // ✨ [변경] 인연 데이터는 이제 시트에서 불러오므로 초기값은 빈 배열입니다.
 let synergies = []; 
@@ -236,6 +237,12 @@ async function loadGameData() {
 
         // 8. 이벤트 정보 설정 (디버깅 로그 추가 버전)
         if (data.eventInfo && data.eventInfo.length > 0) {
+			allEventInfos = data.eventInfo.map(info => ({
+                id: info.id || `event_${info.title}`,
+                title: info.title,
+                startDate: parseDate(info.startDate),
+                endDate: parseDate(info.endDate)
+            }));
             const now = new Date(); // 현재 시간
             console.log("🕒 [시스템 시간]:", now.toLocaleString());
             
