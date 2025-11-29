@@ -4709,52 +4709,58 @@ function displayEventStoryPart2() {
     });
 }
 			
-           function endCombat(isVictory, combatInfo, totalDamageDealt = 0) { 
+           // ✅ [최종 수정] endCombat (레이드 종료 시 모달 잔상 해결)
+function endCombat(isVictory, combatInfo, totalDamageDealt = 0) { 
     console.log("1. 전투 종료 진입:", combatInfo);
 
     isCombatRunning = false; 
 
-    // [1] 방해되는 전투 화면(combat-in-progress-view) 강제로 숨기기
+    // [1] 전투 화면 숨기기
     const combatView = document.getElementById('combat-in-progress-view');
     if (combatView) {
-        combatView.classList.add('hidden'); // ✨ 이게 없어서 화면이 안 바뀌고 멈춘 것처럼 보인 것입니다.
-        console.log("전투 화면(combat-in-progress-view) 숨김 처리 완료");
+        combatView.classList.add('hidden');
     }
 
-    // [2] 결과창 모달 가져오기
+    // [2] 결과창 모달 준비
     const resultModal = document.getElementById('combat-result-modal');
     const resultTitle = document.getElementById('combat-result-title');
     const resultMessage = document.getElementById('combat-result-message');
 
-    // [3] 결과창을 HTML의 맨 끝(body 직계 자식)으로 이동시켜서 가려짐 방지
     if (resultModal) {
-        document.body.appendChild(resultModal); // ✨ 모달을 화면 맨 앞으로 끄집어냄
+        // 일단 모달을 띄움 (강제 표시)
+        document.body.appendChild(resultModal); 
         resultModal.classList.remove('hidden');
-        resultModal.style.zIndex = '99999'; // Z-index를 아주 높게 설정
-        resultModal.style.display = 'flex'; // 강제로 flex 적용 (혹시 CSS 꼬임 방지)
-        console.log("2. 결과창 강제 표시 완료 (Body Append)");
-    } else {
-        console.error("❌ 결과 모달을 찾을 수 없습니다.");
-        alert("결과창 로드 실패. (새로고침 하세요)");
-        return;
+        resultModal.style.zIndex = '99999'; 
+        resultModal.style.display = 'flex'; 
+        
+        // ✨ [중요] 텍스트 초기화 (이전 전투 메시지가 남지 않게 함)
+        if (resultTitle) resultTitle.textContent = "전투 종료 처리 중...";
+        if (resultMessage) resultMessage.textContent = "";
     }
 
-    // [레이드 예외 처리]
+    // [3] 레이드 예외 처리 (여기가 문제였습니다)
     if (combatInfo && combatInfo.type === 'raid') {
-        resultModal.classList.add('hidden'); 
+        if (resultModal) {
+            // ✨ [핵심 수정] flex로 강제된 스타일을 none으로 확실하게 덮어써서 끕니다.
+            resultModal.style.display = 'none'; 
+            resultModal.classList.add('hidden');
+        }
+
         if (typeof submitRaidDamage === 'function') submitRaidDamage(totalDamageDealt);
+        
         document.getElementById('event-view').classList.remove('hidden');
         document.getElementById('event-raid-view').classList.remove('hidden');
+        
         const btnRaid = document.getElementById('event-sub-tab-raid');
         if (btnRaid) btnRaid.classList.add('active');
         return; 
     }
 
-    // [4] 보상 계산 (기존 로직 유지)
+    // [4] 일반/이벤트 전투 보상 계산
     try {
         lastCombatType = combatInfo ? combatInfo.type : 'main'; 
 
-        let rewardMsg = "전투 종료";
+        let rewardMsg = "";
         let titleText = isVictory ? "승리!" : "패배...";
         let titleColor = isVictory ? "text-green-400" : "text-red-400";
 
@@ -4795,6 +4801,7 @@ function displayEventStoryPart2() {
             rewardMsg = "전투에서 패배했습니다...";
         }
 
+        // 결과 텍스트 적용
         if(resultTitle) {
             resultTitle.textContent = titleText;
             resultTitle.className = `text-4xl font-bold mb-4 ${titleColor}`;
