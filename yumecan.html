@@ -616,6 +616,12 @@ body.pointer-events-none {
             </button>
         </div>
     </div>
+    
+    <div class="mt-8 bg-black/40 p-4 rounded-xl border-2 border-gray-600 max-w-2xl mx-auto shadow-2xl">
+        <h3 class="text-xl font-bold text-yellow-300 mb-4 text-center">⚔️ 탐정 기여도 순위 (Top 5)</h3>
+        <div id="raid-ranking-preview-container" class="space-y-3">
+            </div>
+    </div>
 </div>
                 <div id="event-story-view" class="hidden">
                     <p class="text-center text-gray-200 mb-4">이벤트 스테이지를 클리어하고 스토리를 해금하세요.</p>
@@ -1531,7 +1537,7 @@ let ownedFurniture = []; // 보유한 가구 목록
 			// [기존 변수들 아래에 추가]
 let playerCumulativeEventPoints = 0; // 🏆 랭킹용 누적 포인트
 let playerSystemMailHistory = []; // ✨ 이 줄이 있어야 합니다.
-			
+			let playerRaidDamage = 0;
 
             const DECK_CAPACITY = 5;
             const PULL_ONE_COST = 10;
@@ -1695,6 +1701,7 @@ async function saveGameToFirebase() {
         currentEventId: (typeof CURRENT_EVENT_ID !== 'undefined') ? CURRENT_EVENT_ID : null,
         eventPoints: playerEventPoints || 0,
 		cumulativeEventPoints: playerCumulativeEventPoints || 0,
+		raidCumulativeDamage: playerRaidDamage || 0,
         clearedEventDungeons: clearedEventDungeons || [],
         purchasedEventItems: purchasedEventItems || {},
         bookmarks: playerBookmarks || 0,
@@ -1778,7 +1785,9 @@ async function saveGameToFirebase() {
             console.log("이전 이벤트를 이어서 진행합니다:", CURRENT_EVENT_ID);
             // ... (기존 데이터 로드 코드들) ...
             playerEventPoints = savedData.eventPoints ?? 0;
-            playerCumulativeEventPoints = savedData.cumulativeEventPoints ?? playerEventPoints;
+            playerCumulativeEventPoints = savedData.cumulativeEventPoints ?? 
+playerRaidDamage = savedData.raidCumulativeDamage ?? 0;
+playerEventPoints;
             clearedEventDungeons = savedData.clearedEventDungeons || [];
             purchasedEventItems = savedData.purchasedEventItems || {};
             playerChoices = savedData.playerChoices || {};
@@ -8302,6 +8311,65 @@ function startPeriodicMailCheck(uid) {
         }
     }, 60 * 1000); // 60초(1분) 마다 실행
 }
+// yumecan.html - <script> 섹션 (loadRaidRankingData 함수 근처에 추가)
+
+async function loadRaidRankingPreview() {
+    // ⚠️ 현재 이벤트 ID가 없으면 중단
+    if (!CURRENT_EVENT_ID) return;
+    
+    const container = document.getElementById('raid-ranking-preview-container');
+    if (!container) return;
+
+    container.innerHTML = '<p class="text-center text-gray-500 py-2">순위 불러오는 중...</p>';
+
+    try {
+        // Firebase에서 레이드 누적 피해량(raidCumulativeDamage) 기준으로 Top 5를 가져옵니다.
+        const snapshot = await db.collection('users')
+            .where('currentEventId', '==', CURRENT_EVENT_ID)
+            .orderBy('raidCumulativeDamage', 'desc')
+            .limit(5) 
+            .get();
+        
+        container.innerHTML = '';
+
+        if (snapshot.empty) {
+            container.innerHTML = '<p class="text-center text-gray-500 text-sm py-2">아직 참여 기록이 없습니다.</p>';
+            return;
+        }
+
+        let rank = 1;
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const isMe = (currentUser && doc.id === currentUser.uid);
+            
+            const score = (data.raidCumulativeDamage || 0).toLocaleString();
+            
+            const div = document.createElement('div');
+            
+            // 랭킹별 스타일 설정
+            const rankStyle = rank === 1 ? 'border-yellow-400 bg-yellow-900/30' : (isMe ? 'border-blue-500 bg-blue-900/30' : 'border-gray-700 bg-black/30');
+
+            div.className = `flex justify-between items-center p-3 rounded-lg border ${rankStyle}`;
+            
+            // 랭크 배지 설정
+            let rankBadge = rank === 1 ? '🥇' : (rank === 2 ? '🥈' : (rank === 3 ? '🥉' : rank));
+
+            div.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <span class="font-bold text-lg text-yellow-300 w-6 text-center">${rankBadge}</span>
+                    <span class="font-bold text-white truncate max-w-[150px]">${data.nickname || '익명의 탐정'}</span>
+                </div>
+                <span class="font-bold text-red-300 text-sm">${score} DAM</span>
+            `;
+            container.appendChild(div);
+            rank++;
+        });
+
+    } catch (e) {
+        console.error("레이드 랭킹 프리뷰 로드 실패:", e);
+        container.innerHTML = '<p class="text-center text-red-400 text-xs py-2">로딩 실패 (F12 콘솔 확인)</p>';
+    }
+}
 
 // ================== 👇 레이드 시스템 로직 시작 👇 ==================
 let raidBossData = null;
@@ -8385,6 +8453,7 @@ function updateRaidUI() {
         btn.classList.add('bg-red-600', 'hover:bg-red-700');
         imgEl.style.filter = "none";
     }
+	loadRaidRankingPreview();
 }
 
 // 4. 전투 시작 트리거
@@ -8426,6 +8495,7 @@ async function submitRaidDamage(damage) {
         
         if (calculatedReward > 0) {
             playerCurrency += calculatedReward;
+			playerRaidDamage += damage;
 			updateUI();
             saveGame();
             alert(`보스에게 ${damage} 피해를 입혔습니다!\n기여 보상: 💎${calculatedReward}`);
@@ -8436,6 +8506,63 @@ async function submitRaidDamage(damage) {
 
     } catch (e) {
         console.error("레이드 데미지 전송 실패:", e);
+    }
+}
+
+// yumecan.html - loadEventRankingData 함수 근처에 추가
+
+async function loadRaidRankingData() {
+    const listContainer = document.getElementById('ranking-list');
+    
+    // 랭킹 모달이 없으면 함수 종료 (이벤트 탭에서 열었을 경우만 실행)
+    if (!listContainer) return;
+    
+    listContainer.innerHTML = '<p class="text-center text-gray-500 py-4">랭킹 데이터를 불러오는 중...</p>';
+    
+    try {
+        // ✨ [핵심] 쿼리 기준을 raidCumulativeDamage로 변경합니다.
+        const snapshot = await db.collection('users')
+            // 현재 활성화된 이벤트 참가자만 필터링합니다. (기존 이벤트 포인트 랭킹 로직 유지)
+            .where('currentEventId', '==', CURRENT_EVENT_ID) 
+            .orderBy('raidCumulativeDamage', 'desc') // ✨ 이 필드를 기준으로 정렬
+            .limit(20)
+            .get();
+
+        listContainer.innerHTML = '';
+        
+        if (snapshot.empty) {
+            listContainer.innerHTML = '<p class="col-span-full text-center text-gray-500">아직 레이드 참여자가 없습니다.</p>';
+            return;
+        }
+
+        // --- 랭킹 UI 렌더링 로직 (기존과 동일) ---
+        const medals = ['🥇', '🥈', '🥉'];
+        let rank = 1;
+        
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const isMe = (currentUser && doc.id === currentUser.uid);
+            
+            // ✨ [수정] 점수 표시를 raidCumulativeDamage로 변경
+            const score = (data.raidCumulativeDamage || 0).toLocaleString();
+            
+            // ... (기존 UI 스타일 및 클릭 로직 유지) ...
+            
+            const div = document.createElement('div');
+            // ... (rankStyle, rankBadge 설정 로직) ...
+            
+            div.innerHTML = `
+                <div class="text-right">
+                    <p class="text-red-300 font-bold text-sm">${score} DAMAGE</p> 
+                </div>
+            `;
+            listContainer.appendChild(div);
+            rank++;
+        });
+
+    } catch (error) {
+        console.error("레이드 랭킹 로드 실패:", error);
+        listContainer.innerHTML = '<p class="text-red-400 text-center">랭킹을 불러오지 못했습니다.</p>';
     }
 }
 
