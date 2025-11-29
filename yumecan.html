@@ -1538,6 +1538,7 @@ let ownedFurniture = []; // 보유한 가구 목록
 let playerCumulativeEventPoints = 0; // 🏆 랭킹용 누적 포인트
 let playerSystemMailHistory = []; // ✨ 이 줄이 있어야 합니다.
 let playerRaidDailyCount = 0;
+let playerRaidLastResetDate = null;
 			let playerRaidDamage = 0;
 
             const DECK_CAPACITY = 5;
@@ -1703,6 +1704,8 @@ async function saveGameToFirebase() {
         eventPoints: playerEventPoints || 0,
 		cumulativeEventPoints: playerCumulativeEventPoints || 0,
 		raidCumulativeDamage: playerRaidDamage || 0,
+		raidDailyCount: playerRaidDailyCount || 0,
+        raidLastResetDate: playerRaidLastResetDate || null,
         clearedEventDungeons: clearedEventDungeons || [],
         purchasedEventItems: purchasedEventItems || {},
         bookmarks: playerBookmarks || 0,
@@ -1796,18 +1799,18 @@ async function saveGameToFirebase() {
             playerRaidDamage = savedData.raidCumulativeDamage !== undefined 
                 ? savedData.raidCumulativeDamage 
                 : 0;
-				// ✨ [추가] 레이드 일일 참여 횟수 로드 및 날짜 초기화 체크
+				// ✨ [추가] 레이드 참여 횟수 로드 및 초기화 체크
             const savedLastRaidDate = savedData.raidLastResetDate?.toDate().toDateString() || '';
             const today = new Date().toDateString();
-
+    
             if (savedLastRaidDate !== today) {
-                // 날짜가 바뀌었으면 카운트 초기화 (DB 트랜잭션 시에도 동일하게 처리되나, 로컬 변수도 초기화)
+                // 날짜가 다르면 0으로 초기화
                 playerRaidDailyCount = 0; 
+                playerRaidLastResetDate = null; 
             } else {
                 // 날짜가 같으면 DB 카운트 로드
-                playerRaidDailyCount = savedData.raidDailyCount !== undefined 
-                    ? savedData.raidDailyCount 
-                    : 0;
+                playerRaidDailyCount = savedData.raidDailyCount ?? 0;
+                playerRaidLastResetDate = savedData.raidLastResetDate;
             }
 
             clearedEventDungeons = savedData.clearedEventDungeons || [];
@@ -8551,6 +8554,9 @@ async function submitRaidDamage(damage) {
             alert(`⚠️ 레이드 참여 횟수 제한(${DAILY_LIMIT}회)을 모두 사용했습니다. 내일 다시 시도해주세요.`);
             return;
         }
+		// ✨ [핵심 수정] 트랜잭션 성공 후 로컬 변수 동기화
+        playerRaidDailyCount = currentCount + 1; // DB에 저장된 값과 동일하게 로컬 업데이트
+        playerRaidLastResetDate = new Date();    // 현재 시각으로 로컬 업데이트
 
         const calculatedReward = Math.min(MAX_REWARD, Math.floor(damage / REWARD_PER_100_DAMAGE)); 
         
