@@ -596,7 +596,30 @@ body.pointer-events-none {
     </div>
 
     <div class="bg-black/40 p-6 rounded-xl border-2 border-red-600 relative overflow-hidden max-w-2xl mx-auto">
+        
+        <div class="absolute inset-0 bg-red-900/20 animate-pulse pointer-events-none"></div>
+
+        <div class="flex flex-col items-center z-10 relative">
+            <h3 id="raid-boss-name" class="text-2xl md:text-3xl font-bold text-white mb-2">LOADING...</h3>
+            
+            <img id="raid-boss-image" src="" class="w-48 h-48 md:w-64 md:h-64 object-contain drop-shadow-[0_0_15px_rgba(255,0,0,0.6)] mb-4 transition-transform duration-500 hover:scale-105">
+            
+            <div class="w-full bg-gray-800 h-6 md:h-8 rounded-full border border-gray-600 relative overflow-hidden mb-2 shadow-inner">
+                <div id="raid-boss-hp-bar" class="h-full bg-gradient-to-r from-red-600 to-red-400 transition-all duration-500" style="width: 100%"></div>
+                <p id="raid-boss-hp-text" class="absolute inset-0 flex items-center justify-center text-xs md:text-sm font-bold text-white drop-shadow-md">Loading...</p>
+            </div>
+            
+            <p class="text-xs text-gray-400 mb-2">체력은 모든 유저에게 실시간 공유됩니다.</p>
+            
+            <div id="raid-count-display" class="text-sm font-bold text-yellow-300 mb-6">
+                오늘의 레이드: 0 / 5회
+            </div>
+
+            <button id="raid-start-btn" onclick="startRaidBattle()" class="gacha-button bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-10 rounded-full text-lg md:text-xl shadow-[0_0_15px_rgba(220,38,38,0.5)]">
+                ⚔️ 전투 개시
+            </button>
         </div>
+    </div>
 
     <div class="mt-8 bg-black/40 p-4 rounded-xl border-2 border-gray-600 max-w-2xl mx-auto shadow-2xl">
         <h3 class="text-xl font-bold text-yellow-300 mb-4 text-center">⚔️ 탐정 기여도 순위 (Top 5)</h3>
@@ -604,7 +627,7 @@ body.pointer-events-none {
         </div>
     </div>
 
-</div> ```
+</div>
 
     <div class="bg-black/40 p-6 rounded-xl border-2 border-red-600 relative overflow-hidden max-w-2xl mx-auto">
         <div class="absolute inset-0 bg-red-900/20 animate-pulse pointer-events-none"></div>
