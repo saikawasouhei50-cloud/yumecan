@@ -2120,33 +2120,40 @@ async function resetGame() {
                 return bonusDeck;
             }
 
-            function switchTab(tabName) {
+            // yumecan.html - switchTab 함수 (2137행 근처)
+
+function switchTab(tabName) {
     if (isCombatRunning) return;
     
-    // ✨ [핵심 수정 1] homeBtn과 오버레이 요소를 함수 내부에서 정의하고 존재 여부를 체크합니다.
+    // ✨ [핵심 수정 1] homeBtn과 오버레이 요소를 함수 내부에서 정의합니다.
     const homeBtn = document.getElementById('global-home-button');
     const overlayZ20 = document.querySelector('.absolute.z-20.pointer-events-none');
     const overlayBottom = document.querySelector('.absolute.bottom-4.left-0.w-full.px-4');
 
-    // 1. 모든 뷰 숨기기
+    // 1. 모든 뷰 숨기기 (home-view를 포함하여 모든 메인 뷰가 숨겨짐)
     allViews.forEach(view => {
         if (view) view.classList.add('hidden'); 
     });
     
-    // 뷰 겹침 방지 (오버레이 숨김)
+    // 뷰 겹침 방지 (home-view의 오버레이 버튼들을 강제로 숨김)
     if (overlayZ20) overlayZ20.classList.add('hidden');
     if (overlayBottom) overlayBottom.classList.add('hidden');
     
     // 2. 뷰 전환 로직
     let targetView;
-    if (tabName === 'event') targetView = document.getElementById('event-home-view'); 
+    
+    // home 뷰는 별도의 ID로 찾습니다.
+    if (tabName === 'home') targetView = document.getElementById('home-view');
+    else if (tabName === 'event') targetView = document.getElementById('event-home-view'); 
     else if (tabName === 'trade') targetView = document.getElementById('trade-view');
     else if (tabName === 'myroom') targetView = document.getElementById('myroom-view');
     else if (tabName === 'profile') {
         targetView = document.getElementById('profile-view');
         displayProfileView(); 
     }
+    // 나머지 뷰는 `${tabName}-view` 패턴으로 찾습니다.
     else targetView = document.getElementById(`${tabName}-view`);
+    
     
     if (targetView) targetView.classList.remove('hidden');
 
@@ -2162,8 +2169,8 @@ async function resetGame() {
     }
     
     // 3. 탭별 함수 호출 (기존 유지)
-    if (tabName === 'home') displayHomeView();
-    else if (tabName === 'inventory') displayInventory(); 
+    // tabName이 'home'일 경우 displayHomeView()는 위에서 이미 호출했으므로 중복 제거
+    if (tabName === 'inventory') displayInventory(); 
     else if (tabName === 'deck') displayDeckManagement();
     else if (tabName === 'combat') displayCombatView();
     else if (tabName === 'collection') displayCollectionView();
