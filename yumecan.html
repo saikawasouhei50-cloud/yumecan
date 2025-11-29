@@ -8523,7 +8523,10 @@ async function submitRaidDamage(damage) {
             // --- 1. 유저 참여 횟수 확인 및 초기화 로직 ---
             const userDoc = await t.get(userRef);
             const userData = userDoc.data();
-
+            
+            // ✨ [진단용 로그] DB에서 읽은 실제 값 확인
+            console.log(`[RAID DEBUG - READ] DB에 저장된 count: ${userData.raidDailyCount || 0}`);
+            
             const today = new Date().toDateString();
             
             let countBeforeIncrement = userData.raidDailyCount || 0; // DB에서 읽은 값
@@ -8546,7 +8549,7 @@ async function submitRaidDamage(damage) {
             // --- 유저 참여 횟수 확인 로직 끝 ---
             
             // ✨ 성공 시 다음 카운트 계산
-            nextParticipationCount = countBeforeIncrement + 1; 
+            nextParticipationCount = countBeforeIncrement + 1;
 
             const currentHp = doc.data().currentHp;
             if (currentHp <= 0) return; 
