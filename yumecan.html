@@ -4216,23 +4216,51 @@ function startStageCombat(chapterIndex, stageIndex) {
                     if (monsterData.stats.hp <= 0) break;
 
                     await delay(1000);
-                    const alivePlayers = combatDeck.filter(c => c.stats.hp > 0);
-                    if (alivePlayers.length > 0) {
-                        const targetCard = alivePlayers[Math.floor(Math.random() * alivePlayers.length)];
-                        logCombat(`<strong>${monsterData.name}</strong>의 공격!`);
-                        const damage = Math.max(1, monsterData.stats.atk - targetCard.stats.def);
-                        const hpBeforeAttack = targetCard.stats.hp;
-                        targetCard.stats.hp = Math.max(0, targetCard.stats.hp - damage);
-                        logCombat(`<strong>${targetCard.name}</strong>에게 ${damage}의 데미지!`);
-                        
-                        if (targetCard.stats.hp <= 0 && hpBeforeAttack > 0) {
-                            await delay(400);
-                            logCombat(`<strong>${targetCard.name}</strong>: <em>"${targetCard.deathDialogue}"</em>`);
-                        }
+const alivePlayers = combatDeck.filter(c => c.stats.hp > 0);
 
-                        updateCombatUI(combatDeck, originalBonusDeck, monsterData);
-                    }
-                }
+if (alivePlayers.length > 0) {
+    // 1. 광역 공격(AoE)인지 확인
+    if (monsterData.isAoE) {
+        logCombat(`<strong>${monsterData.name}</strong>의 <span class="text-red-400 font-bold">광역 공격!</span>`);
+        
+        // 모든 생존자에게 데미지 적용
+        for (const targetCard of alivePlayers) {
+            // (선택사항) 광역 공격은 데미지를 0.7배로 줄이려면: Math.floor(monsterData.stats.atk * 0.7)
+            const damage = Math.max(1, monsterData.stats.atk - targetCard.stats.def);
+            const hpBeforeAttack = targetCard.stats.hp;
+            
+            targetCard.stats.hp = Math.max(0, targetCard.stats.hp - damage);
+            logCombat(`- <strong>${targetCard.name}</strong>에게 ${damage}의 데미지!`);
+
+            // 사망 대사 처리
+            if (targetCard.stats.hp <= 0 && hpBeforeAttack > 0) {
+                await delay(200); // 텀을 짧게 줌
+                logCombat(`<strong>${targetCard.name}</strong>: <em>"${targetCard.deathDialogue}"</em>`);
+            }
+        }
+        
+    } else {
+        // 2. 기존 단일 공격 (랜덤 1명)
+        const targetCard = alivePlayers[Math.floor(Math.random() * alivePlayers.length)];
+        logCombat(`<strong>${monsterData.name}</strong>의 공격!`);
+        
+        const damage = Math.max(1, monsterData.stats.atk - targetCard.stats.def);
+        const hpBeforeAttack = targetCard.stats.hp;
+        
+        targetCard.stats.hp = Math.max(0, targetCard.stats.hp - damage);
+        logCombat(`<strong>${targetCard.name}</strong>에게 ${damage}의 데미지!`);
+        
+        if (targetCard.stats.hp <= 0 && hpBeforeAttack > 0) {
+            await delay(400);
+            logCombat(`<strong>${targetCard.name}</strong>: <em>"${targetCard.deathDialogue}"</em>`);
+        }
+    }
+
+    updateCombatUI(combatDeck, originalBonusDeck, monsterData);
+}
+// ▲▲▲ [수정된 몬스터 공격 로직 끝] ▲▲▲
+
+} // runCombatLoop의 while문 끝
                 
                 await delay(1000);
                 monsterData.stats.def = originalMonsterDef;
