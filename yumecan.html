@@ -2279,41 +2279,55 @@ function displayCharacterCards(baseName, isCollected) {
                 });
             }
 
-// ✅ (신규) 특정 캐릭터의 '대사 모음' 표시 함수
-// ✅ (수정됨) 특정 캐릭터의 '대사 모음' 표시 함수
+
+// ✅ (수정됨) 특정 캐릭터의 '대사 모음' 표시 함수 (개정판 숨김 + 통합 표시)
 function displayCharacterDialogues(baseName) {
     const dialogueList = document.getElementById('collection-dialogues-list');
     dialogueList.innerHTML = '';
     
-    // 1. 이 캐릭터의 모든 카드 버전을 찾음
-    const characterVersions = characters.filter(c => c.baseName === baseName);
-    const collectedNames = new Set(playerInventory.map(card => card.name));
+    // 1. 이 캐릭터의 '모든' 버전을 가져옵니다. (수집 여부 확인용)
+    const allVersions = characters.filter(c => c.baseName === baseName);
     
-    // --- 👇 핵심 수정 부분 👇 ---
-    // "이 baseName을 가진 카드를 하나라도 수집했는가?" 를 기준으로 판단합니다.
-const isAnyCardCollected = characterVersions.some(character => collectedCardNames.has(character.name));
-    if (!isAnyCardCollected) {
-        // 하나도 수집하지 못했다면 잠금 메시지 표시
-        dialogueList.innerHTML = `<p class="text-gray-400 text-center">등장인물을 수집하여 대사를 잠금 해제하세요.</p>`;
-        return; // 여기서 함수 종료
-    }
-    // --- 🔼 핵심 수정 부분 끝 🔼 ---
+    // 2. 이 캐릭터의 카드를 '하나라도' 수집했는지 확인합니다.
+    const isAnyCardCollected = allVersions.some(character => collectedCardNames.has(character.name));
 
-    // 하나라도 수집했다면, 각 카드별로 대사를 표시 (수집/미수집 상태에 따라)
-    characterVersions.forEach(character => {
-const isCardCollected = collectedCardNames.has(character.name);        
-        if (isCardCollected) {
-            // 2-1. 수집된 카드의 대사
-            dialogueList.innerHTML += `<h4 class="text-lg font-bold text-yellow-300">${character.name}</h4>`;
-            character.dialogues.forEach(diag => { dialogueList.innerHTML += `<p class="pl-4 text-gray-300">"${diag}"</p>`; });
-            character.skills.forEach(skill => { dialogueList.innerHTML += `<p class="pl-4 text-cyan-300"><b>[${skill.name}]</b> "${skill.dialogue}"</p>`; });
-            dialogueList.innerHTML += `<p class="pl-4 text-red-400">"${character.deathDialogue}"</p>`;
-        } else {
-            // 2-2. 미수집된 카드의 대사
-            dialogueList.innerHTML += `<h4 class="text-lg font-bold text-gray-600">${character.name} (미수집)</h4>`;
-            dialogueList.innerHTML += `<p class="pl-4 text-gray-600">"???"</p>`;
+    if (!isAnyCardCollected) {
+        // 하나도 없다면 잠금 메시지 표시 후 종료
+        dialogueList.innerHTML = `<p class="text-gray-400 text-center py-4">등장인물을 수집하여 대사를 잠금 해제하세요.</p>`;
+        return; 
+    }
+
+    // 3. 화면에 표시할 때는 '개정판(+)'이 아닌 카드만 추려냅니다.
+    // (대사가 똑같으므로 기본 카드만 보여줍니다)
+    const displayVersions = allVersions.filter(c => !c.name.includes('+'));
+
+    // 4. 대사 출력
+    displayVersions.forEach(character => {
+        // 이미 위에서 isAnyCardCollected를 통과했으므로, 
+        // 개별 카드의 수집 여부와 상관없이 대사를 보여줍니다. (공유 대사 처리)
+        
+        dialogueList.innerHTML += `<h4 class="text-lg font-bold text-yellow-300 mt-2">${character.name}</h4>`;
+        
+        // 일반 대사
+        if (character.dialogues) {
+            character.dialogues.forEach(diag => { 
+                dialogueList.innerHTML += `<p class="pl-4 text-gray-300 mb-1">"${diag}"</p>`; 
+            });
         }
-        dialogueList.innerHTML += `<hr class="border-gray-600 my-2">`;
+
+        // 스킬 대사
+        if (character.skills) {
+            character.skills.forEach(skill => { 
+                dialogueList.innerHTML += `<p class="pl-4 text-cyan-300 mb-1"><span class="text-xs border border-cyan-500 px-1 rounded mr-1">스킬</span> "${skill.dialogue}"</p>`; 
+            });
+        }
+
+        // 사망 대사
+        if (character.deathDialogue) {
+            dialogueList.innerHTML += `<p class="pl-4 text-red-400 mb-1"><span class="text-xs border border-red-500 px-1 rounded mr-1">사망</span> "${character.deathDialogue}"</p>`;
+        }
+        
+        dialogueList.innerHTML += `<hr class="border-gray-600 my-4">`;
     });
 }
 
@@ -4487,7 +4501,7 @@ function endCombat(isVictory, combatInfo) { // dungeon, type 대신 combatInfo �
                     
                 } else if (mode === 'deckSlot' && cardInstance) {
                     // ✨ [수정됨] 덱 슬롯: 상단 X버튼 대신 하단에 '편찬 해제' 버튼 추가
-                    actionButtonsHTML = `<button data-action="remove-from-deck" data-card-id="${cardInstance.id}" class="w-full mt-2 py-1 rounded-md text-white font-bold text-sm bg-red-600 hover:bg-red-700 shadow-md">편찬 해제</button>`;
+                    actionButtonsHTML = `<button data-action="remove-from-deck" data-card-id="${cardInstance.id}" class="w-full mt-2 py-1 rounded-md text-white font-bold text-sm bg-red-600 hover:bg-red-700 shadow-md">해제</button>`;
                 }
                 
                 // ❌ [삭제됨] 기존의 상단 X 버튼 코드 (deckSlotButton) 제거됨
