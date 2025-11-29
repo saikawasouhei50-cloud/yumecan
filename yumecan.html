@@ -1560,7 +1560,9 @@ const dismantleSelectedButton = document.getElementById('dismantle-selected-butt
 			const fountainPenDisplay = document.getElementById('fountainpen-display');
             const currencyDisplay = document.getElementById('currency-display');
             const messageArea = document.getElementById('message-area');
+            // 1. 전역 변수 선언 (자동으로 모든 탭과 뷰를 잡도록 설정)
             const allTabs = document.querySelectorAll('.tab-button');
+            // 모달창을 제외한 메인 뷰들을 자동으로 모두 가져옵니다.
             const allViews = document.querySelectorAll(
               'main > div:not(#combat-result-modal):not(#card-detail-modal):not(#interactive-story-modal)'
             );
@@ -2162,106 +2164,72 @@ async function resetGame() {
 
 let currentTab = 'home'; // ✨ 이 변수는 스크립트 전체에서 딱 한 번만 선언되어야 합니다!
 
-function switchTab(newTab) {
-    if (currentTab === newTab) return;
+// 2. 안정화된 탭 전환 함수 (거래소이전.html 기반 + 최신 기능 통합)
+            function switchTab(tabName) {
+                if (typeof isCombatRunning !== 'undefined' && isCombatRunning) return;
+                
+                // [초기화] 모든 뷰 숨기기 및 탭 버튼 비활성화
+                if (allViews) {
+                    allViews.forEach(view => {
+                        if (view) view.classList.add('hidden'); 
+                    });
+                }
+                
+                if (allTabs) {
+                    allTabs.forEach(tab => tab.classList.remove('active'));
+                }
+                
+                // [뷰 선택] 탭 이름에 맞는 뷰 찾기
+                let targetView;
 
-    // 1. 상단 공통 영역 요소 가져오기 (1단계에서 추가한 ID 사용)
-    const commonHeader = document.getElementById('global-header');
-    const commonInfo = document.getElementById('global-info-bar');
-    const commonCurrency = document.getElementById('global-currency-bar');
+                if (tabName === 'event') {
+                    // ✨ 핵심: 이벤트 탭 클릭 시 '전투'가 아닌 '이벤트 홈(안내)'을 보여줌
+                    targetView = document.getElementById('event-home-view'); 
+                } 
+                else if (tabName === 'myroom') {
+                    targetView = document.getElementById('myroom-view');
+                }
+                else {
+                    // 그 외: trade -> trade-view, home -> home-view 등 규칙대로 연결
+                    targetView = document.getElementById(`${tabName}-view`);
+                }
+                
+                // [탭 버튼 선택]
+                const targetTab = document.getElementById(`tab-${tabName}`);
 
-    // 2. 모든 뷰 DOM 요소 리스트
-    const allViews = [
-        document.getElementById('home-view'),
-        document.getElementById('gacha-view'),
-        document.getElementById('inventory-view'),
-        document.getElementById('deck-view'),
-        document.getElementById('combat-view'),
-        document.getElementById('combat-in-progress-view'),
-        document.getElementById('collection-view'),
-        document.getElementById('event-view'),
-        document.getElementById('event-home-view'),
-        document.getElementById('achievements-view'),
-        document.getElementById('myroom-view'),
-        document.getElementById('trade-view'),
-        document.getElementById('profile-view'),
-        document.getElementById('friends-view'),
-        document.getElementById('story-view'),
-    ];
+                // 방어 코드: 뷰가 없으면 에러 로그만 남기고 중단 (멈춤 방지)
+                if (!targetView) {
+                    console.warn(`Warning: View for ${tabName} not found.`);
+                    // 뷰가 없어도 코드는 계속 실행되게 하여 멈춤 현상 방지
+                } else {
+                    targetView.classList.remove('hidden');
+                }
 
-    // 3. 홈 화면 전용 오버레이 요소들 (버튼, 배너 등)
-    const homeOverlaySelectors = [
-        '#home-view > .absolute.z-20.pointer-events-none', 
-        '#home-view > .absolute.bottom-4.left-0.w-full.px-4', 
-    ];
-    
-    // --- [로직 수행] ---
+                if (targetTab) {
+                    targetTab.classList.add('active');
+                }
+                
+                // 전역 변수 업데이트 (중복 선언 방지를 위해 window 객체 사용 권장)
+                window.currentTab = tabName;
 
-    // A. 모든 메인 뷰 숨기기
-    allViews.forEach(view => {
-        if (view) view.classList.add('hidden');
-    });
-
-    // B. 상단 공통 영역 제어 (홈 화면이 아니면 숨김)
-    if (newTab !== 'home') {
-        // 홈 오버레이 숨기기
-        homeOverlaySelectors.forEach(sel => {
-            const el = document.querySelector(sel);
-            if (el) el.classList.add('hidden');
-        });
-        
-        // ✨ 상단바(제목, 정보, 재화) 숨기기
-        if (commonHeader) commonHeader.classList.add('hidden');
-        if (commonInfo) commonInfo.classList.add('hidden');
-        if (commonCurrency) commonCurrency.classList.add('hidden');
-
-    } else {
-        // C. 홈 화면으로 돌아온 경우 -> 다시 보이기
-        homeOverlaySelectors.forEach(sel => {
-            const el = document.querySelector(sel);
-            if (el) el.classList.remove('hidden');
-        });
-        
-        // ✨ 상단바 다시 보이기
-        if (commonHeader) commonHeader.classList.remove('hidden');
-        if (commonInfo) commonInfo.classList.remove('hidden');
-        if (commonCurrency) commonCurrency.classList.remove('hidden');
-    }
-
-    // D. 선택한 새 탭 보이기
-    const newView = document.getElementById(newTab + "-view");
-    if (newView) newView.classList.remove('hidden');
-
-    // E. '로비로 복귀' 버튼 상태 업데이트
-    const globalHomeBtn = document.getElementById('global-home-button');
-    if (globalHomeBtn) {
-        // 홈이면 숨기고, 다른 탭이면 보이기
-        if (newTab === 'home') {
-            globalHomeBtn.classList.add('hidden');
-        } else {
-            globalHomeBtn.classList.remove('hidden');
-        }
-    }
-
-    currentTab = newTab;
-
-    // F. 탭별 추가 로직 실행
-    if (newTab === 'inventory') displayInventory();
-    else if (newTab === 'deck') displayDeckManagement();
-    else if (newTab === 'combat') displayCombatView();
-    else if (newTab === 'collection') displayCollectionView();
-    else if (newTab === 'event-home') displayEventHomeView();
-    else if (newTab === 'achievements') displayAchievements();
-    else if (newTab === 'profile') displayProfileView();
-    else if (newTab === 'friends') loadFriendList();
-    else if (newTab === 'story') displayStoryView();
-    else if (newTab === 'myroom') {
-        displayMyRoom();
-        if (typeof isEditMode !== 'undefined' && isEditMode) toggleEditMode();
-    }
-}
-
-window.switchTab = switchTab;
+                // [데이터 로드] 각 탭에 맞는 최신 데이터 불러오기
+                if (tabName === 'home') displayHomeView();
+                else if (tabName === 'inventory') displayInventory(); 
+                else if (tabName === 'deck') displayDeckManagement();
+                else if (tabName === 'combat') displayCombatView();
+                else if (tabName === 'collection') displayCollectionView();
+                else if (tabName === 'story') displayStoryView();
+                else if (tabName === 'event') displayEventHomeView();
+                else if (tabName === 'achievements') displayAchievements();
+                else if (tabName === 'myroom') displayMyRoom();
+                // ✨ 누락되었던 최신 기능 연결 (친구, 교환소, 프로필)
+                else if (tabName === 'friends' && typeof loadFriendList === 'function') loadFriendList();
+                else if (tabName === 'trade' && typeof loadTradeList === 'function') loadTradeList();
+                else if (tabName === 'profile' && typeof displayProfileView === 'function') displayProfileView();
+            }
+            
+            // 전역 스코프에 등록
+            window.switchTab = switchTab;
 
 // ✅ [신규] 이벤트 탭 전용 전환 함수 (확실하게 하나만 보여줌)
 function switchEventSubTab(tabName) {
