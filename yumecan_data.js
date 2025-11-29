@@ -29,6 +29,13 @@ const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbx8f8YOFF4s5bS
 async function loadGameData() {
     try {
         console.log("데이터 로딩 시작...");
+		function parseDate(dateStr) {
+    if (!dateStr) return null;
+    // 구글 시트가 "2023-10-25 14:30:00" 처럼 줄 경우
+    // "2023-10-25T14:30:00" 으로 바꿔주면 브라우저가 시간을 정확히 인식합니다.
+    let safeStr = String(dateStr).replace(' ', 'T'); 
+    return new Date(safeStr);
+}
         
         // ❌ [삭제] 아래 줄을 지우세요! (이제 맨 위의 주소를 자동으로 씁니다)
         // const GOOGLE_SHEET_URL = "..."; 
@@ -36,6 +43,19 @@ async function loadGameData() {
         // 자동으로 맨 위에 적은 GOOGLE_SHEET_URL을 가져옵니다.
         const response = await fetch(GOOGLE_SHEET_URL); 
         const data = await response.json();
+		
+		if (data.systemMails) {
+            systemMails = data.systemMails.map(row => ({
+                id: row.id,
+                target: row.target, // 'ALL' or UID
+                title: row.title,
+                content: row.content,
+                rewards: row.rewards ? JSON.parse(row.rewards) : {}, // JSON 파싱
+                startDate: parseDate(row.startDate),
+        endDate: parseDate(row.endDate)
+            }));
+            console.log("시스템 우편 데이터 로드 완료:", systemMails.length);
+        }
 
         // 1. 캐릭터 데이터 조립
         chibiImages = {}; 
@@ -223,8 +243,10 @@ async function loadGameData() {
                 // 시트의 날짜 문자열을 Date 객체로 변환
                 // (문자열 뒤에 'T'가 없으면 호환성을 위해 추가하는 안전장치도 고려 가능하지만, 
                 // 보통 구글 시트 날짜는 "YYYY-MM-DD HH:mm:ss" 형식이면 잘 됩니다.)
-                const start = new Date(info.startDate);
-                const end = new Date(info.endDate);
+                // 기존 코드: const start = new Date(info.startDate);
+// ✨ [수정] 아래처럼 parseDate 함수를 사용하세요.
+const start = parseDate(info.startDate);
+const end = parseDate(info.endDate);
                 
                 const isOpen = now >= start && now <= end;
 
@@ -412,19 +434,7 @@ async function loadGameData() {
             console.log("상호작용 대사 로드 완료 (Map 구조 유지됨)");
         }
 		
-		// ✨ [추가] 시스템 메일 데이터 로드
-    if (data.systemMails) {
-        systemMails = data.systemMails.map(row => ({
-            id: row.id,
-            target: row.target, // 'ALL' or UID
-            title: row.title,
-            content: row.content,
-            rewards: row.rewards ? JSON.parse(row.rewards) : {}, // JSON 파싱
-            startDate: new Date(row.startDate),
-            endDate: new Date(row.endDate)
-        }));
-        console.log("시스템 우편 데이터 로드 완료:", systemMails.length);
-    }
+		
         
         console.log("모든 데이터 로딩 완료!");
         
