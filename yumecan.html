@@ -4708,44 +4708,35 @@ function displayEventStoryPart2() {
 }
 			
             // gacha3.html - endCombat 함수 (기존 코드 전체 교체)
+fu// ✅ [수정됨] 전투 종료 처리 함수 (이벤트 전투 후 목록으로 복귀)
 function endCombat(isVictory, combatInfo, totalDamageDealt = 0) { 
     lastCombatType = combatInfo.type;
-	
-    // Raid Tab Element (전역 변수로 가정하지만 안전하게 다시 찾습니다)
     
-
-	// ▼▼▼ [수정됨] 레이드 종료 로직 ▼▼▼
-	if (combatInfo.type === 'raid') {
+    // 1. 레이드 종료 처리
+    if (combatInfo.type === 'raid') {
         isCombatRunning = false;
         combatResultModal.classList.add('hidden');
         combatInProgressView.classList.add('hidden');
         
-        // ✨ [핵심] 누적된 데미지를 서버로 전송
         submitRaidDamage(totalDamageDealt);
         
-        // 이벤트 뷰의 레이드 탭으로 복귀
+        // 레이드 탭으로 복귀
         document.getElementById('event-view').classList.remove('hidden');
         document.getElementById('event-raid-view').classList.remove('hidden');
         
-        // 탭 활성화 상태 유지
-        if (eventSubTabRaid) {
-            // switchSubTab 함수는 여기서 정의되지 않았을 수 있으므로, 단순 클래스 조작으로 대체
-            eventSubTabRaid.classList.add('active'); 
-        }
+        const btnRaid = document.getElementById('event-sub-tab-raid');
+        if (btnRaid) btnRaid.classList.add('active');
         
-		
-		
-        return; // 레이드는 여기서 함수 종료
+        return; 
     }
-    // ▲▲▲ [수정 끝] ▲▲▲
 
-    // --- 기존 일반/이벤트 던전 승패 로직 ---
+    // 2. 승리/패배 메시지 처리
     if (isVictory) {
         let rewardMsg = '';
         if (combatInfo.type === 'event') {
             const dungeon = eventDungeons[combatInfo.indices];
             const reward = dungeon.eventPointReward;
-			playerEventPoints += reward;            
+            playerEventPoints += reward;            
             playerCumulativeEventPoints += reward;  
             
             if (!clearedEventDungeons.includes(dungeon.name)) {
@@ -4782,21 +4773,42 @@ function endCombat(isVictory, combatInfo, totalDamageDealt = 0) {
     }
     
     updateUI();
-    
     checkAchievements();
     combatResultModal.classList.remove('hidden');
     isCombatRunning = false;
     
-    // ✨ [추가] 이벤트 전투에서 복귀 시 UI를 새로고침하여 탭을 '전투'로 되돌립니다.
+    // ✨✨ [핵심 수정] 이벤트 전투 종료 후 '전투 목록' 화면으로 강제 이동 ✨✨
     if (combatInfo.type === 'event') {
-        switchTab('event');
-        // '전투' 탭 버튼을 찾아 활성화 (EventSubTabBattle 변수가 필요함)
-        const eventSubTabBattle = document.getElementById('event-sub-tab-battle');
-        if (eventSubTabBattle) {
-            // switchSubTab 함수가 전역에 없다면 이 방식으로 클래스를 조작합니다.
-            document.getElementById('event-battle-view').classList.remove('hidden');
-            eventSubTabBattle.classList.add('active');
+        // 1. 모든 뷰 숨기기
+        allViews.forEach(v => v.classList.add('hidden'));
+        allTabs.forEach(t => t.classList.remove('active'));
+
+        // 2. 이벤트 메인 컨테이너 표시 (정보창 event-home-view 아님!)
+        document.getElementById('event-view').classList.remove('hidden');
+        document.getElementById('event-home-view').classList.add('hidden'); // 정보창 숨김
+        document.getElementById('tab-event').classList.add('active'); // 탭 활성화
+
+        // 3. 서브 탭을 '전투'로 설정
+        displayEventView(); // 데이터 갱신
+        
+        document.getElementById('event-battle-view').classList.remove('hidden'); // 전투 목록 표시
+        document.getElementById('event-raid-view').classList.add('hidden');
+        document.getElementById('event-story-view').classList.add('hidden');
+        document.getElementById('event-shop-view').classList.add('hidden');
+
+        // 4. '전투' 버튼 활성화 스타일 적용
+        const btnBattle = document.getElementById('event-sub-tab-battle');
+        if (btnBattle) {
+            // 형제 버튼들의 active 제거
+            if (btnBattle.parentElement) {
+                Array.from(btnBattle.parentElement.children).forEach(b => b.classList.remove('active'));
+            }
+            btnBattle.classList.add('active');
         }
+    }
+    // 일반 전투는 기존대로
+    else {
+        switchTab('combat');
     }
 }
 
