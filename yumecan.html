@@ -2124,17 +2124,28 @@ async function resetGame() {
 
 let currentTab = 'home';
 
+// yumecan.html - switchTab 함수 (2137행 근처)
+
+let currentTab = 'home';
+
 function switchTab(newTab) {
+    // -------------------------------------------------------------
+    // ⭐ [핵심 수정 1] 상단 공통 영역을 제어할 변수 추가
+    const commonHeaderEl = document.querySelector('header');
+    const commonInfoEl = document.querySelector('.bg-black\\/20.p-2.md\\:p-3.rounded-lg.mb-2.md\\:mb-4');
+    const commonCurrencyEl = document.querySelector('.flex.flex-wrap.items-center.justify-center.md\\:justify-end.gap-1\\.5.md\\:gap-3.mb-4.md\\:mb-6');
+    // -------------------------------------------------------------
+    
     if (currentTab === newTab) return;
 
-    // 모든 뷰 DOM 요소 리스트 (모든 뷰를 명시적으로 나열)
+    // 모든 뷰 DOM 요소 리스트
     const allViews = [
         document.getElementById('home-view'),
-        document.getElementById('gacha-view'), // 추가
+        document.getElementById('gacha-view'),
         document.getElementById('inventory-view'),
         document.getElementById('deck-view'),
         document.getElementById('combat-view'),
-        document.getElementById('combat-in-progress-view'), // 추가
+        document.getElementById('combat-in-progress-view'),
         document.getElementById('collection-view'),
         document.getElementById('event-view'),
         document.getElementById('event-home-view'),
@@ -2142,8 +2153,8 @@ function switchTab(newTab) {
         document.getElementById('myroom-view'),
         document.getElementById('trade-view'),
         document.getElementById('profile-view'),
-        document.getElementById('friends-view'), // 추가
-        document.getElementById('story-view'), // 추가
+        document.getElementById('friends-view'),
+        document.getElementById('story-view'),
     ];
 
     // 홈뷰의 오버레이 요소 셀렉터 (홈 뷰가 아닌 곳으로 이동할 때 항상 숨겨야 함)
@@ -2163,6 +2174,13 @@ function switchTab(newTab) {
             const el = document.querySelector(sel);
             if (el) el.classList.add('hidden');
         });
+        
+        // -------------------------------------------------------------
+        // ⭐ [핵심 수정 2] 홈 뷰가 아니면 상단 공통 영역 숨기기
+        if (commonHeaderEl) commonHeaderEl.classList.add('hidden');
+        if (commonInfoEl) commonInfoEl.classList.add('hidden');
+        if (commonCurrencyEl) commonCurrencyEl.classList.add('hidden');
+        // -------------------------------------------------------------
     }
 
     // 3. 새 탭 열기
@@ -2170,12 +2188,19 @@ function switchTab(newTab) {
     const newView = document.getElementById(newViewId);
     if (newView) newView.classList.remove('hidden');
 
-    // 4. 홈뷰에 돌아가는 경우 → 오버레이 다시 표시
+    // 4. 홈뷰에 돌아가는 경우 → 오버레이 및 상단 공통 영역 다시 표시
     if (newTab === 'home') {
         homeOverlaySelectors.forEach(sel => {
             const el = document.querySelector(sel);
             if (el) el.classList.remove('hidden');
         });
+        
+        // -------------------------------------------------------------
+        // ⭐ [핵심 수정 3] 홈 뷰로 돌아오면 상단 공통 영역 다시 보이기
+        if (commonHeaderEl) commonHeaderEl.classList.remove('hidden');
+        if (commonInfoEl) commonInfoEl.classList.remove('hidden');
+        if (commonCurrencyEl) commonCurrencyEl.classList.remove('hidden');
+        // -------------------------------------------------------------
     }
     
     // 5. 전역 '로비로 복귀' 버튼 상태 업데이트
@@ -2192,7 +2217,6 @@ function switchTab(newTab) {
 
     // 6. 탭 이동 후 추가 UI 업데이트 (필요 시)
     if (newTab === 'inventory') {
-        // [수정] 인벤토리 로직이 displayInventory로 통합되었으므로 이 함수는 제거합니다.
         displayInventory();
     } else if (newTab === 'deck') {
         displayDeckManagement();
