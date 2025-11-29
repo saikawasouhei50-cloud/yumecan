@@ -4710,13 +4710,10 @@ function displayEventStoryPart2() {
 }
 			
             // gacha3.html - endCombat 함수 (기존 코드 전체 교체)
-// ✅ [수정됨] 전투 종료 처리 함수 (모달 표시 버그 수정)
-// ✅ [수정됨] 전투 종료 처리 함수 (모달 표시 보장)
-// ✅ [수정됨] 전투 종료 처리 함수 (결과창 강제 표시 기능 추가)
+// ✅ [수정됨] 전투 종료 처리 함수 (일반 전투 결과창 씹힘 방지)
 function endCombat(isVictory, combatInfo, totalDamageDealt = 0) { 
     lastCombatType = combatInfo.type;
     
-    // 모달 요소 직접 찾기 (안전장치)
     const resultModal = document.getElementById('combat-result-modal');
     const resultTitle = document.getElementById('combat-result-title');
     const resultMessage = document.getElementById('combat-result-message');
@@ -4782,19 +4779,13 @@ function endCombat(isVictory, combatInfo, totalDamageDealt = 0) {
     checkAchievements();
     isCombatRunning = false;
 
-    // ✨ 1차 표시: 일단 모달을 띄웁니다.
-    if(resultModal) resultModal.classList.remove('hidden');
-    
-    // 3. 화면 전환 로직
+    // 3. 화면 전환 및 결과창 표시
     if (combatInfo.type === 'event') {
-        // (1) 모든 뷰 숨기기 (여기서 결과창도 같이 숨겨질 수 있음)
-        allViews.forEach(v => v.classList.add('hidden'));
-        
-        // ✨✨ [핵심 수정] 뷰를 끈 직후에, 결과창만 다시 확실하게 켭니다! ✨✨
-        // 이 줄이 없으면 결과창이 번쩍하고 사라집니다.
-        if(resultModal) resultModal.classList.remove('hidden'); 
+        // [이벤트 전투]
+        const allV = document.querySelectorAll('main > div');
+        allV.forEach(v => v.classList.add('hidden')); 
 
-        allTabs.forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-button').forEach(t => t.classList.remove('active'));
 
         const evtView = document.getElementById('event-view');
         const evtHome = document.getElementById('event-home-view');
@@ -4821,11 +4812,22 @@ function endCombat(isVictory, combatInfo, totalDamageDealt = 0) {
             }
             btnBattle.classList.add('active');
         }
+        
+        // 결과창 즉시 표시
+        if(resultModal) resultModal.classList.remove('hidden');
+
     } else {
-        // 일반 전투
+        // [일반 전투]
         switchTab('combat');
-        // 여기서도 혹시 모르니 다시 켬
-        if(resultModal) resultModal.classList.remove('hidden'); 
+        
+        // ✨✨ [핵심] 일반 전투는 switchTab이 뷰를 덮어버릴 수 있으므로, 
+        // 0.1초 뒤에 결과창을 강제로 한 번 더 띄웁니다.
+        if(resultModal) {
+            resultModal.classList.remove('hidden'); // 즉시 시도
+            setTimeout(() => {
+                resultModal.classList.remove('hidden'); // 0.1초 뒤 확인 사살
+            }, 100);
+        }
     }
 }
 
