@@ -1705,7 +1705,10 @@ async function saveGameToFirebase() {
 		cumulativeEventPoints: playerCumulativeEventPoints || 0,
 		raidCumulativeDamage: playerRaidDamage || 0,
 		raidDailyCount: playerRaidDailyCount || 0,
-        raidLastResetDate: playerRaidLastResetDate || null,
+        raidLastResetDate: (playerRaidLastResetDate instanceof Date && !isNaN(playerRaidLastResetDate)) 
+                           ? playerRaidLastResetDate 
+                           : null,
+        
         clearedEventDungeons: clearedEventDungeons || [],
         purchasedEventItems: purchasedEventItems || {},
         bookmarks: playerBookmarks || 0,
@@ -8493,7 +8496,6 @@ function startRaidBattle() {
 }
 window.startRaidBattle = startRaidBattle;
 
-// ✅ async function submitRaidDamage(damage) 함수 전체를 이 코드로 교체하세요.
 async function submitRaidDamage(damage) {
     if (damage <= 0) return;
     if (!currentUser) return alert("로그인 상태를 확인해주세요.");
@@ -8554,7 +8556,7 @@ async function submitRaidDamage(damage) {
             // 4. DB 업데이트 예약 (유저 카운트 증가 및 날짜 기록)
             t.update(userRef, {
                 raidDailyCount: countAfterIncrement, 
-                raidLastResetDate: firebase.firestore.FieldValue.serverTimestamp() // DB에 저장되는 날짜
+                raidLastResetDate: firebase.firestore.FieldValue.serverTimestamp()
             });
 
             return countAfterIncrement; // 트랜잭션 성공 시 최종 카운트 반환
@@ -8569,33 +8571,31 @@ async function submitRaidDamage(damage) {
              } else if (isBossDefeated) {
                  alert("보스 HP가 0이 되어 전투 기록을 건너뛰었습니다.");
              }
-             // 여기서 UI 업데이트 및 저장은 하지 않습니다. (DB에 반영된 것이 없으므로)
             return;
         }
 
-        // 1. 로컬 변수 동기화 및 보상 계산
+        // 1. 로컬 변수 동기화
         playerRaidDailyCount = finalCount;
-        // playerRaidLastResetDate는 다음 트랜잭션이 DB에서 읽도록 맡기고 로컬에서는 건드리지 않습니다.
         
+        // 2. 보상 계산 (saveGame() 호출 없이 즉시 처리)
         calculatedReward = Math.min(MAX_REWARD, Math.floor(damage * REWARD_PER_100_DAMAGE)); 
         
         if (calculatedReward > 0) {
             playerCurrency += calculatedReward;
         }
         playerRaidDamage += damage;
+        
+        // 3. UI 업데이트만 하고, saveGame은 생략! (DB에 raidDailyCount는 이미 저장됨)
+        updateUI(); 
 
-        // 2. 최종 저장 및 UI 업데이트
-        updateUI();
-        saveGame(); // ⭐⭐ 트랜잭션 외부에서 로컬 변경사항 최종 저장! (충돌 가능성 낮춤)
-
-        // 3. 성공 알림
+        // 4. 성공 알림
         const rewardMsg = calculatedReward > 0 ? `기여 보상: 💎${calculatedReward}` : `(보상 없음)`;
         alert(`🎉 보스에게 ${damage} 피해를 입혔습니다! (오늘 ${finalCount}회 참여)\n${rewardMsg}`);
         
     } catch (error) {
-        // 트랜잭션 실패 시 명확한 알림
+        // 트랜잭션 실패 시 알림을 강화
         console.error("레이드 데미지 전송 실패 (트랜잭션 실패):", error);
-        alert(`❌ 전투 결과 처리 중 오류가 발생했습니다.\n원인: ${error.message || "트랜잭션 충돌 또는 DB 접근 오류"}`);
+        alert(`❌ 전투 결과 처리 중 오류가 발생했습니다.\n원인: ${error.message || "트랜잭션 충돌 또는 DB 접근 오류"}\n(DB 저장 실패)`);
     }
 }
 
