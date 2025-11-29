@@ -8073,124 +8073,122 @@ window.openMailbox = openMailbox;
 
 // ================== 📩 우편함 시스템 끝 ==================
 
+    async function checkAndProcessSystemMails(uid) {
+        const now = new Date();
+        const batch = db.batch();
+        const userRef = db.collection('users').doc(uid);
+        let newMailCount = 0;
 
+        // 1. 시트에 있는 모든 메일을 순회
+        systemMails.forEach(mail => {
+            // (A) 기간 체크
+            if (now < mail.startDate || now > mail.endDate) return;
 
-async function checkAndProcessSystemMails(uid) {
-    const now = new Date();
-    const batch = db.batch();
-    const userRef = db.collection('users').doc(uid);
-    let newMailCount = 0;
+            // (B) 타겟 체크 (ALL 이거나 내 UID여야 함)
+            if (mail.target !== 'ALL' && mail.target !== uid) return;
 
-    // 1. 시트에 있는 모든 메일을 순회
-    systemMails.forEach(mail => {
-        // (A) 기간 체크
-        if (now < mail.startDate || now > mail.endDate) return;
+            // (C) 이미 받은 메일인지 체크 (History 배열 확인)
+            if (playerSystemMailHistory.includes(mail.id)) return;
 
-        // (B) 타겟 체크 (ALL 이거나 내 UID여야 함)
-        if (mail.target !== 'ALL' && mail.target !== uid) return;
+            // --- 조건 만족! 받을 메일임 ---
+            
+            // 2. Firebase 우편함에 추가
+            const newMailRef = userRef.collection('mailbox').doc(); // 자동 ID 생성
+            batch.set(newMailRef, {
+                title: mail.title,
+                content: mail.content,
+                rewards: mail.rewards,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                fromSystemId: mail.id // 추적용 ID
+            });
 
-        // (C) 이미 받은 메일인지 체크 (History 배열 확인)
-        if (playerSystemMailHistory.includes(mail.id)) return;
-
-        // --- 조건 만족! 받을 메일임 ---
-        
-        // 2. Firebase 우편함에 추가
-        const newMailRef = userRef.collection('mailbox').doc(); // 자동 ID 생성
-        batch.set(newMailRef, {
-            title: mail.title,
-            content: mail.content,
-            rewards: mail.rewards,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            fromSystemId: mail.id // 추적용 ID
+            // 3. 로컬 기록 및 카운트 업데이트
+            playerSystemMailHistory.push(mail.id);
+            newMailCount++;
         });
 
-        // 3. 로컬 기록 및 카운트 업데이트
-        playerSystemMailHistory.push(mail.id);
-        newMailCount++;
-    });
+        // 4. 받을 메일이 있다면 DB에 한꺼번에 저장 (Batch)
+        if (newMailCount > 0) {
+            // 유저 정보에 '수령 기록(systemMailHistory)' 업데이트
+            batch.update(userRef, { 
+                systemMailHistory: playerSystemMailHistory 
+            });
 
-    // 4. 받을 메일이 있다면 DB에 한꺼번에 저장 (Batch)
-    if (newMailCount > 0) {
-        // 유저 정보에 '수령 기록(systemMailHistory)' 업데이트
-        batch.update(userRef, { 
-            systemMailHistory: playerSystemMailHistory 
-        });
-
-        try {
-            await batch.commit();
-            console.log(`📭 시스템 우편 ${newMailCount}개가 도착했습니다!`);
-            
-            // 배지 알림 갱신을 위해 리스너가 작동하겠지만, 즉각 반응을 위해 알림 띄우기
-            // (toastNotification이 있다면 활용)
-            const toast = document.getElementById('toast-notification');
-            if(toast) {
-                toast.textContent = `📩 새로운 운영자 우편이 ${newMailCount}통 도착했습니다!`;
-                toast.classList.remove('hidden');
-                setTimeout(() => toast.classList.add('hidden'), 3000);
+            try {
+                await batch.commit();
+                console.log(`📭 시스템 우편 ${newMailCount}개가 도착했습니다!`);
+                
+                // 알림 띄우기
+                const toast = document.getElementById('toast-notification');
+                if(toast) {
+                    toast.textContent = `📩 새로운 운영자 우편이 ${newMailCount}통 도착했습니다!`;
+                    toast.classList.remove('hidden');
+                    setTimeout(() => toast.classList.add('hidden'), 3000);
+                }
+            } catch (e) {
+                console.error("시스템 우편 동기화 실패:", e);
             }
-        } catch (e) {
-            console.error("시스템 우편 동기화 실패:", e);
         }
     }
-}
-// ✅ [신규] 1분마다 구글 시트를 확인해서 새 우편이 있으면 배달하는 함수
-function startPeriodicMailCheck(uid) {
-    // 이미 타이머가 돌고 있다면 중복 실행 방지
-    if (window.mailCheckInterval) clearInterval(window.mailCheckInterval);
 
-    console.log("📮 자동 우편 체크 시스템이 가동되었습니다. (1분 주기)");
+    // ✅ [신규] 1분마다 구글 시트를 확인해서 새 우편이 있으면 배달하는 함수
+    function startPeriodicMailCheck(uid) {
+        // 이미 타이머가 돌고 있다면 중복 실행 방지
+        if (window.mailCheckInterval) clearInterval(window.mailCheckInterval);
 
-    window.mailCheckInterval = setInterval(async () => {
-        if (!uid) return;
+        console.log("📮 자동 우편 체크 시스템이 가동되었습니다. (1분 주기)");
+
+        window.mailCheckInterval = setInterval(async () => {
+            if (!uid) return;
+            
+            try {
+                // 1. 구글 시트 데이터 몰래 새로고침
+                const response = await fetch(GOOGLE_SHEET_URL);
+                const data = await response.json();
+                
+                // 날짜 변환 헬퍼 (내부용)
+                const parseDate = (dateStr) => {
+                    if (!dateStr) return null;
+                    return new Date(String(dateStr).replace(' ', 'T'));
+                };
+
+                // 2. 전역 변수 업데이트
+                if (data.systemMails) {
+                    systemMails = data.systemMails.map(row => ({
+                        id: row.id,
+                        target: row.target,
+                        title: row.title,
+                        content: row.content,
+                        rewards: row.rewards ? JSON.parse(row.rewards) : {},
+                        startDate: parseDate(row.startDate),
+                        endDate: parseDate(row.endDate)
+                    }));
+                }
+
+                // 3. 내 우편함과 비교해서 안 받은 거 넣기
+                await checkAndProcessSystemMails(uid);
+                
+            } catch (e) {
+                console.warn("자동 우편 체크 중 오류(네트워크 등):", e);
+            }
+        }, 60 * 1000); // 60초(1분) 마다 실행
+    }
+
+    function toggleCardLock(cardId) {
+        const cardInstance = playerInventory.find(c => c.id === cardId);
+        if (!cardInstance) return;
+
+        // 상태 토글
+        cardInstance.isLocked = !cardInstance.isLocked;
         
-        try {
-            // 1. 구글 시트 데이터 몰래 새로고침
-            const response = await fetch(GOOGLE_SHEET_URL);
-            const data = await response.json();
-            
-            // 날짜 변환 헬퍼 (내부용)
-            const parseDate = (dateStr) => {
-                if (!dateStr) return null;
-                return new Date(String(dateStr).replace(' ', 'T'));
-            };
-
-            // 2. 전역 변수 업데이트
-            if (data.systemMails) {
-                systemMails = data.systemMails.map(row => ({
-                    id: row.id,
-                    target: row.target,
-                    title: row.title,
-                    content: row.content,
-                    rewards: row.rewards ? JSON.parse(row.rewards) : {},
-                    startDate: parseDate(row.startDate),
-                    endDate: parseDate(row.endDate)
-                }));
-            }
-
-            // 3. 내 우편함과 비교해서 안 받은 거 넣기
-            await checkAndProcessSystemMails(uid);
-            
-        } catch (e) {
-            console.warn("자동 우편 체크 중 오류(네트워크 등):", e);
+        // 저장 및 UI 갱신
+        saveGame();
+        showCardDetails(cardId); // 버튼 상태 갱신
+        
+        if (!document.getElementById('inventory-view').classList.contains('hidden')) {
+            displayInventory(); // 자물쇠 아이콘 갱신
         }
-    }, 60 * 1000); // 60초(1분) 마다 실행
-}
-
-function toggleCardLock(cardId) {
-    const cardInstance = playerInventory.find(c => c.id === cardId);
-    if (!cardInstance) return;
-
-    // 상태 토글
-    cardInstance.isLocked = !cardInstance.isLocked;
-    
-    // 저장 및 UI 갱신
-    saveGame();
-    showCardDetails(cardId); // 버튼 상태 갱신
-    
-    if (!document.getElementById('inventory-view').classList.contains('hidden')) {
-        displayInventory(); // 자물쇠 아이콘 갱신
     }
-} 
 
 }); // <--- 여기가 파일의 끝입니다. (DOMContentLoaded 닫기)
 </script>
