@@ -329,9 +329,6 @@ body.pointer-events-none {
         <span class="hidden md:inline">우편함</span>
         <span id="mail-badge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center border border-white animate-bounce">N</span>
     </button>
-
-    <button id="reset-game" ...>초기화</button>
-</div>
 			
 			<div class="text-xs md:text-xl font-bold text-cyan-300 bg-black/20 py-1 px-2 md:py-2 md:px-4 rounded-full inline-flex items-center">
                 🔖 <span id="bookmark-display" class="ml-1">10</span>/<span id="max-bookmark-display">10</span><span id="bookmark-timer-container" class="ml-1"></span>
@@ -1877,6 +1874,7 @@ async function saveGameToFirebase() {
             clearedEventDungeons = savedData.clearedEventDungeons || [];
             purchasedEventItems = savedData.purchasedEventItems || {};
             playerChoices = savedData.playerChoices || {};
+			playerSystemMailHistory = savedData.systemMailHistory || [];
         } else {
             // ✨ ID가 다른 경우: 새 이벤트 시작 OR 이벤트 종료
             if (CURRENT_EVENT_ID) {
@@ -1911,6 +1909,7 @@ async function saveGameToFirebase() {
             console.log("ID 없는 카드 복구됨:", card.name, card.id);
         }
     });
+	await checkAndProcessSystemMails(uid);
     saveGame(); 
     updateUI();
     checkEventStatus();
@@ -1920,6 +1919,8 @@ async function saveGameToFirebase() {
     document.getElementById('loading-overlay').classList.add('hidden');
     document.body.classList.remove('loading');
 }	
+
+
 
 function saveGame() {
                 // 이 함수는 이미 만들어두신 saveGameToFirebase() 함수를
@@ -7814,6 +7815,67 @@ function saveMyRoomCharacters() {
 // ✨ HTML 버튼에서 함수를 찾을 수 있도록 window에 등록
 window.openMyRoomCharacterSelector = openMyRoomCharacterSelector;
 window.saveMyRoomCharacters = saveMyRoomCharacters;
+
+let playerSystemMailHistory = []; // 전역 변수 추가
+
+async function checkAndProcessSystemMails(uid) {
+    const now = new Date();
+    const batch = db.batch();
+    const userRef = db.collection('users').doc(uid);
+    let newMailCount = 0;
+
+    // 1. 시트에 있는 모든 메일을 순회
+    systemMails.forEach(mail => {
+        // (A) 기간 체크
+        if (now < mail.startDate || now > mail.endDate) return;
+
+        // (B) 타겟 체크 (ALL 이거나 내 UID여야 함)
+        if (mail.target !== 'ALL' && mail.target !== uid) return;
+
+        // (C) 이미 받은 메일인지 체크 (History 배열 확인)
+        if (playerSystemMailHistory.includes(mail.id)) return;
+
+        // --- 조건 만족! 받을 메일임 ---
+        
+        // 2. Firebase 우편함에 추가
+        const newMailRef = userRef.collection('mailbox').doc(); // 자동 ID 생성
+        batch.set(newMailRef, {
+            title: mail.title,
+            content: mail.content,
+            rewards: mail.rewards,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            fromSystemId: mail.id // 추적용 ID
+        });
+
+        // 3. 로컬 기록 및 카운트 업데이트
+        playerSystemMailHistory.push(mail.id);
+        newMailCount++;
+    });
+
+    // 4. 받을 메일이 있다면 DB에 한꺼번에 저장 (Batch)
+    if (newMailCount > 0) {
+        // 유저 정보에 '수령 기록(systemMailHistory)' 업데이트
+        batch.update(userRef, { 
+            systemMailHistory: playerSystemMailHistory 
+        });
+
+        try {
+            await batch.commit();
+            console.log(`📭 시스템 우편 ${newMailCount}개가 도착했습니다!`);
+            
+            // 배지 알림 갱신을 위해 리스너가 작동하겠지만, 즉각 반응을 위해 알림 띄우기
+            // (toastNotification이 있다면 활용)
+            const toast = document.getElementById('toast-notification');
+            if(toast) {
+                toast.textContent = `📩 새로운 운영자 우편이 ${newMailCount}통 도착했습니다!`;
+                toast.classList.remove('hidden');
+                setTimeout(() => toast.classList.add('hidden'), 3000);
+            }
+        } catch (e) {
+            console.error("시스템 우편 동기화 실패:", e);
+        }
+    }
+}
 	
 
     }); // <--- DOMContentLoaded 닫는 괄호 (절대 지우지 마세요!)
