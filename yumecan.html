@@ -1611,40 +1611,41 @@ const dismantleSelectedButton = document.getElementById('dismantle-selected-butt
             const eventTab = document.getElementById('tab-event');
             const eventPointDisplay = document.getElementById('event-point-display');
             const eventPointsSpan = document.getElementById('event-points');
-            const eventSubTabBattle = document.getElementById('event-sub-tab-battle');
-        const eventSubTabRaid = document.getElementById('event-sub-tab-raid');
-        const eventSubTabStory = document.getElementById('event-sub-tab-story');
-        const eventSubTabShop = document.getElementById('event-sub-tab-shop');
+            // ✨ 이벤트 뷰의 서브 탭 리스너 (중복 오류 방지용 수정)
+        {
+            const btnBattle = document.getElementById('event-sub-tab-battle');
+            if (btnBattle) {
+                btnBattle.onclick = function() {
+                    displayEventView(); 
+                    switchEventSubTab('battle'); 
+                };
+            }
 
-        if (eventSubTabBattle) {
-            eventSubTabBattle.addEventListener('click', () => {
-                displayEventView(); 
-                switchEventSubTab('battle'); // ✅ 전용 함수 사용
-            });
-        }
+            const btnRaid = document.getElementById('event-sub-tab-raid');
+            if (btnRaid) {
+                btnRaid.onclick = function() {
+                    displayEventView(); 
+                    switchEventSubTab('raid'); 
+                    // 레이드 데이터 리스너가 필요하다면 여기서 호출
+                    if (typeof initRaidListener === 'function') initRaidListener();
+                };
+            }
 
-        if (eventSubTabRaid) {
-            eventSubTabRaid.addEventListener('click', () => {
-                displayEventView(); 
-                switchEventSubTab('raid'); // ✅ 전용 함수 사용
-                
-                // 레이드 데이터 리스너가 필요하다면 여기서 호출
-                if (typeof initRaidListener === 'function') initRaidListener();
-            });
-        }
+            const btnStory = document.getElementById('event-sub-tab-story');
+            if (btnStory) {
+                btnStory.onclick = function() {
+                    displayEventView(); 
+                    switchEventSubTab('story'); 
+                };
+            }
 
-        if (eventSubTabStory) {
-            eventSubTabStory.addEventListener('click', () => {
-                displayEventView(); 
-                switchEventSubTab('story'); // ✅ 전용 함수 사용
-            });
-        }
-
-        if (eventSubTabShop) {
-            eventSubTabShop.addEventListener('click', () => {
-                displayEventView(); 
-                switchEventSubTab('shop'); // ✅ 전용 함수 사용
-            });
+            const btnShop = document.getElementById('event-sub-tab-shop');
+            if (btnShop) {
+                btnShop.onclick = function() {
+                    displayEventView(); 
+                    switchEventSubTab('shop'); 
+                };
+            }
         }
             const eventBattleView = document.getElementById('event-battle-view');
             const eventStoryView = document.getElementById('event-story-view');
@@ -4781,6 +4782,8 @@ function endCombat(isVictory, combatInfo, totalDamageDealt = 0) {
             eventSubTabRaid.classList.add('active'); 
         }
         
+		
+		
         return; // 레이드는 여기서 함수 종료
     }
     // ▲▲▲ [수정 끝] ▲▲▲
