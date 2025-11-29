@@ -1261,7 +1261,7 @@ body.pointer-events-none {
             <button onclick="saveMyRoomCharacters()" class="flex-1 gacha-button bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 rounded-lg shadow-lg">저장하기</button>
             <button onclick="document.getElementById('myroom-char-selector-modal').classList.add('hidden')" class="w-1/4 gacha-button bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 rounded-lg">취소</button>
         </div> </div> 
-		<div id="combat-result-modal" class="hidden absolute inset-0 bg-black/70 flex justify-center items-center z-20">
+		<div id="combat-result-modal" class="hidden fixed inset-0 bg-black/70 flex justify-center items-center z-[9999]">
                     <div class="bg-gray-800 p-8 rounded-lg text-center">
                         <h2 id="combat-result-title" class="text-4xl font-bold mb-4"></h2>
                         <p id="combat-result-message" class="text-lg mb-6"></p>
@@ -4711,16 +4711,17 @@ function displayEventStoryPart2() {
 			
             // gacha3.html - endCombat 함수 (기존 코드 전체 교체)
 // ✅ [수정됨] 전투 종료 처리 함수 (모달 표시 버그 수정)
+// ✅ [수정됨] 전투 종료 처리 함수 (모달 표시 보장)
 function endCombat(isVictory, combatInfo, totalDamageDealt = 0) { 
     lastCombatType = combatInfo.type;
     
-    // 1. DOM 요소 직접 찾기 (안전장치)
+    // 모달 요소 찾기
     const resultModal = document.getElementById('combat-result-modal');
     const resultTitle = document.getElementById('combat-result-title');
     const resultMessage = document.getElementById('combat-result-message');
     const inProgressView = document.getElementById('combat-in-progress-view');
 
-    // 2. 레이드 종료 처리 (기존과 동일)
+    // 1. 레이드 종료 처리
     if (combatInfo.type === 'raid') {
         isCombatRunning = false;
         if(resultModal) resultModal.classList.add('hidden');
@@ -4728,19 +4729,15 @@ function endCombat(isVictory, combatInfo, totalDamageDealt = 0) {
         
         submitRaidDamage(totalDamageDealt);
         
-        // 레이드 탭 복귀
-        const evtView = document.getElementById('event-view');
-        const raidView = document.getElementById('event-raid-view');
-        if(evtView) evtView.classList.remove('hidden');
-        if(raidView) raidView.classList.remove('hidden');
+        document.getElementById('event-view').classList.remove('hidden');
+        document.getElementById('event-raid-view').classList.remove('hidden');
         
         const btnRaid = document.getElementById('event-sub-tab-raid');
         if (btnRaid) btnRaid.classList.add('active');
-        
         return; 
     }
 
-    // 3. 승리/패배 메시지 설정
+    // 2. 승리/패배 메시지 설정
     if (isVictory) {
         let rewardMsg = '';
         if (combatInfo.type === 'event') {
@@ -4748,18 +4745,12 @@ function endCombat(isVictory, combatInfo, totalDamageDealt = 0) {
             const reward = dungeon.eventPointReward;
             playerEventPoints += reward;            
             playerCumulativeEventPoints += reward;  
-            
-            if (!clearedEventDungeons.includes(dungeon.name)) {
-                clearedEventDungeons.push(dungeon.name);
-            }
+            if (!clearedEventDungeons.includes(dungeon.name)) clearedEventDungeons.push(dungeon.name);
             rewardMsg = `이벤트 스테이지 클리어! ${reward} P를 획득했습니다.`;
         } else if (combatInfo.type === 'main_stage') {
             const stage = mainChapters[combatInfo.indices.chapter].stages[combatInfo.indices.stage];
             const stageId = `${combatInfo.indices.chapter + 1}-${combatInfo.indices.stage + 1}`;
-            
-            if (!clearedStages.includes(stageId)) {
-                clearedStages.push(stageId);
-            }
+            if (!clearedStages.includes(stageId)) clearedStages.push(stageId);
             
             let rewardsEarned = [];
             if (stage.rewards.fountainPens) {
@@ -4770,45 +4761,38 @@ function endCombat(isVictory, combatInfo, totalDamageDealt = 0) {
                 playerCurrency += stage.rewards.currency;
                 rewardsEarned.push(`💎${stage.rewards.currency}`);
             }
-            
             rewardMsg = `스테이지 클리어! ${rewardsEarned.join(', ')} 획득!`;
         }
         
-        if (resultTitle) {
+        if(resultTitle) {
             resultTitle.textContent = "승리!";
             resultTitle.className = "text-4xl font-bold mb-4 text-green-400";
         }
-        if (resultMessage) resultMessage.textContent = rewardMsg;
-
+        if(resultMessage) resultMessage.textContent = rewardMsg;
     } else {
-        if (resultTitle) {
+        if(resultTitle) {
             resultTitle.textContent = "패배...";
             resultTitle.className = "text-4xl font-bold mb-4 text-red-400";
         }
-        if (resultMessage) resultMessage.textContent = `전투에서 패배했습니다...`;
+        if(resultMessage) resultMessage.textContent = `전투에서 패배했습니다...`;
     }
     
     updateUI();
     checkAchievements();
-    
-    // ✨ [핵심] 결과 모달 띄우기 (여기서 띄웁니다!)
-    if (resultModal) {
-        resultModal.classList.remove('hidden');
-    } else {
-        console.error("❌ 오류: combat-result-modal을 찾을 수 없습니다.");
-        alert(resultTitle.textContent + "\n" + resultMessage.textContent); // 모달 없으면 alert라도 띄움
-    }
-
     isCombatRunning = false;
-    
-    // 4. 전투 종료 후 화면 이동 로직
-    if (combatInfo.type === 'event') {
-        // 이벤트 전투 후 -> 이벤트 전투 목록으로 이동
-        const allV = document.querySelectorAll('main > div');
-        allV.forEach(v => v.classList.add('hidden')); // 일단 다 숨김 (모달 제외)
-        if(resultModal) resultModal.classList.remove('hidden'); // 모달은 다시 켬
 
-        document.querySelectorAll('.tab-button').forEach(t => t.classList.remove('active'));
+    // ✨ 일단 모달 띄우기 (여기서 1차로 띄움)
+    if(resultModal) resultModal.classList.remove('hidden');
+    
+    // 3. 화면 전환 로직
+    if (combatInfo.type === 'event') {
+        // 모든 뷰 숨김
+        allViews.forEach(v => v.classList.add('hidden'));
+        
+        // ✨✨ [핵심 수정] 뷰를 다 숨긴 뒤, 결과창만 다시 확실하게 켭니다! ✨✨
+        if(resultModal) resultModal.classList.remove('hidden'); 
+
+        allTabs.forEach(t => t.classList.remove('active'));
 
         const evtView = document.getElementById('event-view');
         const evtHome = document.getElementById('event-home-view');
@@ -4821,7 +4805,7 @@ function endCombat(isVictory, combatInfo, totalDamageDealt = 0) {
         displayEventView();
         
         const battleView = document.getElementById('event-battle-view');
-        if(battleView) battleView.classList.remove('hidden'); // 전투 목록 뷰 켜기
+        if(battleView) battleView.classList.remove('hidden');
         
         ['event-raid-view', 'event-story-view', 'event-shop-view'].forEach(id => {
             const el = document.getElementById(id);
@@ -4836,10 +4820,9 @@ function endCombat(isVictory, combatInfo, totalDamageDealt = 0) {
             btnBattle.classList.add('active');
         }
     } else {
-        // 일반 전투 후 -> 일반 전투 목록으로 이동
         switchTab('combat');
-        // switchTab이 모달까지 숨겨버릴 수 있으므로 다시 켬
-        if(resultModal) resultModal.classList.remove('hidden');
+        // 일반 전투 때도 혹시 모르니 다시 켬
+        if(resultModal) resultModal.classList.remove('hidden'); 
     }
 }
 
