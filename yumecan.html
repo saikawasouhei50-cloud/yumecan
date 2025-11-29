@@ -8460,6 +8460,7 @@ function initRaidListener() {
 }
 
 // 3. UI 업데이트
+// yumecan.html - updateRaidUI 함수 전체를 이 코드로 교체하세요 (7979행 근처)
 function updateRaidUI() {
     if (!raidBossData) return;
     
@@ -8467,7 +8468,8 @@ function updateRaidUI() {
     const imgEl = document.getElementById('raid-boss-image');
     const hpBar = document.getElementById('raid-boss-hp-bar');
     const hpText = document.getElementById('raid-boss-hp-text');
-    const btn = document.getElementById('btn-start-raid-combat');
+    // ✅ [수정] 버튼 ID를 raid-start-btn으로 변경
+    const btn = document.getElementById('raid-start-btn'); 
 
     nameEl.textContent = `Lv.${raidBossData.level} ${raidBossData.name}`;
     imgEl.src = raidBossData.imageUrl;
@@ -8478,21 +8480,29 @@ function updateRaidUI() {
     hpText.textContent = `${raidBossData.currentHp.toLocaleString()} / ${raidBossData.maxHp.toLocaleString()}`;
 
     // 보스 처치 상태 처리
-    if (raidBossData.currentHp <= 0) {
-        btn.disabled = true;
-        btn.textContent = "토벌 완료";
-        btn.classList.add('bg-gray-600', 'cursor-not-allowed');
-        btn.classList.remove('bg-red-600', 'hover:bg-red-700');
-        imgEl.style.filter = "grayscale(100%) opacity(0.6)";
-        nameEl.textContent += " (격파됨)";
-    } else {
-        btn.disabled = false;
-        btn.textContent = "⚔️ 전투 개시";
-        btn.classList.remove('bg-gray-600', 'cursor-not-allowed');
-        btn.classList.add('bg-red-600', 'hover:bg-red-700');
-        imgEl.style.filter = "none";
+    if (btn) { // ✅ [안전장치] 버튼 요소가 존재하는지 먼저 확인
+        if (raidBossData.currentHp <= 0) {
+            btn.disabled = true;
+            btn.textContent = "토벌 완료";
+            btn.classList.add('bg-gray-600', 'cursor-not-allowed');
+            btn.classList.remove('bg-red-600', 'hover:bg-red-700');
+            imgEl.style.filter = "grayscale(100%) opacity(0.6)";
+            nameEl.textContent += " (격파됨)";
+        } else {
+            // 레이드 횟수 제한 로직은 updateRaidDailyCountUI가 처리해야 하지만, 
+            // 기본 스타일은 여기서 설정해 둡니다.
+            if (!btn.disabled) {
+                btn.classList.remove('bg-gray-600', 'cursor-not-allowed');
+                btn.classList.add('bg-red-600', 'hover:bg-red-700');
+                btn.textContent = "⚔️ 전투 개시";
+            }
+            imgEl.style.filter = "none";
+        }
     }
-	loadRaidRankingPreview();
+    
+    // ✅ [추가] 레이드 횟수 UI도 업데이트합니다.
+    updateRaidDailyCountUI(); 
+    loadRaidRankingPreview();
 }
 
 // 4. 전투 시작 트리거
@@ -8754,7 +8764,8 @@ async function checkAndSpawnRaidBoss() {
 
 // ... (다른 함수들)
 
-// ✅ [추가] 레이드 횟수 UI를 업데이트하고 버튼을 활성화/비활성화하는 함수
+// yumecan.html - updateRaidDailyCountUI 함수 전체를 이 코드로 교체하세요 (7894행 근처)
+// ✅ [수정] 레이드 횟수 UI를 업데이트하고 버튼을 활성화/비활성화하는 함수
 function updateRaidDailyCountUI() {
     const maxCount = 5;
     // playerRaidDailyCount는 loadGameFromFirebase에서 로드되거나 0으로 초기화됨
@@ -8762,13 +8773,14 @@ function updateRaidDailyCountUI() {
     const remaining = Math.max(0, maxCount - currentCount);
 
     const display = document.getElementById("raid-count-display");
-    // ✅ [수정] HTML에서 변경한 ID와 일치시켜야 합니다.
+    // ✅ [확인] HTML에서 변경한 ID와 일치시켜야 합니다.
     const btn = document.getElementById("raid-start-btn"); 
 
     if (display) {
         display.textContent = `오늘의 레이드: ${currentCount} / ${maxCount}회`;
     }
 
+    // ⭐ [핵심 수정] 버튼이 null이 아닐 때만 접근
     if (btn) {
         if (remaining <= 0) {
             btn.disabled = true;
@@ -8777,9 +8789,12 @@ function updateRaidDailyCountUI() {
             btn.textContent = "횟수 제한";
         } else {
             btn.disabled = false;
-            btn.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-gray-600');
-            btn.classList.add('bg-red-600', 'hover:bg-red-700');
-            btn.textContent = "⚔️ 전투 개시";
+            // ⭐ [핵심 수정] 횟수 제한이 풀려도 보스가 죽었는지 최종 확인 후 스타일 적용
+            if (raidBossData && raidBossData.currentHp > 0) {
+                btn.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-gray-600');
+                btn.classList.add('bg-red-600', 'hover:bg-red-700');
+                btn.textContent = "⚔️ 전투 개시";
+            }
         }
     }
 }
