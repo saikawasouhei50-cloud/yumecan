@@ -1790,19 +1790,24 @@ async function saveGameToFirebase() {
             
             playerEventPoints = savedData.eventPoints !== undefined ? savedData.eventPoints : 0;
             
-            // ✨ [핵심 수정 1] 오류가 났던 부분을 삼항 연산자로 수정하고 할당 구문을 정리
             playerCumulativeEventPoints = savedData.cumulativeEventPoints !== undefined 
                 ? savedData.cumulativeEventPoints 
-                : playerEventPoints; // 이전에 획득한 이벤트 포인트가 없으면 현재 포인트로 초기화
+                : playerEventPoints;
             
-            // ✨ [핵심 수정 2] playerRaidDamage 할당 구문을 분리하고 삼항 연산자로 수정
+            // ✨ [핵심 수정 1] playerRaidDamage 로드
             playerRaidDamage = savedData.raidCumulativeDamage !== undefined 
                 ? savedData.raidCumulativeDamage 
                 : 0;
-				// ✨ [추가] 레이드 참여 횟수 로드 및 초기화 체크
-            const savedLastRaidDate = savedData.raidLastResetDate?.toDate().toDateString() || '';
-            const today = new Date().toDateString();
-    
+
+            // ✨ [핵심 수정 2] 레이드 참여 횟수 로드 및 초기화 체크
+            const lastResetTimestamp = savedData.raidLastResetDate;
+            const today = new Date().toDateString(); // 예: 'Sat Nov 29 2025'
+            
+            // ⚠️ [수정된 안전 장치] Timestamp 객체인지 확인 (TypeError 방지)
+            const savedLastRaidDate = (lastResetTimestamp && typeof lastResetTimestamp.toDate === 'function')
+                ? lastResetTimestamp.toDate().toDateString() 
+                : ''; // 유효하지 않으면 빈 문자열로 처리
+            
             if (savedLastRaidDate !== today) {
                 // 날짜가 다르면 0으로 초기화
                 playerRaidDailyCount = 0; 
@@ -1818,17 +1823,17 @@ async function saveGameToFirebase() {
             playerChoices = savedData.playerChoices || {};
 			playerSystemMailHistory = savedData.systemMailHistory || [];
         } else {
-            // ✨ ID가 다른 경우: 새 이벤트 시작 OR 이벤트 종료
+            // ✨ ID가 다른 경우: 새 이벤트 시작 OR 이벤트 종료 (모든 이벤트 관련 데이터 초기화)
             if (CURRENT_EVENT_ID) {
                 console.log(`새로운 이벤트[${CURRENT_EVENT_ID}]가 감지되어, 이전 기록을 초기화합니다.`);
             } else {
                 console.log("현재 진행 중인 이벤트가 없어 기록을 초기화합니다.");
             }
             
-            // 이벤트가 바뀌거나 없을 경우 레이드 피해량 포함 모든 이벤트 기록을 0으로 초기화
             playerEventPoints = 0;
             playerCumulativeEventPoints = 0;
-            playerRaidDamage = 0; // ✨ 레이드 피해량도 초기화
+            playerRaidDamage = 0; 
+            playerRaidDailyCount = 0; // ✨ 레이드 횟수 초기화
             clearedEventDungeons = [];
             purchasedEventItems = {};
             playerChoices = {};
