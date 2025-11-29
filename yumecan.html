@@ -7721,7 +7721,7 @@ function openMyRoomCharacterSelector() {
 
 let currentMyRoomFilter = 'All';
 
-// 2. 선택창 UI 그리기 (안전장치 추가 버전)
+// [수정됨] 입주민 선택창 UI 그리기 (캐릭터별 정렬 적용)
 function updateMyRoomSelectorUI() {
     const list = document.getElementById('myroom-char-selector-modal').querySelector('#myroom-char-list');
     const countSpan = document.getElementById('myroom-selected-count');
@@ -7733,7 +7733,6 @@ function updateMyRoomSelectorUI() {
     const filteredInv = playerInventory.filter(cardInstance => {
         if (currentMyRoomFilter === 'All') return true;
         const charData = findCharacter(cardInstance.name);
-        // 데이터가 없거나 등급이 다르면 제외
         return charData && charData.rarity === currentMyRoomFilter;
     });
 
@@ -7742,22 +7741,30 @@ function updateMyRoomSelectorUI() {
         return;
     }
 
-    // 2. 정렬 (등급 > 레벨 > 이름)
+    // 2. ✨ 정렬 로직 변경 (캐릭터 이름 -> 등급 -> 레벨)
     const sortedInv = [...filteredInv].sort((a, b) => {
         const charA = findCharacter(a.name);
         const charB = findCharacter(b.name);
         
+        // 안전장치
         if (!charA) return 1;
         if (!charB) return -1;
 
+        // [1순위] 캐릭터 기본 이름(BaseName)으로 묶기 (가나다순)
+        const nameComparison = charA.baseName.localeCompare(charB.baseName);
+        if (nameComparison !== 0) return nameComparison;
+
+        // [2순위] 등급 높은 순 (SSR > SR > R > N)
         const rarityOrder = { 'SSR': 4, 'SR': 3, 'R': 2, 'N': 1 };
         const rA = rarityOrder[charA.rarity] || 0;
         const rB = rarityOrder[charB.rarity] || 0;
+        if (rA !== rB) return rB - rA;
 
-        return (rB - rA) || (b.level - a.level);
+        // [3순위] 레벨 높은 순
+        return b.level - a.level;
     });
 
-    // 3. 카드 생성 (기존 로직 유지)
+    // 3. 카드 생성
     sortedInv.forEach(cardInstance => {
         const charData = findCharacter(cardInstance.name);
         if (!charData) return;
