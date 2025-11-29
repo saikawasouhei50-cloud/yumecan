@@ -8590,7 +8590,9 @@ async function submitRaidDamage(damage) {
         
         // 3. UI 업데이트만 실행 (saveGame 호출 안 함)
         updateUI(); 
-		saveGame();
+		setTimeout(() => {
+            saveGame(); 
+        }, 1000); // 1초 지연
 
         // 4. 최종 저장: 다음 자동 저장 시점이나 탭 이동 시 저장되기를 기대합니다.
         //    (즉, 충돌을 피하기 위해 DB 쓰기를 미룹니다.)
