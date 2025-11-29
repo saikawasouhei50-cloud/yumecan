@@ -1815,7 +1815,7 @@ async function saveGameToFirebase() {
             } else {
                 // 날짜가 같으면 DB 카운트 로드
                 playerRaidDailyCount = savedData.raidDailyCount ?? 0;
-                playerRaidLastResetDate = savedData.raidLastResetDate;
+    playerRaidLastResetDate = savedData.raidLastResetDate;
             }
 
             clearedEventDungeons = savedData.clearedEventDungeons || [];
@@ -8578,7 +8578,7 @@ async function submitRaidDamage(damage) {
 
         // 1. 로컬 변수 동기화
         playerRaidDailyCount = finalCount; // DB와 동일한 값으로 로컬 업데이트
-        playerRaidLastResetDate = new Date();    
+         
         
         const calculatedReward = Math.min(MAX_REWARD, Math.floor(damage / REWARD_PER_100_DAMAGE)); 
         
