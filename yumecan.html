@@ -1301,6 +1301,7 @@ const COLLECTION_GROUPS = ['히어로 대 빌런: 각축전', '히어로 대 빌
         const eventSubTabStory = document.getElementById('event-sub-tab-story');
         const eventSubTabShop = document.getElementById('event-sub-tab-shop'); // ✨ 이제 shop 버튼을 찾을 수 있습니다.
 	await loadGameData();
+	checkEndedEvents();
 	const exitMultiModeButton = document.getElementById('exit-multi-mode');
     const enterMultiModeButton = document.getElementById('enter-multi-mode');
 
@@ -1457,6 +1458,16 @@ const RAID_RANK_REWARDS = {
     3: { currency: 500, fountainPens: 200, title: "레이드 기여도 3위 보상" },
     top5: { currency: 300, fountainPens: 100, title: "레이드 기여도 Top 5 보상" }, // 4~5위
     participation: { currency: 100, fountainPens: 50, title: "레이드 토벌 참가 보상" } // 그 외
+};
+
+// ✨ [신규] 이벤트 랭킹 보상 설정
+const EVENT_RANK_REWARDS = {
+    1: { currency: 3000, fountainPens: 1000, title: "이벤트 1위" },
+    2: { currency: 2000, fountainPens: 800, title: "이벤트 2위" },
+    3: { currency: 1500, fountainPens: 600, title: "이벤트 3위" },
+    top10: { currency: 1000, fountainPens: 500, title: "이벤트 Top 10" },
+    top50: { currency: 500, fountainPens: 300, title: "이벤트 Top 50" },
+    participation: { currency: 200, fountainPens: 100, title: "이벤트 참가상" }
 };
 	
 			const DISMANTLE_REWARDS = {
@@ -8653,6 +8664,77 @@ function startRaidBattle() {
 }
 window.startRaidBattle = startRaidBattle;
 
+// ✨ [신규] 이벤트 랭킹 보상 분배 함수 (종료된 이벤트 처리)
+async function distributeEventRewards(eventId, eventTitle) {
+    console.log(`🎁 [${eventTitle}] 랭킹 보상 분배 시작...`);
+    
+    try {
+        // 1. 해당 이벤트의 참가자 명단 가져오기 (이벤트 포인트 순)
+        // (주의: 이미 종료된 이벤트라 currentEventId가 바뀌었을 수 있지만, 
+        //  DB에는 기록이 남아있다고 가정하고 쿼리합니다.)
+        const snapshot = await db.collection('users')
+            .where('currentEventId', '==', eventId)
+            .orderBy('cumulativeEventPoints', 'desc') // 누적 포인트 기준
+            .limit(500) 
+            .get();
+
+        if (snapshot.empty) {
+            console.log("참여자가 없어 보상을 분배하지 않습니다.");
+            return;
+        }
+
+        const batch = db.batch();
+        let count = 0;
+        let currentRank = 1; 
+
+        // 2. 순위별 우편 생성
+        snapshot.docs.forEach(doc => {
+            const userData = doc.data();
+            
+            // 포인트가 없는 유저 제외
+            if (!userData.cumulativeEventPoints || userData.cumulativeEventPoints <= 0) return;
+
+            const rank = currentRank++;
+            let rewardData = null;
+
+            if (rank === 1) rewardData = EVENT_RANK_REWARDS[1];
+            else if (rank === 2) rewardData = EVENT_RANK_REWARDS[2];
+            else if (rank === 3) rewardData = EVENT_RANK_REWARDS[3];
+            else if (rank <= 10) rewardData = EVENT_RANK_REWARDS.top10;
+            else if (rank <= 50) rewardData = EVENT_RANK_REWARDS.top50;
+            else rewardData = EVENT_RANK_REWARDS.participation;
+
+            const mailRef = db.collection('users').doc(doc.id).collection('mailbox').doc();
+            const scoreStr = userData.cumulativeEventPoints.toLocaleString();
+
+            batch.set(mailRef, {
+                title: `[이벤트 종료] ${eventTitle}`,
+                content: `${eventTitle} 이벤트가 종료되었습니다.\n당신의 최종 순위는 ${rank}위 입니다.\n(누적 포인트: ${scoreStr} P)`,
+                rewards: {
+                    currency: rewardData.currency,
+                    fountainPens: rewardData.fountainPens
+                },
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                fromSystem: true
+            });
+            count++;
+        });
+
+        // 3. 일괄 전송
+        await batch.commit();
+        console.log(`✅ [${eventTitle}] 총 ${count}명에게 랭킹 보상 발송 완료.`);
+        
+        // (운영자/최초 접속자에게만 보이는 메시지)
+        showMessage(`지난 이벤트 [${eventTitle}]의 보상 정산이 완료되었습니다.`, "text-yellow-300", messageArea);
+
+    } catch (e) {
+        console.error("이벤트 보상 분배 중 오류:", e);
+        if (e.message.includes('index')) {
+            alert("시스템 오류: 이벤트 랭킹 인덱스 생성 필요 (콘솔 확인)");
+        }
+    }
+}
+
 // ✅ [수정됨] 레이드 보상 분배 함수 (NaN 오류 수정 + 안전한 랭킹 계산)
 async function distributeRaidRewards(bossName) {
     console.log("🎁 레이드 보상 분배 시작...");
@@ -8942,6 +9024,43 @@ async function loadRaidRankingData() {
         } else {
              listContainer.innerHTML = '<p class="text-red-400 text-center">랭킹을 불러오지 못했습니다.</p>';
         }
+    }
+}
+
+// ✨ [신규] 종료된 이벤트 확인 및 보상 트리거
+async function checkEndedEvents() {
+    if (!allEventInfos || allEventInfos.length === 0) return;
+
+    const now = new Date();
+    const statusRef = db.collection('system').doc('event_status');
+
+    try {
+        await db.runTransaction(async (t) => {
+            const doc = await t.get(statusRef);
+            // 문서가 없으면 빈 객체로 시작
+            const statusData = doc.exists ? doc.data() : {};
+            
+            // 모든 이벤트 목록을 순회하며 '종료되었으나 보상이 안 나간' 건을 찾음
+            for (const info of allEventInfos) {
+                // 1. 이미 종료된 이벤트인가?
+                if (now > info.endDate) {
+                    // 2. 이미 보상이 지급되었는가? (statusData에 기록 확인)
+                    if (!statusData[info.id]) {
+                        console.log(`📢 [${info.title}] 이벤트가 종료되었습니다. 보상 분배를 시도합니다.`);
+                        
+                        // 3. '지급 완료' 플래그를 먼저 설정 (중복 실행 방지 락)
+                        // 주의: 여기서는 플래그만 찍고, 실제 분배(distributeEventRewards)는
+                        // 트랜잭션 밖에서 실행하거나 비동기로 호출합니다.
+                        t.set(statusRef, { [info.id]: true }, { merge: true });
+                        
+                        // 4. 분배 함수 실행 (await 없이 호출하여 트랜잭션 지연 방지)
+                        distributeEventRewards(info.id, info.title);
+                    }
+                }
+            }
+        });
+    } catch (e) {
+        console.error("이벤트 종료 체크 중 오류:", e);
     }
 }
 
