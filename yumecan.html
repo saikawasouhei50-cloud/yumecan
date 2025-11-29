@@ -1355,6 +1355,10 @@ const COLLECTION_GROUPS = ['히어로 대 빌런: 각축전', '히어로 대 빌
     // DOM이 모두 로드된 후 게임 스크립트 실행
     document.addEventListener('DOMContentLoaded', async () => {
 	document.body.classList.add('loading');
+	const eventSubTabBattle = document.getElementById('event-sub-tab-battle');
+        const eventSubTabRaid = document.getElementById('event-sub-tab-raid');
+        const eventSubTabStory = document.getElementById('event-sub-tab-story');
+        const eventSubTabShop = document.getElementById('event-sub-tab-shop'); // ✨ 이제 shop 버튼을 찾을 수 있습니다.
 	await loadGameData();
 	const exitMultiModeButton = document.getElementById('exit-multi-mode');
     const enterMultiModeButton = document.getElementById('enter-multi-mode');
@@ -8539,8 +8543,7 @@ async function loadRaidRankingPreview() {
 }
 
 // ================== 👇 레이드 시스템 로직 시작 👇 ==================
-let raidBossData = null;
-let raidUnsubscribe = null;
+
 
 // 1. 이벤트 탭 전환 기능 (레이드 탭 포함)
 const eventSubTabRaid = document.getElementById('event-sub-tab-raid');
@@ -8757,6 +8760,7 @@ async function submitRaidDamage(damage) {
         alert(`❌ 전투 결과 처리 중 오류가 발생했습니다.\n원인: ${error.message || "트랜잭션 충돌"}\n(DB 저장 실패)`);
     }
 }
+window.startRaidBattle = startRaidBattle;
 
 // yumecan.html - loadEventRankingData 함수 근처에 추가
 
@@ -8889,6 +8893,9 @@ async function checkAndSpawnRaidBoss() {
         }
     }
 }
+
+let raidBossData = null;
+let raidUnsubscribe = null;
 
 // ... (다른 함수들)
 
