@@ -388,39 +388,39 @@ body.pointer-events-none {
 
     <div class="absolute z-20 pointer-events-none 
             bottom-[6.5rem] left-0 w-full flex flex-row items-end justify-center gap-1 px-1
-            md:top-0 md:bottom-auto md:left-auto md:right-0 md:w-1/3 md:min-w-[280px] md:flex-col md:items-end md:gap-4 md:pr-8">
+            md:top-0 md:bottom-auto md:left-auto md:right-0 md:w-1/3 md:min-w-[280px] md:flex-col md:items-end md:gap-3 md:pr-8">
     
     <button id="btn-lobby-deck" onclick="switchTab('deck')" class="pointer-events-auto 
             flex-1 h-12 text-xs
-            md:flex-none md:w-[90%] md:max-w-[280px] md:h-20 md:text-2xl 
+            md:flex-none md:w-[90%] md:max-w-[280px] md:h-16 md:text-xl 
             bg-gradient-to-r from-gray-700 to-gray-800 text-white font-bold transform -skew-x-12 
             hover:scale-105 hover:bg-gray-600 transition-all shadow-lg 
             border-b-2 md:border-b-0 md:border-l-4 border-blue-400 
             flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-2">
         <span class="transform skew-x-12 text-base md:text-2xl">📝</span>
-        <span class="transform skew-x-12 text-[10px] md:text-2xl leading-none">편찬</span>
+        <span class="transform skew-x-12 text-[10px] md:text-xl leading-none">편찬</span>
     </button>
 
     <button id="btn-lobby-inventory" onclick="switchTab('inventory')" class="pointer-events-auto 
             flex-1 h-12 text-xs
-            md:flex-none md:w-[90%] md:max-w-[280px] md:h-20 md:text-2xl 
+            md:flex-none md:w-[90%] md:max-w-[280px] md:h-16 md:text-xl 
             bg-gradient-to-r from-gray-700 to-gray-800 text-white font-bold transform -skew-x-12 
             hover:scale-105 hover:bg-gray-600 transition-all shadow-lg 
             border-b-2 md:border-b-0 md:border-l-4 border-green-400 
             flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-2">
         <span class="transform skew-x-12 text-base md:text-2xl">📚</span>
-        <span class="transform skew-x-12 text-[10px] md:text-2xl leading-none">서고</span>
+        <span class="transform skew-x-12 text-[10px] md:text-xl leading-none">서고</span>
     </button>
 
     <button id="btn-lobby-gacha" onclick="switchTab('gacha')" class="pointer-events-auto 
             flex-1 h-12 text-xs
-            md:flex-none md:w-[90%] md:max-w-[280px] md:h-20 md:text-2xl 
+            md:flex-none md:w-[90%] md:max-w-[280px] md:h-16 md:text-xl 
             bg-gradient-to-r from-gray-700 to-gray-800 text-white font-bold transform -skew-x-12 
             hover:scale-105 hover:bg-gray-600 transition-all shadow-lg 
             border-b-2 md:border-b-0 md:border-l-4 border-purple-400 
             flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-2">
         <span class="transform skew-x-12 text-base md:text-2xl">✨</span>
-        <span class="transform skew-x-12 text-[10px] md:text-2xl leading-none">소환</span>
+        <span class="transform skew-x-12 text-[10px] md:text-xl leading-none">소환</span>
     </button>
     
     <button onclick="switchTab('trade')" class="pointer-events-auto 
@@ -444,13 +444,13 @@ body.pointer-events-none {
     <button id="btn-lobby-combat" onclick="switchTab('combat')" class="pointer-events-auto group 
             order-last md:order-none
             w-20 h-16 text-sm
-            md:w-full md:max-w-[320px] md:h-32 md:text-5xl 
+            md:w-full md:max-w-[320px] md:h-24 md:text-4xl 
             bg-gradient-to-r from-yellow-500 to-orange-600 text-white font-black italic transform -skew-x-12 
             hover:scale-105 hover:brightness-110 transition-all 
             shadow-[2px_2px_0px_rgba(0,0,0,0.5)] md:shadow-[6px_6px_0px_rgba(0,0,0,0.5)] border-2 border-yellow-300 
             flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-2">
         <span class="transform skew-x-12 inline-block text-xl md:text-5xl">⚔️</span>
-        <span class="transform skew-x-12 inline-block text-xs md:text-5xl">독서</span>
+        <span class="transform skew-x-12 inline-block text-xs md:text-4xl">독서</span>
         <span class="absolute -bottom-2 -right-2 text-6xl opacity-20 transform skew-x-12 text-black hidden md:block">COMBAT</span>
     </button>
 
@@ -8426,6 +8426,7 @@ async function submitRaidDamage(damage) {
         
         if (calculatedReward > 0) {
             playerCurrency += calculatedReward;
+			updateUI();
             saveGame();
             alert(`보스에게 ${damage} 피해를 입혔습니다!\n기여 보상: 💎${calculatedReward}`);
         } else {
