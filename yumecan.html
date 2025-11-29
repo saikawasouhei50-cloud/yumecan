@@ -2122,65 +2122,64 @@ async function resetGame() {
 
             // yumecan.html - switchTab 함수 (2137행 근처)
 
-function switchTab(tabName) {
-    if (isCombatRunning) return;
-    
-    // ✨ [핵심 수정 1] homeBtn과 오버레이 요소를 함수 내부에서 정의합니다.
-    const homeBtn = document.getElementById('global-home-button');
-    const overlayZ20 = document.querySelector('.absolute.z-20.pointer-events-none');
-    const overlayBottom = document.querySelector('.absolute.bottom-4.left-0.w-full.px-4');
+function switchTab(newTab) {
+    if (currentTab === newTab) return;
 
-    // 1. 모든 뷰 숨기기 (home-view를 포함하여 모든 메인 뷰가 숨겨짐)
+    // 모든 뷰 DOM 요소 리스트
+    const allViews = [
+        document.getElementById('home-view'),
+        document.getElementById('inventory-view'),
+        document.getElementById('deck-view'),
+        document.getElementById('combat-view'),
+        document.getElementById('collection-view'),
+        document.getElementById('event-view'),
+        document.getElementById('event-home-view'),
+        document.getElementById('achievements-view'),
+        document.getElementById('myroom-view'),
+        document.getElementById('trade-view'),
+        document.getElementById('profile-view'),
+    ];
+
+    // 모든 탭 숨기기
     allViews.forEach(view => {
-        if (view) view.classList.add('hidden'); 
+        if (view) view.classList.add('hidden');
     });
-    
-    // 뷰 겹침 방지 (home-view의 오버레이 버튼들을 강제로 숨김)
-    if (overlayZ20) overlayZ20.classList.add('hidden');
-    if (overlayBottom) overlayBottom.classList.add('hidden');
-    
-    // 2. 뷰 전환 로직
-    let targetView;
-    
-    // home 뷰는 별도의 ID로 찾습니다.
-    if (tabName === 'home') targetView = document.getElementById('home-view');
-    else if (tabName === 'event') targetView = document.getElementById('event-home-view'); 
-    else if (tabName === 'trade') targetView = document.getElementById('trade-view');
-    else if (tabName === 'myroom') targetView = document.getElementById('myroom-view');
-    else if (tabName === 'profile') {
-        targetView = document.getElementById('profile-view');
-        displayProfileView(); 
-    }
-    // 나머지 뷰는 `${tabName}-view` 패턴으로 찾습니다.
-    else targetView = document.getElementById(`${tabName}-view`);
-    
-    
-    if (targetView) targetView.classList.remove('hidden');
 
-    // ✨ [핵심 수정 2] 홈 화면일 경우 오버레이 버튼을 다시 표시하고, 로비 버튼을 숨깁니다.
-    if (tabName === 'home') {
-        if (overlayZ20) overlayZ20.classList.remove('hidden');
-        if (overlayBottom) overlayBottom.classList.remove('hidden');
-        
-        if (homeBtn) homeBtn.classList.add('hidden'); // 로비 버튼 숨김
-        displayHomeView();
-    } else {
-        if (homeBtn) homeBtn.classList.remove('hidden'); // 다른 곳에서는 로비 버튼 표시
+    // 홈뷰 오버레이 요소들도 항상 숨기기
+    const homeOverlaySelectors = [
+        '.absolute.z-20.pointer-events-none',
+        '.absolute.bottom-4.left-0.w-full.px-4'
+    ];
+
+    homeOverlaySelectors.forEach(sel => {
+        const el = document.querySelector(sel);
+        if (el) el.classList.add('hidden');
+    });
+
+    // 새 탭 열기
+    const newViewId = newTab + "-view";
+    const newView = document.getElementById(newViewId);
+    if (newView) newView.classList.remove('hidden');
+
+    // 홈뷰에 돌아가는 경우 → 오버레이 다시 표시
+    if (newTab === 'home') {
+        homeOverlaySelectors.forEach(sel => {
+            const el = document.querySelector(sel);
+            if (el) el.classList.remove('hidden');
+        });
     }
-    
-    // 3. 탭별 함수 호출 (기존 유지)
-    // tabName이 'home'일 경우 displayHomeView()는 위에서 이미 호출했으므로 중복 제거
-    if (tabName === 'inventory') displayInventory(); 
-    else if (tabName === 'deck') displayDeckManagement();
-    else if (tabName === 'combat') displayCombatView();
-    else if (tabName === 'collection') displayCollectionView();
-    else if (tabName === 'story') displayStoryView();
-    else if (tabName === 'event') displayEventHomeView();
-    else if (tabName === 'achievements') displayAchievements();
-    else if (tabName === 'myroom') displayMyRoom();
-	else if (tabName === 'friends') loadFriendList();
-	else if (tabName === 'trade') loadTradeList();
+
+    currentTab = newTab;
+
+    // 탭 이동 후 추가 UI 업데이트 (필요 시)
+    if (newTab === 'inventory') {
+        loadInventoryPageData();
+    }
+    if (newTab === 'event') {
+        loadEventHome();
+    }
 }
+
 window.switchTab = switchTab;
             function switchSubTab(viewContainer, button) {
                 Array.from(viewContainer.children).forEach(view => {
