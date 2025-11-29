@@ -1448,6 +1448,7 @@ let ownedFurniture = []; // 보유한 가구 목록
 			let clearedStageStories = []; 
 			// [기존 변수들 아래에 추가]
 let playerCumulativeEventPoints = 0; // 🏆 랭킹용 누적 포인트
+let playerSystemMailHistory = []; // ✨ 이 줄이 있어야 합니다.
 			
 
             const DECK_CAPACITY = 5;
@@ -1623,6 +1624,7 @@ async function saveGameToFirebase() {
         collectedCardNames: Array.from(collectedCardNames || []),
         myRoom: playerRoom || { furniture: [], characters: [] },
         ownedFurniture: ownedFurniture || [],
+		systemMailHistory: playerSystemMailHistory || [],
         
         // 프로필 데이터
         profile: safeProfile
