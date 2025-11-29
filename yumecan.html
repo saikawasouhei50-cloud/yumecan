@@ -8398,8 +8398,13 @@ function startRaidBattle() {
 window.startRaidBattle = startRaidBattle;
 
 // 5. 데미지 전송 (전투 종료 시 호출됨)
+// ✅ async function submitRaidDamage(damage) 함수 전체를 이 코드로 교체하세요.
 async function submitRaidDamage(damage) {
     if (damage <= 0) return;
+    
+    // ✨ [신규] 참여 보상 설정
+    const REWARD_PER_100_DAMAGE = 1; // 100 데미지당 보석 1개
+    const MAX_REWARD = 50;           // 한 판당 최대 50 보석
     
     try {
         const bossRef = db.collection('system').doc('raid_boss');
@@ -8411,17 +8416,22 @@ async function submitRaidDamage(damage) {
             const currentHp = doc.data().currentHp;
             if (currentHp <= 0) return; // 이미 죽었으면 데미지 무효
 
+            // DB 업데이트: 체력 감소
             const newHp = Math.max(0, currentHp - damage);
             t.update(bossRef, { currentHp: newHp });
         });
         
-        // 간단한 보상 로직 (예: 데미지의 10%만큼 보석 획득, 최대 50개)
-        /* const reward = Math.min(50, Math.floor(damage / 100));
-        playerCurrency += reward;
-        saveGame();
-        alert(`보스에게 ${damage} 피해를 입혔습니다!\n보상: 💎${reward}`);
-        */
-       alert(`보스에게 ${damage}의 피해를 입혔습니다!`);
+        // --- 보상 지급 로직 활성화 ---
+        const calculatedReward = Math.min(MAX_REWARD, Math.floor(damage / REWARD_PER_100_DAMAGE)); 
+        
+        if (calculatedReward > 0) {
+            playerCurrency += calculatedReward;
+            saveGame();
+            alert(`보스에게 ${damage} 피해를 입혔습니다!\n기여 보상: 💎${calculatedReward}`);
+        } else {
+             alert(`보스에게 ${damage}의 피해를 입혔습니다!`);
+        }
+        // -----------------------------
 
     } catch (e) {
         console.error("레이드 데미지 전송 실패:", e);
