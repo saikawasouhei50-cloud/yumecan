@@ -2123,13 +2123,19 @@ async function resetGame() {
             function switchTab(tabName) {
     if (isCombatRunning) return;
     
+    // ✨ [핵심 수정 1] homeBtn과 오버레이 요소를 함수 내부에서 정의하고 존재 여부를 체크합니다.
+    const homeBtn = document.getElementById('global-home-button');
+    const overlayZ20 = document.querySelector('.absolute.z-20.pointer-events-none');
+    const overlayBottom = document.querySelector('.absolute.bottom-4.left-0.w-full.px-4');
+
     // 1. 모든 뷰 숨기기
     allViews.forEach(view => {
         if (view) view.classList.add('hidden'); 
     });
-    // (기존 탭 버튼 비활성화 코드는 이제 상단 메뉴가 없으므로 에러가 날 수 있어 제거하거나 무시해도 됩니다)
-	document.querySelector('.absolute.z-20.pointer-events-none').classList.add('hidden');
-    document.querySelector('.absolute.bottom-4.left-0.w-full.px-4').classList.add('hidden');
+    
+    // 뷰 겹침 방지 (오버레이 숨김)
+    if (overlayZ20) overlayZ20.classList.add('hidden');
+    if (overlayBottom) overlayBottom.classList.add('hidden');
     
     // 2. 뷰 전환 로직
     let targetView;
@@ -2144,14 +2150,15 @@ async function resetGame() {
     
     if (targetView) targetView.classList.remove('hidden');
 
+    // ✨ [핵심 수정 2] 홈 화면일 경우 오버레이 버튼을 다시 표시하고, 로비 버튼을 숨깁니다.
     if (tabName === 'home') {
-        document.querySelector('.absolute.z-20.pointer-events-none').classList.remove('hidden');
-        document.querySelector('.absolute.bottom-4.left-0.w-full.px-4').classList.remove('hidden');
+        if (overlayZ20) overlayZ20.classList.remove('hidden');
+        if (overlayBottom) overlayBottom.classList.remove('hidden');
         
-        homeBtn.classList.add('hidden'); 
+        if (homeBtn) homeBtn.classList.add('hidden'); // 로비 버튼 숨김
         displayHomeView();
     } else {
-        homeBtn.classList.remove('hidden'); // 다른 곳에서는 보임
+        if (homeBtn) homeBtn.classList.remove('hidden'); // 다른 곳에서는 로비 버튼 표시
     }
     
     // 3. 탭별 함수 호출 (기존 유지)
