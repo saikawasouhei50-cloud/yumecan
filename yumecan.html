@@ -4709,77 +4709,110 @@ function displayEventStoryPart2() {
     });
 }
 			
-            // ✅ [수정됨] 전투 종료 처리 함수 (화면 전환 충돌 방지)
+            // ✅ [최종 수정] 전투 종료 함수 (에러 방지 안전장치 추가)
 function endCombat(isVictory, combatInfo, totalDamageDealt = 0) { 
-    lastCombatType = combatInfo.type;
-    isCombatRunning = false; // 전투 상태 해제
+    console.log("전투 종료 처리 시작:", combatInfo);
 
-    // 1. 레이드 종료 처리 (기존 로직 유지)
-    if (combatInfo.type === 'raid') {
-        const inProgressView = document.getElementById('combat-in-progress-view');
-        if(inProgressView) inProgressView.classList.add('hidden');
-        
-        submitRaidDamage(totalDamageDealt);
-        
-        document.getElementById('event-view').classList.remove('hidden');
-        document.getElementById('event-raid-view').classList.remove('hidden');
-        
-        const btnRaid = document.getElementById('event-sub-tab-raid');
-        if (btnRaid) btnRaid.classList.add('active');
-        return; 
-    }
+    try {
+        lastCombatType = combatInfo.type;
+        isCombatRunning = false; // 전투 상태 해제
 
-    // 2. 승리/패배 보상 및 메시지 계산
-    const resultModal = document.getElementById('combat-result-modal');
-    const resultTitle = document.getElementById('combat-result-title');
-    const resultMessage = document.getElementById('combat-result-message');
-
-    if (isVictory) {
-        let rewardMsg = '';
-        if (combatInfo.type === 'event') {
-            const dungeon = eventDungeons[combatInfo.indices];
-            const reward = dungeon.eventPointReward;
-            playerEventPoints += reward;            
-            playerCumulativeEventPoints += reward;  
-            if (!clearedEventDungeons.includes(dungeon.name)) clearedEventDungeons.push(dungeon.name);
-            rewardMsg = `이벤트 스테이지 클리어! ${reward} P를 획득했습니다.`;
-        } else if (combatInfo.type === 'main_stage') {
-            const stage = mainChapters[combatInfo.indices.chapter].stages[combatInfo.indices.stage];
-            const stageId = `${combatInfo.indices.chapter + 1}-${combatInfo.indices.stage + 1}`;
-            if (!clearedStages.includes(stageId)) clearedStages.push(stageId);
+        // 1. 레이드 종료 처리는 별도 로직 (여기서 리턴됨)
+        if (combatInfo.type === 'raid') {
+            const inProgressView = document.getElementById('combat-in-progress-view');
+            if(inProgressView) inProgressView.classList.add('hidden');
             
-            let rewardsEarned = [];
-            if (stage.rewards.fountainPens) {
-                playerFountainPens += stage.rewards.fountainPens;
-                rewardsEarned.push(`🖋️${stage.rewards.fountainPens}`);
+            submitRaidDamage(totalDamageDealt);
+            
+            document.getElementById('event-view').classList.remove('hidden');
+            document.getElementById('event-raid-view').classList.remove('hidden');
+            
+            const btnRaid = document.getElementById('event-sub-tab-raid');
+            if (btnRaid) btnRaid.classList.add('active');
+            return; 
+        }
+
+        const resultModal = document.getElementById('combat-result-modal');
+        const resultTitle = document.getElementById('combat-result-title');
+        const resultMessage = document.getElementById('combat-result-message');
+
+        // 2. 보상 및 메시지 계산
+        if (isVictory) {
+            let rewardMsg = '';
+            
+            // 이벤트 전투 보상
+            if (combatInfo.type === 'event') {
+                if (eventDungeons && eventDungeons[combatInfo.indices]) {
+                    const dungeon = eventDungeons[combatInfo.indices];
+                    const reward = dungeon.eventPointReward;
+                    playerEventPoints += reward;            
+                    playerCumulativeEventPoints += reward;  
+                    if (!clearedEventDungeons.includes(dungeon.name)) clearedEventDungeons.push(dungeon.name);
+                    rewardMsg = `이벤트 스테이지 클리어! ${reward} P를 획득했습니다.`;
+                }
+            } 
+            // 일반 스테이지 보상
+            else if (combatInfo.type === 'main_stage') {
+                // 안전하게 데이터 접근
+                const chapterData = mainChapters[combatInfo.indices.chapter];
+                if (chapterData && chapterData.stages[combatInfo.indices.stage]) {
+                    const stage = chapterData.stages[combatInfo.indices.stage];
+                    const stageId = `${combatInfo.indices.chapter + 1}-${combatInfo.indices.stage + 1}`;
+                    
+                    if (!clearedStages.includes(stageId)) clearedStages.push(stageId);
+                    
+                    let rewardsEarned = [];
+                    if (stage.rewards && stage.rewards.fountainPens) {
+                        playerFountainPens += stage.rewards.fountainPens;
+                        rewardsEarned.push(`🖋️${stage.rewards.fountainPens}`);
+                    }
+                    if (stage.rewards && stage.rewards.currency) {
+                        playerCurrency += stage.rewards.currency;
+                        rewardsEarned.push(`💎${stage.rewards.currency}`);
+                    }
+                    rewardMsg = `스테이지 클리어! ${rewardsEarned.join(', ')} 획득!`;
+                }
             }
-            if (stage.rewards.currency) {
-                playerCurrency += stage.rewards.currency;
-                rewardsEarned.push(`💎${stage.rewards.currency}`);
+            
+            if(resultTitle) {
+                resultTitle.textContent = "승리!";
+                resultTitle.className = "text-4xl font-bold mb-4 text-green-400";
             }
-            rewardMsg = `스테이지 클리어! ${rewardsEarned.join(', ')} 획득!`;
+            if(resultMessage) resultMessage.textContent = rewardMsg;
+
+        } else {
+            // 패배 처리
+            if(resultTitle) {
+                resultTitle.textContent = "패배...";
+                resultTitle.className = "text-4xl font-bold mb-4 text-red-400";
+            }
+            if(resultMessage) resultMessage.textContent = `전투에서 패배했습니다...`;
         }
         
-        if(resultTitle) {
-            resultTitle.textContent = "승리!";
-            resultTitle.className = "text-4xl font-bold mb-4 text-green-400";
-        }
-        if(resultMessage) resultMessage.textContent = rewardMsg;
-    } else {
-        if(resultTitle) {
-            resultTitle.textContent = "패배...";
-            resultTitle.className = "text-4xl font-bold mb-4 text-red-400";
-        }
-        if(resultMessage) resultMessage.textContent = `전투에서 패배했습니다...`;
-    }
-    
-    updateUI();
-    checkAchievements();
+        // UI 업데이트 (에러가 나도 모달은 뜨게 하기 위해 try 감싸기)
+        try { updateUI(); } catch(e) { console.error("UI 업데이트 중 오류:", e); }
+        try { checkAchievements(); } catch(e) { console.error("업적 확인 중 오류:", e); }
 
-    // ✨ [핵심 수정] 여기서 화면을 이동(switchTab)하지 않고 모달만 띄웁니다.
-    if (resultModal) {
-        resultModal.classList.remove('hidden');
-        resultModal.style.zIndex = '9999'; // 화면 맨 위로 강제 배치
+        // ✨ [핵심] 결과창 띄우기 (여기가 실행되어야 멈추지 않음)
+        if (resultModal) {
+            resultModal.classList.remove('hidden');
+            resultModal.style.zIndex = '9999'; 
+        }
+
+    } catch (error) {
+        // 🔥 만약 위 과정 중 어디서든 에러가 나면 비상 모달을 띄움
+        console.error("전투 종료 처리 중 치명적 오류:", error);
+        
+        const resultModal = document.getElementById('combat-result-modal');
+        const resultTitle = document.getElementById('combat-result-title');
+        const resultMessage = document.getElementById('combat-result-message');
+        
+        if (resultModal) {
+            if(resultTitle) resultTitle.textContent = "전투 종료";
+            if(resultMessage) resultMessage.textContent = "결과 처리 중 오류가 발생했으나 보상은 저장되었습니다.";
+            resultModal.classList.remove('hidden');
+            resultModal.style.zIndex = '9999';
+        }
     }
 }
 
