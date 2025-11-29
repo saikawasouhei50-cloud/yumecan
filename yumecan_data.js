@@ -124,17 +124,18 @@ async function loadGameData() {
 
         // 2. 몬스터 데이터 조립
         if (data.monsters) {
-            monsters = {}; 
-            data.monsters.forEach(row => {
-                // key가 없으면 name을 키로 사용
-                const mKey = row.key || row.name;
-                monsters[mKey] = {
-                    name: row.name,
-                    stats: { hp: Number(row.hp), atk: Number(row.atk), def: Number(row.def) },
-                    imageUrl: row.imageUrl
-                };
-            });
-        }
+    monsters = {}; 
+    data.monsters.forEach(row => {
+        const mKey = row.key || row.name;
+        monsters[mKey] = {
+            name: row.name,
+            stats: { hp: Number(row.hp), atk: Number(row.atk), def: Number(row.def) },
+            imageUrl: row.imageUrl,
+            // ▼▼▼ [추가] 광역 공격 여부 체크 ▼▼▼
+            isAoE: (row.isAoE === true || row.isAoE === 'TRUE' || row.isAoE === 1)
+        };
+    });
+}
 
         // 3. 가구 데이터 조립
         if (data.furniture) {
