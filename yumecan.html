@@ -8521,10 +8521,10 @@ async function submitRaidDamage(damage) {
             if (!doc.exists) throw "보스가 사라졌습니다.";
             
             // --- 1. 유저 참여 횟수 확인 및 초기화 로직 ---
-            const userDoc = await t.get(userRef);
+            const userDoc = await t.get(userRef); // DB에서 유저 데이터 읽기
             const userData = userDoc.data();
 
-            const today = new Date().toDateString();
+            const today = new Date().toDateString(); // 오늘 날짜 문자열
             
             let countBeforeIncrement = userData.raidDailyCount || 0; 
             
@@ -8534,7 +8534,7 @@ async function submitRaidDamage(damage) {
                 ? lastResetTimestamp.toDate().toDateString() 
                 : '';
             
-            // 날짜가 바뀌었으면 카운트 초기화
+            // 날짜가 바뀌었으면 카운트 초기화 (이것이 핵심)
             if (lastDate !== today) {
                 countBeforeIncrement = 0;
             }
@@ -8555,7 +8555,8 @@ async function submitRaidDamage(damage) {
             
             // 3. DB 업데이트: 유저 카운트 증가 및 날짜 기록
             t.update(userRef, {
-                raidDailyCount: countAfterIncrement, // 계산된 다음 카운트 사용
+                // ✅ DB의 유저 문서에 최종 카운트와 오늘 날짜를 기록
+                raidDailyCount: countAfterIncrement, 
                 raidLastResetDate: firebase.firestore.FieldValue.serverTimestamp()
             });
 
