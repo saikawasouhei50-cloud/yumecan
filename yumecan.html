@@ -1813,11 +1813,11 @@ async function saveGameToFirebase() {
                 playerRaidDailyCount = 0; 
                 playerRaidLastResetDate = null; 
             } else {
+                } else {
                 // 날짜가 같으면 DB 카운트 로드
-                playerRaidDailyCount = savedData.raidDailyCount ?? 0;
-    playerRaidLastResetDate = savedData.raidLastResetDate;
+                playerRaidDailyCount = savedData.raidDailyCount ?? 0; // ⭐⭐
+                playerRaidLastResetDate = savedData.raidLastResetDate;
             }
-
             clearedEventDungeons = savedData.clearedEventDungeons || [];
             purchasedEventItems = savedData.purchasedEventItems || {};
             playerChoices = savedData.playerChoices || {};
@@ -1873,12 +1873,8 @@ async function saveGameToFirebase() {
 
 
 function saveGame() {
-                // 이 함수는 이미 만들어두신 saveGameToFirebase() 함수를
-                // 호출하기만 하면 됩니다.
-                // saveGameToFirebase 함수가 알아서 로그인된 유저를 확인하고
-                // 서버에 데이터를 저장해 줍니다.
-                saveGameToFirebase();
-            }
+    saveGameToFirebase(); // <--- 이 함수가 비동기 호출을 보장해야 합니다.
+}
 
 			
             function initializeNewGameData() {
@@ -8577,7 +8573,8 @@ async function submitRaidDamage(damage) {
         }
 
         // 1. 로컬 변수 동기화
-        playerRaidDailyCount = finalCount; // DB와 동일한 값으로 로컬 업데이트
+        playerRaidDailyCount = finalCount;
+        playerRaidLastResetDate = new Date(); // 새로운 날짜 객체를 할당
          
         
         const calculatedReward = Math.min(MAX_REWARD, Math.floor(damage / REWARD_PER_100_DAMAGE)); 
