@@ -351,9 +351,7 @@ body.pointer-events-none {
                 💧 <span id="inkwell-display" class="ml-1">0</span>
             </div>
             
-            <button id="reset-game" class="gacha-button bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-2 md:py-2 md:px-4 rounded-full text-xs md:text-sm">
-                초기화
-            </button>
+            
         </div> <main>
 			<div id="message-area" class="text-center text-lg h-8 mb-4 transition-opacity duration-300"></div>
 
@@ -931,6 +929,19 @@ body.pointer-events-none {
             <button onclick="saveProfileData()" class="gacha-button w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg transition-transform transform hover:scale-105">
                 프로필 저장
             </button>
+
+            <div class="mt-12 pt-6 border-t border-gray-600">
+                <h4 class="text-red-400 font-bold mb-2 text-sm flex items-center gap-2">
+                    <span>⚠ 위험 구역</span>
+                </h4>
+                <p class="text-xs text-gray-500 mb-3">
+                    계정을 초기화하면 모든 데이터(카드, 재화, 친구 등)가 영구적으로 삭제됩니다.
+                </p>
+                <button id="reset-game" class="gacha-button w-full bg-red-900/50 hover:bg-red-700 border border-red-600 text-red-100 font-bold py-3 rounded-lg shadow-lg text-sm transition-all" data-confirming="false">
+                    계정 초기화
+                </button>
+            </div>
+
         </div>
     </div>
 </div>
