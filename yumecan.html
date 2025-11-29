@@ -1863,7 +1863,7 @@ async function saveGameToFirebase() {
         }
     });
 	await checkAndProcessSystemMails(uid);
-    saveGame(); 
+    
     updateUI();
     checkEventStatus();
     switchTab('home');
@@ -8589,7 +8589,7 @@ async function submitRaidDamage(damage) {
         updateUI(); 
 		
         // 3. 로컬 DB 저장 (지연 없이 즉시 저장)
-        saveGame(); // ⭐ saveGame 함수는 내부적으로 saveGameToFirebase를 호출합니다.
+        
 
         // 4. 최종 저장: 다음 자동 저장 시점이나 탭 이동 시 저장되기를 기대합니다.
         //    (즉, 충돌을 피하기 위해 DB 쓰기를 미룹니다.)
