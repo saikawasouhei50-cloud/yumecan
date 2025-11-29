@@ -1612,8 +1612,40 @@ const dismantleSelectedButton = document.getElementById('dismantle-selected-butt
             const eventPointDisplay = document.getElementById('event-point-display');
             const eventPointsSpan = document.getElementById('event-points');
             const eventSubTabBattle = document.getElementById('event-sub-tab-battle');
-            const eventSubTabStory = document.getElementById('event-sub-tab-story');
-            const eventSubTabShop = document.getElementById('event-sub-tab-shop');
+        const eventSubTabRaid = document.getElementById('event-sub-tab-raid');
+        const eventSubTabStory = document.getElementById('event-sub-tab-story');
+        const eventSubTabShop = document.getElementById('event-sub-tab-shop');
+
+        if (eventSubTabBattle) {
+            eventSubTabBattle.addEventListener('click', () => {
+                displayEventView(); 
+                switchEventSubTab('battle'); // ✅ 전용 함수 사용
+            });
+        }
+
+        if (eventSubTabRaid) {
+            eventSubTabRaid.addEventListener('click', () => {
+                displayEventView(); 
+                switchEventSubTab('raid'); // ✅ 전용 함수 사용
+                
+                // 레이드 데이터 리스너가 필요하다면 여기서 호출
+                if (typeof initRaidListener === 'function') initRaidListener();
+            });
+        }
+
+        if (eventSubTabStory) {
+            eventSubTabStory.addEventListener('click', () => {
+                displayEventView(); 
+                switchEventSubTab('story'); // ✅ 전용 함수 사용
+            });
+        }
+
+        if (eventSubTabShop) {
+            eventSubTabShop.addEventListener('click', () => {
+                displayEventView(); 
+                switchEventSubTab('shop'); // ✅ 전용 함수 사용
+            });
+        }
             const eventBattleView = document.getElementById('event-battle-view');
             const eventStoryView = document.getElementById('event-story-view');
             const eventShopView = document.getElementById('event-shop-view');
@@ -2119,7 +2151,6 @@ async function resetGame() {
 
             // yumecan.html - switchTab 함수 (2137행 근처)
 
-
 // yumecan.html - switchTab 함수 (2137행 근처)
 
 // ========================================================
@@ -2228,6 +2259,37 @@ function switchTab(newTab) {
 }
 
 window.switchTab = switchTab;
+
+// ✅ [신규] 이벤트 탭 전용 전환 함수 (확실하게 하나만 보여줌)
+function switchEventSubTab(tabName) {
+    // 1. 모든 이벤트 서브 뷰 ID 목록
+    const allViewIds = [
+        'event-battle-view', 
+        'event-raid-view', 
+        'event-story-view', 
+        'event-shop-view'
+    ];
+    
+    // 2. 모든 뷰 숨기기 & 모든 버튼 비활성화
+    allViewIds.forEach(id => {
+        const view = document.getElementById(id);
+        if (view) view.classList.add('hidden');
+        
+        // 버튼 ID는 뷰 ID에서 '-view'를 뺀 뒤 'sub-tab-'을 중간에 넣은 형태
+        // 예: event-battle-view -> event-sub-tab-battle
+        const btnId = id.replace('event-', 'event-sub-tab-').replace('-view', '');
+        const btn = document.getElementById(btnId);
+        if (btn) btn.classList.remove('active');
+    });
+
+    // 3. 선택된 뷰만 보이기
+    const targetView = document.getElementById(`event-${tabName}-view`);
+    if (targetView) targetView.classList.remove('hidden');
+
+    // 4. 선택된 버튼 활성화
+    const targetBtn = document.getElementById(`event-sub-tab-${tabName}`);
+    if (targetBtn) targetBtn.classList.add('active');
+}
             function switchSubTab(viewContainer, button) {
                 Array.from(viewContainer.children).forEach(view => {
                     if(view.id.endsWith('-view')) view.classList.add('hidden');
@@ -4698,7 +4760,7 @@ function endCombat(isVictory, combatInfo, totalDamageDealt = 0) {
     lastCombatType = combatInfo.type;
 	
     // Raid Tab Element (전역 변수로 가정하지만 안전하게 다시 찾습니다)
-    const eventSubTabRaid = document.getElementById('event-sub-tab-raid');
+    
 
 	// ▼▼▼ [수정됨] 레이드 종료 로직 ▼▼▼
 	if (combatInfo.type === 'raid') {
@@ -8870,5 +8932,4 @@ function updateRaidDailyCountUI() {
     </script>
 </body>
 </html>
-
 
