@@ -4097,15 +4097,15 @@ function startStageCombat(chapterIndex, stageIndex) {
     startCombat({ chapter: chapterIndex, stage: stageIndex }, 'main_stage');
 }
 
-				async function startCombat(indices, type) {
+				// ✅ 기존 async function startCombat 함수 전체를 이 코드로 교체하세요.
+async function startCombat(indices, type) {
     isCombatRunning = true;
     setCombatSpeed(1); 
 
     let monsterData;
 
-    // ▼▼▼ [수정] 레이드 타입 처리 ▼▼▼
+    // ▼▼▼ 몬스터 데이터 설정 (레이드 포함) ▼▼▼
     if (type === 'raid') {
-        // 전역 변수 raidBossData를 사용하여 몬스터 생성
         monsterData = JSON.parse(JSON.stringify({
             name: raidBossData.name,
             stats: { 
@@ -4114,10 +4114,9 @@ function startStageCombat(chapterIndex, stageIndex) {
                 def: raidBossData.def 
             },
             imageUrl: raidBossData.imageUrl,
-            isAoE: true // ✨ 레이드 보스는 광역 공격 설정
+            isAoE: true 
         }));
     } 
-    // ▲▲▲ [수정 끝] ▲▲▲
     else if (type === 'main_stage') {
         const combatData = mainChapters[indices.chapter].stages[indices.stage];
         monsterData = JSON.parse(JSON.stringify(monsters[combatData.monsterName]));
@@ -4125,11 +4124,59 @@ function startStageCombat(chapterIndex, stageIndex) {
         const combatData = eventDungeons[indices];
         monsterData = JSON.parse(JSON.stringify(monsters[combatData.monsterName]));
     }
+    // ▲▲▲ 몬스터 데이터 설정 끝 ▲▲▲
 
-    // ... (이하 덱 설정 및 UI 초기화 코드는 기존과 동일하게 유지) ...
-    // ... (중략) ...
+    // 1. 퇴고/개정 레벨 적용 (여기서 combatDeck 정의)
+    let combatDeck = playerDeck.map(cardInstance => {
+        const baseCard = findCharacter(cardInstance.name);
+        const enhancedStats = getEnhancedStats(cardInstance);
+        return {
+            ...baseCard,
+            stats: enhancedStats,
+        };
+    });
 
-    // runCombatLoop 호출 시 type 전달
+    // 2. 인연 보너스 적용
+    combatDeck = applySynergyBonusesToDeck(combatDeck);
+
+    // 3. 최대 HP 저장 (원본 보너스 덱 저장)
+    const originalBonusDeck = JSON.parse(JSON.stringify(combatDeck)); 
+
+    // --- UI 렌더링 ---
+    const combatMonsterImage = document.getElementById('combat-monster-image');
+    if(combatMonsterImage) combatMonsterImage.classList.remove('shake-animation'); // 애니메이션 잔상 제거
+
+    // 뷰 전환
+    allViews.forEach(view => view.classList.add('hidden'));
+    combatInProgressView.classList.remove('hidden');
+    combatLog.innerHTML = '';
+    combatPlayerDeck.innerHTML = '';
+    
+    // 플레이어 덱 UI 그리기
+    combatDeck.forEach((card, index) => {
+        const cardEl = document.createElement('div');
+        cardEl.className = 'bg-gray-700 p-2 rounded';
+        cardEl.innerHTML = `
+            <p class="font-bold text-sm truncate" title="${card.name}">${card.name}</p>
+            <div class="hp-bar-background rounded-full h-2.5 mt-1">
+                <div id="player-hp-bar-${index}" class="hp-bar-foreground h-2.5 rounded-full" style="width: 100%"></div>
+            </div>
+            <p id="player-hp-text-${index}" class="text-xs text-center mt-0.5">${card.stats.hp} / ${originalBonusDeck[index].stats.hp}</p>
+        `;
+        combatPlayerDeck.appendChild(cardEl);
+    });
+
+    // 몬스터 UI 그리기
+    combatMonsterArea.innerHTML = `
+        <h3 class="text-2xl font-bold">${monsterData.name}</h3>
+        <img id="combat-monster-image" src="${monsterData.imageUrl}" alt="${monsterData.name}" class="my-4 h-48 w-48 object-contain">
+        <div class="w-full hp-bar-background rounded-full h-4">
+            <div id="monster-hp-bar" class="hp-bar-foreground h-4 rounded-full" style="width: 100%"></div>
+        </div>
+        <p id="monster-hp-text" class="text-sm mt-1">${monsterData.stats.hp} / ${monsterData.stats.hp}</p>
+    `;
+
+    // 4. 전투 루프 실행
     await runCombatLoop(combatDeck, originalBonusDeck, monsterData, indices, type); 
 }
 
