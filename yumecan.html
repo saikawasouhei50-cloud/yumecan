@@ -6386,13 +6386,25 @@ eventBanner.addEventListener('click', () => {
 });
 // ✨ 모달 닫기 버튼들 (결과 확인 후 화면 이동 처리)
 closeCombatResultButton.addEventListener('click', () => {
-    // 1. 결과창과 전투 화면 숨기기
-    combatResultModal.classList.add('hidden');
-    document.getElementById('combat-in-progress-view').classList.add('hidden');
+    const resultModal = document.getElementById('combat-result-modal');
+    
+    if (resultModal) {
+        // [핵심 해결] 아까 강제로 준 display: flex를 display: none으로 덮어씁니다.
+        resultModal.style.display = 'none'; 
+        resultModal.classList.add('hidden');
+        
+        // Z-index도 초기화 (혹시 모를 간섭 방지)
+        resultModal.style.zIndex = '';
+    }
 
-    // 2. 전투 유형에 따라 원래 화면으로 복귀
+    // 전투 화면 숨기기
+    const combatView = document.getElementById('combat-in-progress-view');
+    if (combatView) {
+        combatView.classList.add('hidden');
+    }
+
+    // 화면 이동 로직 (원래대로)
     if (lastCombatType === 'event') {
-        // 이벤트 전투였다면 이벤트 탭으로 이동
         switchTab('event');
         displayEventView();
         
@@ -6402,7 +6414,6 @@ closeCombatResultButton.addEventListener('click', () => {
             switchSubTab(eventView, btnBattle);
         }
     } else {
-        // 일반 전투였다면 스테이지 목록으로 이동
         switchTab('combat');
     }
 });
