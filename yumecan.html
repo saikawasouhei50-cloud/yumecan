@@ -8285,6 +8285,7 @@ function startRaidBattle() {
     // 레이드 모드로 전투 시작
     startCombat(null, 'raid');
 }
+window.startRaidBattle = startRaidBattle;
 
 // 5. 데미지 전송 (전투 종료 시 호출됨)
 async function submitRaidDamage(damage) {
