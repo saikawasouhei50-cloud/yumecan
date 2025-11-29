@@ -2884,8 +2884,11 @@ function addCardToInventory(cardName) {
 
 function pullCharacter(allowedRarities = null, gachaType = 'normal') {
     const now = new Date();
-    // 이벤트 기간 체크 (시트에서 가져온 정보 활용)
-    const isEventActive = currentEventInfo.startDate && now >= currentEventInfo.startDate && now <= currentEventInfo.endDate;
+    
+    // ✨ [핵심 수정] currentEventInfo가 존재하는지 먼저 확인합니다!
+    // (이벤트가 없으면 null이므로 뒤의 조건들은 검사하지 않고 false가 됩니다)
+    const isEventActive = currentEventInfo && currentEventInfo.startDate && 
+                          now >= currentEventInfo.startDate && now <= currentEventInfo.endDate;
     
     // gachaType이 'event'여도 이벤트 기간이 아니면 확률은 normal을 씀 (단, 풀은 gachaType을 따름)
     const useEventRates = gachaType === 'event' && isEventActive;
@@ -2930,7 +2933,7 @@ function pullCharacter(allowedRarities = null, gachaType = 'normal') {
     if (possibleCharacters.length === 0) {
         console.warn(`경고: ${gachaType} 뽑기의 ${selectedRarity} 등급에 해당하는 캐릭터가 없습니다! N등급으로 대체합니다.`);
         
-        // ▼▼▼ [수정] N등급 캐릭터들을 모두 찾아서 그 중 랜덤으로 하나를 줍니다 ▼▼▼
+        // N등급 캐릭터들을 모두 찾아서 그 중 랜덤으로 하나를 줍니다
         const nRankChars = characters.filter(c => c.rarity === 'N');
         
         if (nRankChars.length > 0) {
@@ -2939,7 +2942,6 @@ function pullCharacter(allowedRarities = null, gachaType = 'normal') {
         
         // (만약 N등급조차 하나도 없다면 어쩔 수 없이 전체 목록의 첫 번째를 줍니다)
         return characters[0];
-        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
     }
 
     // 3. 픽업 캐릭터 확률 적용 (이벤트 뽑기인 경우)
