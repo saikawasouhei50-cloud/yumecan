@@ -294,6 +294,11 @@ body.pointer-events-none {
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
+<button id="global-home-button" onclick="switchTab('home')" 
+        class="hidden fixed top-4 left-4 z-[9999] bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-2 px-4 rounded-full shadow-lg border-2 border-white flex items-center gap-2 transition-transform hover:scale-105">
+        <span>🏠</span>
+        <span class="hidden md:inline">로비로 복귀</span> 
+    </button>
 
     <div id="loading-overlay" class="fixed inset-0 bg-black/80 flex flex-col justify-center items-center z-50">
         <div class="text-yellow-300 text-2xl font-bold animate-pulse">YUMECAN!_</div>
@@ -353,11 +358,7 @@ body.pointer-events-none {
     
     
     
-<button id="global-home-button" onclick="switchTab('home')" 
-    class="hidden fixed top-4 left-4 z-[9999] bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-2 px-4 rounded-full shadow-lg border-2 border-white flex items-center gap-2 transition-transform hover:scale-105">
-    <span>🏠</span>
-    <span class="hidden md:inline">로비로 복귀</span> 
-</button>
+
 
         <!-- 메인 컨텐츠 영역 -->
         <main>
@@ -1327,7 +1328,7 @@ body.pointer-events-none {
    
 
 	
-	<script src="yumecan_data.js"></script>
+	</div> <script src="yumecan_data.js"></script>
 	
     <script>
 	
