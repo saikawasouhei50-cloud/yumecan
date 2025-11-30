@@ -772,6 +772,9 @@ body.pointer-events-none {
                     <button id="speed-2x" class="speed-button bg-gray-600 text-white font-bold py-1 px-3 rounded-full text-sm">2x</button>
                     <button id="speed-4x" class="speed-button bg-gray-600 text-white font-bold py-1 px-3 rounded-full text-sm">4x</button>
                 </div>
+				<div class="flex justify-end items-center gap-2 mt-4">
+    <button id="combat-run-button" class="gacha-button bg-yellow-600 hover:bg-yellow-700 text-black font-bold py-1 px-3 rounded-full text-sm">항복</button>
+    </div>
                 <div id="combat-log-container" class="mt-2 bg-black/30 p-4 rounded-lg h-40 overflow-y-auto">
                     <div id="combat-log"></div>
                 </div>
@@ -1336,7 +1339,9 @@ body.pointer-events-none {
     const db = firebase.firestore();
     const auth = firebase.auth(); // 인증 서비스 변수 추가
 
-    
+    let currentCombatIndices = null; 
+let currentCombatType = null;
+let raidBossDataSheet = null;
 let currentCollectionGroup = '히어로 대 빌런: 각축전';
 	// ▼▼▼ [수정] 도감 그룹 관리 변수 ▼▼▼
 let currentCollectionSelection = null;
@@ -1350,6 +1355,12 @@ const COLLECTION_GROUPS = ['히어로 대 빌런: 각축전', '사제와 악마:
         const eventSubTabRaid = document.getElementById('event-sub-tab-raid');
         const eventSubTabStory = document.getElementById('event-sub-tab-story');
         const eventSubTabShop = document.getElementById('event-sub-tab-shop'); // ✨ 이제 shop 버튼을 찾을 수 있습니다.
+		// ✨ [신규] 전투 항복 버튼 리스너
+document.getElementById('combat-run-button').addEventListener('click', () => {
+    if (confirm("정말로 항복하고 독서를 중단하시겠습니까? (패배 처리됩니다)")) {
+        fleeCombat();
+    }
+});
 	await loadGameData();
 	checkEndedEvents();
 	const exitMultiModeButton = document.getElementById('exit-multi-mode');
@@ -4336,6 +4347,8 @@ async function startCombat(indices, type) {
         monsterData = JSON.parse(JSON.stringify(monsters[combatData.monsterName]));
     }
     // ▲▲▲ 몬스터 데이터 설정 끝 ▲▲▲
+	window.currentCombatIndices = indices;
+    window.currentCombatType = type;
 
     // 1. 퇴고/개정 레벨 적용 (여기서 combatDeck 정의)
     let combatDeck = playerDeck.map(cardInstance => {
@@ -9265,6 +9278,26 @@ window.openGachaPoolModal = openGachaPoolModal;
 let raidBossData = null;
 let raidUnsubscribe = null;
 
+// ✅ [신규] 항복/도주 로직 함수
+function fleeCombat() {
+    if (!isCombatRunning) return;
+
+    if (!window.currentCombatIndices || !window.currentCombatType) {
+        console.error("전투 정보가 유실되었습니다. 홈으로 돌아갑니다.");
+        isCombatRunning = false;
+        switchTab('home'); 
+        return;
+    }
+
+    isCombatRunning = false; // 루프 종료 플래그 설정
+    
+    // 전투 종료 화면 호출 (isVictory=false, totalDamageDealt=0)
+    endCombat(false, {
+        indices: window.currentCombatIndices,
+        type: window.currentCombatType
+    }, 0); 
+}
+
 // ... (다른 함수들)
 
 // yumecan.html - updateRaidDailyCountUI 함수 전체를 이 코드로 교체하세요 (7894행 근처)
@@ -9311,7 +9344,6 @@ function updateRaidDailyCountUI() {
     </script>
 </body>
 </html>
-
 
 
 
