@@ -443,7 +443,9 @@ body.pointer-events-none {
         md:w-[90%] md:max-w-[135px] md:h-14 md:text-lg 
         bg-blue-900/80 hover:bg-blue-800 text-white font-bold transform -skew-x-12 shadow-lg 
         flex flex-col md:flex-row items-center justify-center border border-white/20 
-        mb-1 md:mb-1"> <span class="transform skew-x-12 text-xs md:text-xl mb-0.5 md:mb-0">⚖️</span>
+        mb-1 md:mb-1"> 
+		<span id="trade-badge" class="hidden absolute -top-1 -right-1 md:top-0 md:right-0 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-black animate-bounce z-10 transform skew-x-12">N</span>
+		<span class="transform skew-x-12 text-xs md:text-xl mb-0.5 md:mb-0">⚖️</span>
     <span class="transform skew-x-12 text-[8px] md:text-lg leading-none">교환</span>
 </button>
 
@@ -1383,6 +1385,7 @@ document.getElementById('combat-run-button').addEventListener('click', () => {
                 startFriendListener(user.uid);
 				startMailListener(user.uid);
 				startPeriodicMailCheck(user.uid);
+				startTradeListener(user.uid);
 
             } else {
                 // --- 유저가 로그아웃했을 때 ---
@@ -8007,6 +8010,26 @@ async function loadRankingPreview() {
     window.acceptFriendRequest = acceptFriendRequest;
     window.cancelFriendRequest = cancelFriendRequest;
 	window.deleteFriend = cancelFriendRequest;
+	
+	// ✨ [신규] 거래소 알림 리스너 (수령 대기 중인 거래가 있으면 배지 표시)
+function startTradeListener(uid) {
+    db.collection('trades')
+      .where('senderUid', '==', uid)           // 내가 보낸 거래 중
+      .where('status', '==', 'waiting_claim')  // '수령 대기' 상태인 것만 감시
+      .onSnapshot(snapshot => {
+          const badge = document.getElementById('trade-badge');
+          const count = snapshot.size; // 대기 중인 거래 개수
+
+          if (badge) {
+              if (count > 0) {
+                  badge.classList.remove('hidden'); // 배지 보이기
+                  badge.textContent = count;        // 개수 표시 (1, 2...)
+              } else {
+                  badge.classList.add('hidden');    // 배지 숨기기
+              }
+          }
+      });
+}
 	
 	// ✨ 친구 요청 실시간 감시 함수
     function startFriendListener(uid) {
