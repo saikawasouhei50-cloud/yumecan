@@ -9170,7 +9170,7 @@ async function checkAndSpawnRaidBoss() {
     }
 }
 
-// ✅ [신규] 가챠 획득 가능 목록 모달 열기 함수
+// ✅ [수정됨] 가챠 획득 가능 목록 모달 열기 함수 (3열 고정)
 function openGachaPoolModal(gachaType) {
     const modal = document.getElementById('gacha-pool-modal');
     const titleEl = document.getElementById('pool-modal-title');
@@ -9186,7 +9186,7 @@ function openGachaPoolModal(gachaType) {
     // 2. 캐릭터 필터링 (gachaPool 데이터 기준)
     const obtainableCharacters = characters.filter(char => {
         const poolInfo = gachaPool[char.name];
-        if (!poolInfo) return false; // 가챠 풀 시트에 없는 캐릭터는 제외
+        if (!poolInfo) return false; 
         return gachaType === 'normal' ? poolInfo.normal : poolInfo.event;
     });
 
@@ -9206,7 +9206,6 @@ function openGachaPoolModal(gachaType) {
         const charList = grouped[rarity];
         if (charList && charList.length > 0) {
             
-            // 등급별 색상 설정
             const colorClass = { 
                 'SSR': 'text-yellow-400', 
                 'SR': 'text-purple-400', 
@@ -9216,7 +9215,7 @@ function openGachaPoolModal(gachaType) {
             
             const section = document.createElement('div');
             
-            // 픽업 표시 (이벤트 가챠일 때만)
+            // 픽업 표시
             let pickupBadge = '';
             if (gachaType === 'event') {
                  const pickupCount = charList.filter(c => EVENT_CHARACTER_NAMES.includes(c.name)).length;
@@ -9229,12 +9228,12 @@ function openGachaPoolModal(gachaType) {
                 <h4 class="text-xl font-bold ${colorClass} mb-2 flex items-center">
                     ${rarity} (${charList.length}종)${pickupBadge}
                 </h4>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 border-b border-gray-700 pb-4 mb-4">
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-3 border-b border-gray-700 pb-4 mb-4">
                     ${charList.map(char => {
                         return `
-                            <div class="bg-gray-700/50 p-2 rounded-lg flex items-center gap-2">
-                                <img src="${char.cardImageUrl}" class="w-8 h-8 rounded object-cover">
-                                <span class="text-sm text-white truncate" title="${char.name}">${char.name}</span>
+                            <div class="bg-gray-700/50 p-2 rounded-lg flex flex-col items-center text-center justify-center gap-1">
+                                <img src="${char.cardImageUrl}" class="w-16 h-16 rounded object-cover">
+                                <span class="text-xs text-white text-center font-medium">${char.name}</span>
                             </div>
                         `;
                     }).join('')}
@@ -9247,9 +9246,6 @@ function openGachaPoolModal(gachaType) {
     // 5. 모달 표시
     modal.classList.remove('hidden');
 }
-
-// HTML 버튼에서 함수를 찾을 수 있도록 window에 등록
-window.openGachaPoolModal = openGachaPoolModal;
 
 let raidBossData = null;
 let raidUnsubscribe = null;
