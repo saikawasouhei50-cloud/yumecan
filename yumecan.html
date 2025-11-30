@@ -1345,7 +1345,6 @@ raidBossDataSheet = null;
 let currentCollectionGroup = '히어로 대 빌런: 각축전';
 	// ▼▼▼ [수정] 도감 그룹 관리 변수 ▼▼▼
 let currentCollectionSelection = null;
-		let EVENT_CHARACTER_NAMES = [];
 // 탭으로 만들 그룹 목록 (순서대로 나옵니다)
 const COLLECTION_GROUPS = ['히어로 대 빌런: 각축전', '사제와 악마: 고해소', 'NPC'];
 
@@ -4411,25 +4410,32 @@ async function startCombat(indices, type) {
             const delay = ms => new Promise(res => setTimeout(res, ms / combatSpeedMultiplier));
 
             // ✅ 기존 runCombatLoop 함수를 이 코드로 통째로 교체하세요.
+// ✅ [수정됨] 전투 루프 함수 (항복 시 즉시 중단 기능 추가)
 async function runCombatLoop(combatDeck, originalBonusDeck, monsterData, indices, type) { 
     const originalMonsterDef = monsterData.stats.def;
-    
-    // ✨ [레이드] 플레이어가 입힌 총 데미지를 기록하는 변수
     let totalDamageDealt = 0; 
 
     // 몬스터나 플레이어 중 한 쪽이 전멸할 때까지 반복
     while (monsterData.stats.hp > 0 && combatDeck.some(c => c.stats.hp > 0)) {
         
+        // ✨ [핵심 1] 루프 시작 시 전투 중인지 체크. 아니라면 즉시 종료.
+        if (!isCombatRunning) return;
+
         // ===============================================
         // 1. 플레이어 턴
         // ===============================================
         for (let i = 0; i < combatDeck.length; i++) {
+            // ✨ [핵심 2] 턴 중간에도 수시로 체크
+            if (!isCombatRunning) return;
+
             const card = combatDeck[i];
             if (card.stats.hp > 0) {
                 await delay(800);
+                if (!isCombatRunning) return; // ✨ 딜레이 직후 체크 필수!
+
                 const monsterImage = document.getElementById('combat-monster-image');
                 
-                // 스킬 사용 여부 결정 (궁극기 25%, 일반스킬 40%)
+                // 스킬 사용 여부 결정
                 const useUltimate = card.rarity === 'SSR' && Math.random() < 0.25;
                 const useSkill = Math.random() < 0.4;
                 let skillToUse = null;
@@ -4440,80 +4446,62 @@ async function runCombatLoop(combatDeck, originalBonusDeck, monsterData, indices
                 let damage = 0;
 
                 if (skillToUse) {
-                    // ⚠️ 주의: HTML 태그가 들어간 문자열은 반드시 백틱(`)을 사용해야 합니다.
                     logCombat(`<strong>${card.name}</strong>의 스킬! <span class="text-yellow-300">"${skillToUse.name}"</span>`);
+                    
                     await delay(400);
+                    if (!isCombatRunning) return; // ✨ 딜레이 직후 체크
+
                     logCombat(`<em>"${skillToUse.dialogue}"</em>`);
                     
-                    // --- 스킬 타입별 효과 계산 ---
-                    
-                    // 1. 관통 (방어 무시)
+                    // --- 스킬 효과 계산 ---
                     if (skillToUse.type === 'true_damage') {
                         damage = Math.floor(card.stats.atk * skillToUse.power);
                         logCombat(`방어력을 무시한 강력한 일격!`);
-                    } 
-                    // 2. 치유 (공격 안함)
-                    else if (skillToUse.type === 'heal') {
+                    } else if (skillToUse.type === 'heal') {
                         damage = 0;
                         const healAmount = Math.floor(card.stats.atk * skillToUse.power);
                         const maxHp = originalBonusDeck[i].stats.hp;
                         card.stats.hp = Math.min(maxHp, card.stats.hp + healAmount);
                         logCombat(`<strong>${card.name}</strong>이(가) 체력을 ${healAmount} 회복했습니다!`);
-                    } 
-                    // 3. 흡혈 (공격 + 회복)
-                    else if (skillToUse.type === 'vampire') {
+                    } else if (skillToUse.type === 'vampire') {
                         damage = Math.max(1, Math.floor(card.stats.atk * skillToUse.power) - monsterData.stats.def);
                         const healedAmount = Math.floor(damage * 0.5);
                         const maxHp = originalBonusDeck[i].stats.hp;
                         card.stats.hp = Math.min(maxHp, card.stats.hp + healedAmount);
                         logCombat(`<strong>${card.name}</strong>이(가) ${healedAmount}의 체력을 흡수했습니다!`);
-                    } 
-                    // 4. 디버프 (방어 감소)
-                    else if (skillToUse.type === 'debuff_def') {
+                    } else if (skillToUse.type === 'debuff_def') {
                         monsterData.stats.def = Math.max(0, Math.floor(monsterData.stats.def * 0.8));
                         logCombat(`<strong>${monsterData.name}</strong>의 방어력이 감소했습니다!`);
-                    } 
-                    // 5. 디버프 (공격 감소)
-                    else if (skillToUse.type === 'debuff_atk') {
+                    } else if (skillToUse.type === 'debuff_atk') {
                         monsterData.stats.atk = Math.max(0, Math.floor(monsterData.stats.atk * 0.9));
                         logCombat(`<strong>${monsterData.name}</strong>의 공격력이 감소했습니다!`);
-                    } 
-                    // 6. 버프 (자기 공격 증가)
-                    else if (skillToUse.type === 'buff_atk') {
+                    } else if (skillToUse.type === 'buff_atk') {
                         card.stats.atk = Math.floor(card.stats.atk * 1.1);
                         logCombat(`<strong>${card.name}</strong>의 공격력이 상승했습니다!`);
-                    } 
-                    // 7. 일반 데미지 스킬
-                    else {
+                    } else {
                         damage = Math.max(1, Math.floor(card.stats.atk * skillToUse.power) - monsterData.stats.def);
                     }
 
                 } else {
-                    // 일반 공격
                     logCombat(`<strong>${card.name}</strong>의 일반 공격!`);
                     damage = Math.max(1, card.stats.atk - monsterData.stats.def);
                 }
                 
-                // 데미지 적용 및 누적
                 if (damage > 0) {
                     monsterData.stats.hp = Math.max(0, monsterData.stats.hp - damage);
-                    totalDamageDealt += damage; // ✨ 여기서 총 데미지 누적
-                    
+                    totalDamageDealt += damage;
                     logCombat(`<strong>${monsterData.name}</strong>에게 ${damage}의 데미지!`);
                     
-                    // 몬스터 피격 애니메이션
                     if (monsterImage) {
                         monsterImage.classList.add('shake-animation');
                         setTimeout(() => monsterImage.classList.remove('shake-animation'), 300 / combatSpeedMultiplier);
                     }
-                    
                     updateCombatUI(combatDeck, originalBonusDeck, monsterData);
                 }
 
-                // 몬스터 사망 체크
                 if (monsterData.stats.hp <= 0) break;
             }
-        } // 플레이어 턴 반복문 종료
+        } 
 
         if (monsterData.stats.hp <= 0) break;
 
@@ -4521,43 +4509,38 @@ async function runCombatLoop(combatDeck, originalBonusDeck, monsterData, indices
         // 2. 몬스터 턴
         // ===============================================
         await delay(1000);
+        if (!isCombatRunning) return; // ✨ 딜레이 직후 체크
+
         const alivePlayers = combatDeck.filter(c => c.stats.hp > 0);
         
         if (alivePlayers.length > 0) {
-            // ✨ [레이드] 보스가 광역 공격(AoE) 속성을 가졌는지 확인
             if (monsterData.isAoE) {
                 logCombat(`<strong>${monsterData.name}</strong>의 <span class="text-red-400 font-bold">광역 공격!</span>`);
-                
-                // 모든 생존자에게 데미지
                 for (const targetCard of alivePlayers) {
                     const damage = Math.max(1, monsterData.stats.atk - targetCard.stats.def);
                     const hpBeforeAttack = targetCard.stats.hp;
-                    
                     targetCard.stats.hp = Math.max(0, targetCard.stats.hp - damage);
                     logCombat(`- <strong>${targetCard.name}</strong>에게 ${damage}의 데미지!`);
                     
-                    // 사망 대사
                     if (targetCard.stats.hp <= 0 && hpBeforeAttack > 0) {
                         await delay(200);
+                        if (!isCombatRunning) return; // ✨ 체크
                         if (targetCard.deathDialogue) {
                             logCombat(`<strong>${targetCard.name}</strong>: <em>"${targetCard.deathDialogue}"</em>`);
                         }
                     }
                 }
             } else {
-                // 기존 단일 공격 (랜덤 1명)
                 const targetCard = alivePlayers[Math.floor(Math.random() * alivePlayers.length)];
                 logCombat(`<strong>${monsterData.name}</strong>의 공격!`);
-                
                 const damage = Math.max(1, monsterData.stats.atk - targetCard.stats.def);
                 const hpBeforeAttack = targetCard.stats.hp;
-                
                 targetCard.stats.hp = Math.max(0, targetCard.stats.hp - damage);
                 logCombat(`<strong>${targetCard.name}</strong>에게 ${damage}의 데미지!`);
                 
-                // 사망 대사
                 if (targetCard.stats.hp <= 0 && hpBeforeAttack > 0) {
                     await delay(400);
+                    if (!isCombatRunning) return; // ✨ 체크
                     if (targetCard.deathDialogue) {
                         logCombat(`<strong>${targetCard.name}</strong>: <em>"${targetCard.deathDialogue}"</em>`);
                     }
@@ -4568,10 +4551,14 @@ async function runCombatLoop(combatDeck, originalBonusDeck, monsterData, indices
     } // while 루프 종료
     
     await delay(1000);
-    monsterData.stats.def = originalMonsterDef; // 방어력 원상복구 (디버프 해제)
+    if (!isCombatRunning) return; // ✨ 마지막 딜레이 후에도 체크
+
+    monsterData.stats.def = originalMonsterDef; 
     
-    // ✨ 전투 종료 함수 호출 (누적 데미지 전달)
-    endCombat(monsterData.stats.hp <= 0, {indices: indices, type: type}, totalDamageDealt);
+    // ✨ [핵심 3] 전투가 '항복'으로 인해 이미 끝났는지(false) 확인 후 정상 종료 호출
+    if (isCombatRunning) {
+        endCombat(monsterData.stats.hp <= 0, {indices: indices, type: type}, totalDamageDealt);
+    }
 }
 
             function logCombat(message) {
@@ -7470,83 +7457,57 @@ async function loadFriendList() {
     }
 }
 
-// [수정] 타 유저 프로필 모달 열기 (친구 관계 확인 강화)
-async function openOtherUserProfile(userData) {
-    // 기존 모달 닫기
+// ✅ [디버깅 추가] 타 유저 프로필 모달
+async function openOtherUserProfile(initialData) {
     const oldModal = document.getElementById('other-user-profile-modal');
     if (oldModal) oldModal.remove();
 
-    const targetUid = userData.uid;
-    const nickname = userData.nickname || "익명의 탐정";
+    let userData = initialData;
     
-    // 대표 카드 이미지 준비
-    let imgUrl = "https://placehold.co/400x600/000000/ffffff?text=No+Card";
-    let cardName = "카드 정보 없음";
-    if (userData.representative) {
-        const charData = findCharacter(userData.representative);
-        if (charData) {
-            imgUrl = charData.imageUrl;
-            cardName = `[${charData.rarity}] ${charData.name}`;
+    try {
+        document.body.style.cursor = 'wait';
+        console.log(`🔍 [DEBUG] UID(${initialData.uid}) 데이터 불러오는 중...`);
+        
+        const doc = await db.collection('users').doc(initialData.uid).get();
+        if (doc.exists) {
+            const dbData = doc.data();
+            
+            // 🔥 [여기를 확인하세요] F12 콘솔에 이 로그가 뜰 겁니다.
+            console.log("🔥 [DEBUG] 서버에서 받은 데이터:", dbData);
+            console.log("📦 [DEBUG] 인벤토리 개수:", dbData.inventory ? dbData.inventory.length : "없음");
+            console.log("👤 [DEBUG] 프로필 설정:", dbData.profile);
+
+            userData = { ...initialData, ...dbData };
+        } else {
+            console.warn("⚠️ [DEBUG] 해당 유저의 데이터가 DB에 존재하지 않습니다.");
         }
+    } catch (e) {
+        console.error("프로필 정보 로드 실패:", e);
+    } finally {
+        document.body.style.cursor = 'default';
     }
+
+    // -----------------------------------------------------------
+    // ✨ [안전장치 추가] 헬퍼 함수 호출 전 데이터 정제
+    // inventory가 null이거나 없으면 빈 배열로 만들어서 오류 방지
+    if (!userData.inventory) userData.inventory = [];
+    if (!userData.profile) userData.profile = { repCardId: null };
+    // -----------------------------------------------------------
+
+    const nickname = userData.nickname || "익명의 탐정";
     const statusMsg = (userData.profile && userData.profile.statusMessage) ? userData.profile.statusMessage : "등록된 한마디가 없습니다.";
+    
+    // 헬퍼 함수 호출
+    const { imgUrl, cardName } = getUserRepInfo(userData);
 
-    // ✨ [핵심] DB에서 관계 조회 (비동기 대기)
-    let relationStatus = 'none'; 
-    if (currentUser && targetUid && targetUid !== currentUser.uid) {
-        try {
-            const doc = await db.collection('users').doc(currentUser.uid).collection('friends').doc(targetUid).get();
-            if (doc.exists) {
-                // status 필드가 없으면 'accepted'(친구)로 간주
-                relationStatus = doc.data().status || 'accepted';
-            }
-        } catch(e) { console.error("관계 확인 실패:", e); }
-    }
+    const isMe = (currentUser && userData.uid === currentUser.uid);
+    
+    const friendBtnHTML = isMe ? '' : `
+        <button onclick="sendFriendRequest('${userData.uid}', '${nickname}')" class="flex-1 gacha-button bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold text-lg shadow-lg transition-all border border-green-500">
+            🤝 친구 추가
+        </button>
+    `;
 
-    // ✨ 버튼 HTML 생성 로직
-    let actionBtnHTML = '';
-
-    if (currentUser && targetUid === currentUser.uid) {
-        // (A) 본인
-        actionBtnHTML = `<button class="flex-1 gacha-button bg-gray-600 text-gray-400 py-3 rounded-lg font-bold text-lg cursor-default">본인입니다</button>`;
-    } 
-    else if (relationStatus === 'accepted') {
-        // (B) 친구 -> 방문/삭제
-        actionBtnHTML = `
-            <button onclick="visitFriendRoom('${targetUid}', '${nickname}'); document.getElementById('other-user-profile-modal').remove();" class="flex-1 gacha-button bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-bold text-lg shadow-lg border border-indigo-500">
-                🏠 사무소 방문
-            </button>
-            <button onclick="deleteFriend('${targetUid}', '${nickname}'); document.getElementById('other-user-profile-modal').remove();" class="w-16 gacha-button bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-bold text-lg shadow-lg border border-red-500">
-                ✂️
-            </button>
-        `;
-    } 
-    else if (relationStatus === 'sent') {
-        // (C) 요청 보냄 -> 취소
-        actionBtnHTML = `
-            <button onclick="cancelFriendRequest('${targetUid}', '${nickname}'); document.getElementById('other-user-profile-modal').remove();" class="flex-1 gacha-button bg-gray-500 hover:bg-gray-600 text-white py-3 rounded-lg font-bold text-lg shadow-lg">
-                ✉️ 요청 보냄 (취소)
-            </button>
-        `;
-    } 
-    else if (relationStatus === 'received') {
-        // (D) 요청 받음 -> 수락
-        actionBtnHTML = `
-            <button onclick="acceptFriendRequest('${targetUid}', '${nickname}'); document.getElementById('other-user-profile-modal').remove();" class="flex-1 gacha-button bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold text-lg shadow-lg animate-pulse">
-                ✅ 요청 수락하기
-            </button>
-        `;
-    } 
-    else {
-        // (E) 남남 -> 친구 추가
-        actionBtnHTML = `
-            <button onclick="sendFriendRequest('${targetUid}', '${nickname}'); document.getElementById('other-user-profile-modal').remove();" class="flex-1 gacha-button bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold text-lg shadow-lg">
-                🤝 친구 추가
-            </button>
-        `;
-    }
-
-    // 모달 HTML 생성
     const modal = document.createElement('div');
     modal.id = 'other-user-profile-modal';
     modal.className = 'fixed inset-0 bg-black/80 flex items-center justify-center z-[100]';
@@ -7562,7 +7523,7 @@ async function openOtherUserProfile(userData) {
                         <img src="${imgUrl}" class="w-full h-full object-cover">
                         <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none"></div>
                         <div class="absolute bottom-2 left-0 right-0 text-center">
-                            <span class="inline-block bg-black/60 text-yellow-300 text-xs font-bold px-3 py-1 rounded-full border border-yellow-500/30">${cardName}</span>
+                            <span class="inline-block bg-black/60 text-yellow-300 text-xs font-bold px-3 py-1 rounded-full border border-yellow-500/30">${cardName || '카드 정보 없음'}</span>
                         </div>
                     </div>
                 </div>
@@ -7584,7 +7545,7 @@ async function openOtherUserProfile(userData) {
             </div>
 
             <div class="mt-8 flex gap-3">
-                ${actionBtnHTML}
+                ${friendBtnHTML}
                 <button onclick="document.getElementById('other-user-profile-modal').remove()" class="flex-1 gacha-button bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-lg font-bold text-lg shadow-lg transition-all border border-gray-600">
                     닫기
                 </button>
@@ -7623,6 +7584,7 @@ async function searchUserByName() {
         const doc = snapshot.docs[0];
         const userData = doc.data();
         const uid = doc.id;
+		const { imgUrl } = getUserRepInfo(userData);
 
         // --- ✨ [추가] 관계 상태 확인 로직 ---
         let relationStatus = 'none';
@@ -7634,11 +7596,7 @@ async function searchUserByName() {
         }
         // -------------------------------------
 
-        let imgUrl = "https://placehold.co/50x50/333/fff?text=?";
-        if (userData.representative) {
-            const charData = findCharacter(userData.representative);
-            if (charData) imgUrl = charData.imageUrl;
-        }
+    
 
         resultBox.classList.remove('hidden');
         
@@ -7689,66 +7647,92 @@ async function searchUserByName() {
 }
 
 
-// 4. 친구 마이룸 방문 (읽기 전용 모드)
+// ✅ [최종 수정] 친구 방 방문 함수 (내용물 직접 교체 방식)
 let originalMyRoomData = null; // 내 방 데이터를 임시 저장할 변수
 
 async function visitFriendRoom(targetUid, targetNickname) {
+    // 1. 배치 모드 중이라면 강제로 끄고 저장
     if (typeof isEditMode !== 'undefined' && isEditMode) {
         toggleEditMode();
     }
+
     try {
-        // 1. 친구 데이터 가져오기
+        console.log(`[방문 시작] ${targetNickname} (${targetUid})`);
+
+        // 2. 친구 데이터 가져오기
         const doc = await db.collection('users').doc(targetUid).get();
-        if (!doc.exists) return alert("존재하지 않는 유저입니다.");
-
-        const friendData = doc.data();
-        const friendInventory = friendData.inventory || []; // ✨ 친구 인벤토리 가져오기
-        
-        // 깊은 복사 (참조 끊기)
-        let friendRoom = JSON.parse(JSON.stringify(friendData.myRoom || { furniture: [], characters: [] }));
-
-        // ✨ [핵심 수정] 친구의 입주민 ID를 실제 카드 객체로 변환하여 미리 넣어둡니다.
-        if (friendRoom.characters && friendRoom.characters.length > 0) {
-            // ID 목록을 순회하며 친구 인벤토리에서 카드 정보를 찾습니다.
-            const resolvedCharacters = friendRoom.characters
-                .map(id => friendInventory.find(c => c.id === id))
-                .filter(Boolean); // 없는 카드(파쇄됨 등) 제거
-            
-            // ID 목록(String Array)을 객체 목록(Object Array)으로 교체
-            friendRoom.characters = resolvedCharacters;
+        if (!doc.exists) {
+            alert("존재하지 않는 유저입니다.");
+            return;
         }
 
-        // 2. 내 방 데이터 백업
+        const friendData = doc.data();
+        const friendInventory = friendData.inventory || []; 
+        
+        // 3. 친구 방 데이터 준비 (없으면 빈 방)
+        let friendFurniture = [];
+        let friendCharacters = [];
+
+        if (friendData.myRoom) {
+            // 가구 데이터 안전하게 가져오기
+            if (Array.isArray(friendData.myRoom.furniture)) {
+                friendFurniture = JSON.parse(JSON.stringify(friendData.myRoom.furniture));
+            }
+
+            // 캐릭터 데이터 안전하게 가져오기
+            if (Array.isArray(friendData.myRoom.characters)) {
+                // 저장된 ID 목록을 실제 캐릭터 객체로 변환
+                friendCharacters = friendData.myRoom.characters
+                    .map(id => friendInventory.find(c => c.id === id))
+                    .filter(Boolean); // 유효하지 않은 카드 제거
+            }
+        }
+        
+        console.log(`[데이터 로드 완료] 가구: ${friendFurniture.length}개, 캐릭터: ${friendCharacters.length}명`);
+
+        // 4. 내 방 데이터 백업 (아직 백업 안 했다면)
         if (!originalMyRoomData) {
+            // 현재 playerRoom 상태를 깊은 복사로 백업
             originalMyRoomData = JSON.parse(JSON.stringify(playerRoom));
         }
 
-        // 3. 현재 방 데이터를 친구 데이터로 덮어쓰기
-        playerRoom = friendRoom;
+        // ✨ [핵심 수정] 객체 자체를 바꾸지 않고, 속성만 친구 데이터로 덮어씁니다.
+        // 이렇게 하면 참조 오류를 방지하고 확실하게 내용이 바뀝니다.
+        playerRoom.furniture = friendFurniture;
+        playerRoom.characters = friendCharacters;
 
-        // 4. 화면 전환
+        // 5. 화면 전환 및 렌더링
         switchTab('myroom');
         
         // 방문 모드 UI 표시
-        document.getElementById('visit-mode-overlay').classList.remove('hidden');
+        const overlay = document.getElementById('visit-mode-overlay');
+        if (overlay) overlay.classList.remove('hidden');
       
-        // ✨ 수정/상점/보관함/입주관리 버튼 모두 숨기기
-        document.getElementById('myroom-edit-mode').classList.add('hidden');
-        document.getElementById('open-furniture-shop').classList.add('hidden');
-        document.getElementById('open-furniture-storage').classList.add('hidden');
-        
-        // [추가] 입주 관리 버튼 숨기기 (onclick 속성으로 찾습니다)
+        // 수정/상점/보관함/입주관리 버튼 모두 숨기기
+        const editBtn = document.getElementById('myroom-edit-mode');
+        const shopBtn = document.getElementById('open-furniture-shop');
+        const storageBtn = document.getElementById('open-furniture-storage');
         const charSelectorBtn = document.querySelector('button[onclick="openMyRoomCharacterSelector()"]');
-        if(charSelectorBtn) charSelectorBtn.classList.add('hidden');
 
-        // 방 렌더링
+        if (editBtn) editBtn.classList.add('hidden');
+        if (shopBtn) shopBtn.classList.add('hidden');
+        if (storageBtn) storageBtn.classList.add('hidden');
+        if (charSelectorBtn) charSelectorBtn.classList.add('hidden');
+
+        // 방 다시 그리기 (확실하게 비우고 다시 그림)
+        const roomLayer = document.getElementById('room-layer');
+        if (roomLayer) roomLayer.innerHTML = ''; 
+        
         displayMyRoom();
         
         showMessage(`${targetNickname}님의 사무소에 방문했습니다.`, 'text-indigo-300', messageArea);
 
     } catch (e) {
-        console.error(e);
-        alert("방문에 실패했습니다.");
+        console.error("방문 중 오류 발생:", e);
+        alert(`방문에 실패했습니다. 오류: ${e.message}`);
+        
+        // 오류 나면 내 방으로 복구 시도
+        if (originalMyRoomData) exitVisitMode();
     }
 }
 
@@ -7813,92 +7797,18 @@ async function openRankingModal() {
     loadEventRankingData();
 }
 
-// [추가] 다른 유저 프로필 모달 열기 함수
-// [수정] 타 유저 프로필 모달 열기 (동적 생성 방식으로 변경하여 무조건 맨 위에 표시)
-function openOtherUserProfile(userData) {
-    const oldModal = document.getElementById('other-user-profile-modal');
-    if (oldModal) oldModal.remove();
 
-    const modal = document.createElement('div');
-    modal.id = 'other-user-profile-modal';
-    modal.className = 'fixed inset-0 bg-black/80 flex items-center justify-center z-[100]';
-    
-    const nickname = userData.nickname || "익명의 탐정";
-    const statusMsg = (userData.profile && userData.profile.statusMessage) ? userData.profile.statusMessage : "등록된 한마디가 없습니다.";
-    let cardName = "카드 정보 없음";
-    let imgUrl = "https://placehold.co/400x600/000000/ffffff?text=No+Card";
-    
-    if (userData.representative) {
-        const charData = findCharacter(userData.representative);
-        if (charData) {
-            imgUrl = charData.imageUrl;
-            cardName = `[${charData.rarity}] ${charData.name}`;
-        }
-    }
 
-    // ✨ [추가] 내 프로필이 아닐 때만 '친구 추가' 버튼 표시
-    const isMe = (currentUser && userData.uid === currentUser.uid);
-    const friendBtnHTML = isMe ? '' : `
-        <button onclick="sendFriendRequest('${userData.uid}', '${nickname}')" class="flex-1 gacha-button bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold text-lg shadow-lg transition-all border border-green-500">
-            🤝 친구 추가
-        </button>
-    `;
-
-    modal.innerHTML = `
-        <div class="bg-gray-800 p-6 rounded-lg max-w-2xl w-full relative border border-gray-600 shadow-2xl mx-4 animate-fadeIn">
-            <button onclick="document.getElementById('other-user-profile-modal').remove()" class="absolute top-3 right-4 text-gray-400 hover:text-white text-2xl">&times;</button>
-            <h3 class="text-2xl font-bold text-yellow-300 mb-8 text-center">탐정 프로필</h3>
-            
-            <div class="flex flex-col md:flex-row gap-8 items-start">
-                <div class="w-full md:w-1/2 flex flex-col items-center">
-                    <div class="relative w-full max-w-[240px] aspect-[2/3] bg-black/30 rounded-lg overflow-hidden border-4 border-gray-700 shadow-xl mb-4 group">
-                        <img src="${imgUrl}" class="w-full h-full object-cover">
-                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none"></div>
-                        <div class="absolute bottom-2 left-0 right-0 text-center">
-                            <span class="inline-block bg-black/60 text-yellow-300 text-xs font-bold px-3 py-1 rounded-full border border-yellow-500/30">${cardName}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="w-full md:w-1/2 flex flex-col justify-center space-y-6 py-2">
-                    <div class="bg-black/20 p-4 rounded-lg border-l-4 border-indigo-500">
-                        <p class="text-gray-400 text-xs font-bold mb-1 uppercase tracking-wider">Nickname</p>
-                        <p class="text-white font-bold text-2xl tracking-tight">${nickname}</p>
-                    </div>
-                    <div>
-                        <p class="text-gray-400 text-xs font-bold mb-2 uppercase tracking-wider ml-1">Status Message</p>
-                        <div class="bg-black/30 p-6 rounded-xl text-gray-200 min-h-[120px] flex items-center justify-center relative border border-gray-700 shadow-inner">
-                            <span class="text-6xl text-gray-700 absolute top-0 left-2 font-serif select-none leading-none">“</span>
-                            <p class="italic px-4 break-words w-full text-center text-lg font-serif leading-relaxed z-10">${statusMsg}</p>
-                            <span class="text-6xl text-gray-700 absolute bottom-[-10px] right-2 font-serif select-none leading-none">”</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="mt-8 flex gap-3">
-                ${friendBtnHTML}
-                <button onclick="document.getElementById('other-user-profile-modal').remove()" class="flex-1 gacha-button bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-lg font-bold text-lg shadow-lg transition-all border border-gray-600">
-                    닫기
-                </button>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(modal);
-}
-
-// 2. Firestore에서 랭킹 데이터 가져오기
+// ✅ [수정됨] 이벤트 랭킹 로드 함수 (프로필 카드 적용 완료)
 async function loadEventRankingData() {
     const listContainer = document.getElementById('ranking-list');
     
     try {
-        // ✨ [핵심] Firestore 쿼리
-        // users 컬렉션에서 'currentEventId'가 현재 이벤트랑 같고
-        // 'cumulativeEventPoints'가 높은 순서대로 20명만 가져옴
+        // Firestore 쿼리 (변동 없음)
         const snapshot = await db.collection('users')
-            .where('currentEventId', '==', CURRENT_EVENT_ID) // 현재 이벤트 참가자만
-            .orderBy('cumulativeEventPoints', 'desc')        // 점수 높은 순
-            .limit(20)                                       // 상위 20명
+            .where('currentEventId', '==', CURRENT_EVENT_ID)
+            .orderBy('cumulativeEventPoints', 'desc')
+            .limit(20)
             .get();
 
         listContainer.innerHTML = '';
@@ -7913,8 +7823,16 @@ async function loadEventRankingData() {
             const data = doc.data();
             const isMe = (currentUser && doc.id === currentUser.uid);
             
+            // ---------------------------------------------------------
+            // ✨ [핵심 수정] 기존의 복잡한 이미지 확인 로직을 
+            // 헬퍼 함수 호출 한 줄로 대체합니다.
+            // (이 함수가 '프로필 카드' -> '대표 캐릭터' 순으로 알아서 찾아줍니다)
+            // ---------------------------------------------------------
+            const { imgUrl } = getUserRepInfo(data); 
+
             const div = document.createElement('div');
-            // 1, 2, 3위는 특별한 색상 적용
+            
+            // 랭킹 스타일 설정 (변동 없음)
             let rankStyle = 'bg-gray-700 border-gray-600';
             let rankBadge = `<span class="font-bold w-6 text-center text-gray-400">${rank}</span>`;
             
@@ -7929,24 +7847,17 @@ async function loadEventRankingData() {
                 rankBadge = '🥉';
             }
 
-            // 내 순위 강조
             if (isMe) rankStyle += ' ring-2 ring-blue-500';
 
-            // 대표 캐릭터 이미지 (없으면 기본값)
-            let repImg = "https://placehold.co/50x50/333/fff?text=?";
-            if (data.representative) {
-                const charData = findCharacter(data.representative);
-                if (charData) repImg = charData.imageUrl;
-            }
-
-            // ✨ [수정 1] 클릭 가능하도록 스타일(cursor-pointer)과 호버 효과 추가
-    div.className = `flex items-center gap-3 p-2 rounded border ${rankStyle} cursor-pointer hover:bg-white/10 transition-colors relative group`;
-    
-    // ✨ [수정 2] 클릭 시 프로필 모달 열기 연결 (data 객체 전체를 넘김)
-    div.onclick = () => openOtherUserProfile({ ...data, uid: doc.id });
+            // 클릭 이벤트 및 스타일
+            div.className = `flex items-center gap-3 p-2 rounded border ${rankStyle} cursor-pointer hover:bg-white/10 transition-colors relative group`;
+            div.onclick = () => openOtherUserProfile({ ...data, uid: doc.id });
+            
             div.innerHTML = `
                 <div class="text-xl">${rankBadge}</div>
-                <img src="${repImg}" class="w-10 h-10 rounded object-cover bg-black">
+                
+                <img src="${imgUrl}" class="w-10 h-10 rounded object-cover bg-black border border-white/20">
+                
                 <div class="flex-grow">
                     <p class="text-sm font-bold text-white truncate max-w-[120px]">
                         ${data.nickname || '익명의 탐정'}
@@ -7964,16 +7875,15 @@ async function loadEventRankingData() {
     } catch (error) {
         console.error("랭킹 로드 실패:", error);
         
-        // ⚠️ Firestore 인덱스 에러 처리 안내
-        if (error.message.includes('The query requires an index')) {
-            listContainer.innerHTML = `
+        if (error.message.includes('index')) {
+             listContainer.innerHTML = `
                 <div class="text-red-400 text-center text-sm p-2">
                     <p class="font-bold">⚠️ 시스템 설정 필요</p>
                     <p>개발자 콘솔(F12)을 열어 Firestore 인덱스 생성 링크를 클릭해주세요.</p>
                 </div>
             `;
         } else {
-            listContainer.innerHTML = '<p class="text-center text-red-500">랭킹을 불러오지 못했습니다.</p>';
+             listContainer.innerHTML = '<p class="text-center text-red-500">랭킹을 불러오지 못했습니다.</p>';
         }
     }
 }
@@ -8007,6 +7917,7 @@ async function loadRankingPreview() {
         let rank = 0;
         snapshot.forEach(doc => {
             const data = doc.data();
+			const { imgUrl } = getUserRepInfo(data);
             const nickname = data.nickname || "익명의 탐정";
             const score = (data.cumulativeEventPoints || 0).toLocaleString();
 
@@ -8817,6 +8728,42 @@ async function distributeEventRewards(eventId, eventTitle) {
     }
 }
 
+		// ✅ [신규] 유저의 대표 정보(이미지, 이름)를 결정하는 헬퍼 함수
+// (프로필 설정 카드 우선 -> 없으면 메인 홈 캐릭터 사용)
+function getUserRepInfo(userData) {
+    let imgUrl = "https://placehold.co/50x50/333/fff?text=?";
+    let cardName = "";
+
+    // 1순위: 프로필 메뉴에서 설정한 카드 (repCardId)
+    // 인벤토리 정보가 있어야 찾을 수 있습니다.
+    if (userData.profile && userData.profile.repCardId && userData.inventory) {
+        const profileCard = userData.inventory.find(c => c.id === userData.profile.repCardId);
+        if (profileCard) {
+            const charData = findCharacter(profileCard.name);
+            if (charData) {
+                return { 
+                    imgUrl: charData.imageUrl, 
+                    cardName: `[${charData.rarity}] ${charData.name}` 
+                };
+            }
+        }
+    }
+
+    // 2순위: 메인 홈 캐릭터 (representative)
+    if (userData.representative) {
+        const charData = findCharacter(userData.representative);
+        if (charData) {
+            return { 
+                imgUrl: charData.imageUrl, 
+                cardName: `[${charData.rarity}] ${charData.name}` 
+            };
+        }
+    }
+
+    // 정보 없음
+    return { imgUrl, cardName };
+}
+
 // ✅ [수정됨] 레이드 보상 분배 함수 (NaN 오류 수정 + 안전한 랭킹 계산)
 async function distributeRaidRewards(bossName) {
     console.log("🎁 레이드 보상 분배 시작...");
@@ -9040,6 +8987,7 @@ async function loadRaidRankingData() {
         snapshot.forEach(doc => {
             const data = doc.data();
             const isMe = (currentUser && doc.id === currentUser.uid);
+			const { imgUrl } = getUserRepInfo(data);
             
             // 점수 포맷팅
             const score = (data.raidCumulativeDamage || 0).toLocaleString();
@@ -9064,33 +9012,28 @@ async function loadRaidRankingData() {
             // 내 순위 강조
             if (isMe) rankStyle += ' ring-2 ring-blue-500';
 
-            // 대표 캐릭터 이미지
-            let repImg = "https://placehold.co/50x50/333/fff?text=?";
-            if (data.representative) {
-                const charData = findCharacter(data.representative);
-                if (charData) repImg = charData.imageUrl;
-            }
+
 
             // 클릭 가능하도록 스타일 및 이벤트 추가
             div.className = `flex items-center gap-3 p-2 rounded border ${rankStyle} cursor-pointer hover:bg-white/10 transition-colors relative group`;
-            div.onclick = () => openOtherUserProfile({ ...data, uid: doc.id });
-            
-            div.innerHTML = `
-                <div class="text-xl">${rankBadge}</div>
-                <img src="${repImg}" class="w-10 h-10 rounded object-cover bg-black">
-                <div class="flex-grow">
-                    <p class="text-sm font-bold text-white truncate max-w-[120px]">
-                        ${data.nickname || '익명의 탐정'}
-                    </p>
-                    ${isMe ? '<span class="text-[10px] bg-blue-600 text-white px-1 rounded">ME</span>' : ''}
-                </div>
-                <div class="text-right">
-                    <p class="text-red-300 font-bold text-sm">${score} DAMAGE</p> 
-                </div>
-            `;
-            listContainer.appendChild(div);
-            rank++;
-        });
+    div.onclick = () => openOtherUserProfile({ ...data, uid: doc.id });
+    
+    div.innerHTML = `
+        <div class="text-xl">${rankBadge}</div>
+        <img src="${imgUrl}" class="w-10 h-10 rounded object-cover bg-black">
+        <div class="flex-grow">
+            <p class="text-sm font-bold text-white truncate max-w-[120px]">
+                ${data.nickname || '익명의 탐정'}
+            </p>
+            ${isMe ? '<span class="text-[10px] bg-blue-600 text-white px-1 rounded">ME</span>' : ''}
+        </div>
+        <div class="text-right">
+            <p class="text-yellow-300 font-bold text-sm">${(data.cumulativeEventPoints || 0).toLocaleString()} P</p>
+        </div>
+    `;
+    listContainer.appendChild(div);
+    rank++;
+});
 
     } catch (error) {
         console.error("레이드 랭킹 로드 실패:", error);
@@ -9280,7 +9223,9 @@ let raidBossData = null;
 let raidUnsubscribe = null;
 
 // ✅ [신규] 항복/도주 로직 함수
+// ✅ [수정됨] 항복/도주 로직 함수 (확실한 종료 처리)
 function fleeCombat() {
+    // 이미 전투가 끝난 상태라면 무시
     if (!isCombatRunning) return;
 
     if (!window.currentCombatIndices || !window.currentCombatType) {
@@ -9290,9 +9235,11 @@ function fleeCombat() {
         return;
     }
 
-    isCombatRunning = false; // 루프 종료 플래그 설정
+    // 1. 전투 진행 플래그를 먼저 끕니다. (이게 runCombatLoop를 멈추는 신호가 됩니다)
+    isCombatRunning = false; 
     
-    // 전투 종료 화면 호출 (isVictory=false, totalDamageDealt=0)
+    // 2. 패배 처리로 전투 종료 함수 호출
+    // (totalDamageDealt는 0으로 처리)
     endCombat(false, {
         indices: window.currentCombatIndices,
         type: window.currentCombatType
