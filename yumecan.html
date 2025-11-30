@@ -2531,51 +2531,64 @@ function displayCharacterCards(baseName, isCollected) {
             }
 
 
-// ✅ (수정됨) 특정 캐릭터의 '대사 모음' 표시 함수 (개정판 숨김 + 통합 표시)
+// ✅ (수정됨) 특정 캐릭터의 '대사 모음' 표시 함수 (카드 버전별 잠금)
 function displayCharacterDialogues(baseName) {
     const dialogueList = document.getElementById('collection-dialogues-list');
     dialogueList.innerHTML = '';
     
-    // 1. 이 캐릭터의 '모든' 버전을 가져옵니다. (수집 여부 확인용)
+    // 1. 이 캐릭터의 '모든' 버전을 가져옵니다.
     const allVersions = characters.filter(c => c.baseName === baseName);
     
     // 2. 이 캐릭터의 카드를 '하나라도' 수집했는지 확인합니다.
     const isAnyCardCollected = allVersions.some(character => collectedCardNames.has(character.name));
 
+    // 이 탭 자체가 잠겨야 하는지 확인
     if (!isAnyCardCollected) {
-        // 하나도 없다면 잠금 메시지 표시 후 종료
-        dialogueList.innerHTML = `<p class="text-gray-400 text-center py-4">등장인물을 수집하여 대사를 잠금 해제하세요.</p>`;
+        dialogueList.innerHTML = `<p class="text-gray-400 text-center py-4">등장인물을 수집하여 대사 탭을 잠금 해제하세요.</p>`;
         return; 
     }
 
     // 3. 화면에 표시할 때는 '개정판(+)'이 아닌 카드만 추려냅니다.
-    // (대사가 똑같으므로 기본 카드만 보여줍니다)
     const displayVersions = allVersions.filter(c => !c.name.includes('+'));
 
-    // 4. 대사 출력
+    // 4. 대사 출력 (수집 여부에 따라 잠금/해금)
     displayVersions.forEach(character => {
-        // 이미 위에서 isAnyCardCollected를 통과했으므로, 
-        // 개별 카드의 수집 여부와 상관없이 대사를 보여줍니다. (공유 대사 처리)
-        
-        dialogueList.innerHTML += `<h4 class="text-lg font-bold text-yellow-300 mt-2">${character.name}</h4>`;
-        
-        // 일반 대사
-        if (character.dialogues) {
-            character.dialogues.forEach(diag => { 
-                dialogueList.innerHTML += `<p class="pl-4 text-gray-300 mb-1">"${diag}"</p>`; 
-            });
-        }
+        const isCardCollected = collectedCardNames.has(character.name); // ✨ 이 버전의 카드를 수집했는지 확인
 
-        // 스킬 대사
-        if (character.skills) {
-            character.skills.forEach(skill => { 
-                dialogueList.innerHTML += `<p class="pl-4 text-cyan-300 mb-1"><span class="text-xs border border-cyan-500 px-1 rounded mr-1">스킬</span> "${skill.dialogue}"</p>`; 
-            });
+        // --- 헤더 출력 (수집 안 했으면 🔒 표시) ---
+        let headerHTML;
+        if (isCardCollected) {
+            headerHTML = `<h4 class="text-lg font-bold text-yellow-300 mt-2">${character.name}</h4>`;
+        } else {
+            headerHTML = `<h4 class="text-lg font-bold text-gray-500 mt-2">🔒 ${character.name} (수집 필요)</h4>`;
         }
+        dialogueList.innerHTML += headerHTML;
+        
+        if (isCardCollected) {
+            // --- 해금된 경우: 대사 내용 출력 ---
+            
+            // 일반 대사
+            if (character.dialogues) {
+                character.dialogues.forEach(diag => { 
+                    dialogueList.innerHTML += `<p class="pl-4 text-gray-300 mb-1">"${diag}"</p>`; 
+                });
+            }
 
-        // 사망 대사
-        if (character.deathDialogue) {
-            dialogueList.innerHTML += `<p class="pl-4 text-red-400 mb-1"><span class="text-xs border border-red-500 px-1 rounded mr-1">사망</span> "${character.deathDialogue}"</p>`;
+            // 스킬 대사
+            if (character.skills) {
+                character.skills.forEach(skill => { 
+                    dialogueList.innerHTML += `<p class="pl-4 text-cyan-300 mb-1"><span class="text-xs border border-cyan-500 px-1 rounded mr-1">스킬</span> "${skill.dialogue}"</p>`; 
+                });
+            }
+
+            // 사망 대사
+            if (character.deathDialogue) {
+                dialogueList.innerHTML += `<p class="pl-4 text-red-400 mb-1"><span class="text-xs border border-red-500 px-1 rounded mr-1">사망</span> "${character.deathDialogue}"</p>`;
+            }
+            
+        } else {
+            // --- 잠긴 경우: 잠금 메시지 출력 ---
+            dialogueList.innerHTML += `<p class="pl-4 text-gray-600 mb-1">해당 원고를 수집해야만 대사를 확인할 수 있습니다.</p>`;
         }
         
         dialogueList.innerHTML += `<hr class="border-gray-600 my-4">`;
