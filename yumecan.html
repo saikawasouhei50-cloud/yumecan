@@ -56,6 +56,17 @@
     }
 }
 
+/* --- ✨ 등급별 이미지 글로우 효과 (filter: drop-shadow) ✨ --- */
+/* N 등급: 흰색/회색 은은한 빛 */
+.rarity-glow-N { filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.4)); }
+/* R 등급: 하늘색 빛 */
+.rarity-glow-R { filter: drop-shadow(0 0 7px rgba(0, 180, 255, 0.8)); }
+/* SR 등급: 보라색/자주색 빛 */
+.rarity-glow-SR { filter: drop-shadow(0 0 9px rgba(200, 0, 255, 0.9)); }
+/* SSR 등급: 금색/노란색 강한 빛 */
+.rarity-glow-SSR { filter: drop-shadow(0 0 14px rgba(255, 220, 0, 1.0)); }
+/* ------------------------------------- */
+
 #room-container {
     position: absolute;
     top: 0;
@@ -4891,105 +4902,108 @@ saveGame();
     }
 }
 
-            // ✅ 이 코드로 기존 createCard 함수를 통째로 교체해주세요.
-            function createCard(character, options = {}) {
-                const { animationIndex, mode = 'default', isCardInDeck, isDeckFull, isCollected } = options;
-                
-                // 카드 외형 컨테이너
-                const card = document.createElement('div');
-                card.className = `rarity-${character.rarity} relative text-center rounded-lg shadow-md p-2 transform transition-transform duration-300 hover:scale-105 cursor-pointer`;
-                card.title = character.name;
-                
-                const rarityColor = { 'N': 'text-gray-600', 'R': 'text-blue-800', 'SR': 'text-white', 'SSR': 'text-black' }[character.rarity];
-                const factionColors = {
-                    '탐정': 'bg-blue-500 text-white',
-                    '조수': 'bg-green-500 text-white',
-                    '범인': 'bg-red-500 text-white',
-                    '히어로': 'bg-indigo-600 text-white',
-                    '빌런': 'bg-gray-800 text-white',
-                    '마법사': 'bg-purple-600 text-white',
-                    '초대객': 'bg-orange-400 text-white',
-                    '도박사': 'bg-yellow-600 text-white',
-                    '사제': 'bg-teal-500 text-white',
-                    '악마': 'bg-rose-900 text-white'
-                };
-                const cardInstance = options.instance;
+            // ✅ [수정됨] createCard 함수 (등급별 글로우 적용)
+function createCard(character, options = {}) {
+    const { animationIndex, mode = 'default', isCardInDeck, isDeckFull, isCollected } = options;
+    
+    // 1. 글로우 클래스 설정
+    const glowClass = `rarity-glow-${character.rarity}`; // ✨ [핵심] 글로우 클래스 준비
+    
+    // 카드 외형 컨테이너
+    const card = document.createElement('div');
+    card.className = `rarity-${character.rarity} relative text-center rounded-lg shadow-md p-2 transform transition-transform duration-300 hover:scale-105 cursor-pointer`;
+    card.title = character.name;
+    
+    // ... (나머지 변수 설정 로직은 유지) ...
+    const rarityColor = { 'N': 'text-gray-600', 'R': 'text-blue-800', 'SR': 'text-white', 'SSR': 'text-black' }[character.rarity];
+    const factionColors = {
+        '탐정': 'bg-blue-500 text-white',
+        '조수': 'bg-green-500 text-white',
+        '범인': 'bg-red-500 text-white',
+        // ... (나머지 진영 컬러 유지) ...
+        '히어로': 'bg-indigo-600 text-white',
+        '빌런': 'bg-gray-800 text-white',
+        '마법사': 'bg-purple-600 text-white',
+        '초대객': 'bg-orange-400 text-white',
+        '도박사': 'bg-yellow-600 text-white',
+        '사제': 'bg-teal-500 text-white',
+        '악마': 'bg-rose-900 text-white'
+    };
+    const cardInstance = options.instance;
 
-                // 1. 레벨 배지
-                let levelBadgeHTML = '';
-                if (cardInstance && cardInstance.level > 0) {
-                    levelBadgeHTML = `<div class="level-badge">+${cardInstance.level}</div>`;
-                }
-                
-                // 2. 개정(별) 표시
-                let revisionStarsHTML = '';
-                if (cardInstance && cardInstance.revision > 0) {
-                    revisionStarsHTML = `<div class="revision-stars">${'⭐'.repeat(cardInstance.revision)}</div>`;
-                }
-                
-                // 3. 하단 액션 버튼 생성 (여기에 '편찬 해제' 추가!)
-                let actionButtonsHTML = '';
-                
-                if (mode === 'deckBuilder' && cardInstance) {
-                    // [편찬 탭 - 하단 인벤토리] 덱에 넣기 버튼
-                    const disabled = isDeckFull || isCardInDeck;
-                    const buttonText = isCardInDeck ? '편찬됨' : '추가';
-                    const buttonColor = isCardInDeck ? 'bg-gray-500' : 'bg-green-500 hover:bg-green-600';
-                    actionButtonsHTML = `<button data-action="add-to-deck" data-card-id="${cardInstance.id}" class="w-full mt-2 py-1 rounded-md text-white font-bold text-sm ${buttonColor}" ${disabled ? 'disabled' : ''}>${buttonText}</button>`;
-                    
-                } else if (mode === 'inventory') {
-                    // [서고 탭] 대표 설정 버튼
-                    const isRepresentative = representativeCharacter && representativeCharacter.name === character.name;
-                    const repButtonText = isRepresentative ? '대표' : '대표 설정';
-                    const repButtonColor = isRepresentative ? 'bg-yellow-500' : 'bg-gray-600 hover:bg-gray-700';
-                    actionButtonsHTML = `<button data-action="set-representative" data-card-name="${character.name}" class="w-full mt-2 py-1 rounded-md text-white font-bold text-sm ${repButtonColor}" ${isRepresentative ? 'disabled' : ''}>${repButtonText}</button>`;
-                    
-                } else if (mode === 'deckSlot' && cardInstance) {
-                    // ✨ [수정됨] 덱 슬롯: 상단 X버튼 대신 하단에 '편찬 해제' 버튼 추가
-                    actionButtonsHTML = `<button data-action="remove-from-deck" data-card-id="${cardInstance.id}" class="w-full mt-2 py-1 rounded-md text-white font-bold text-sm bg-red-600 hover:bg-red-700 shadow-md">해제</button>`;
-                }
-                
-                // ❌ [삭제됨] 기존의 상단 X 버튼 코드 (deckSlotButton) 제거됨
+    // 1. 레벨 배지
+    let levelBadgeHTML = '';
+    if (cardInstance && cardInstance.level > 0) {
+        levelBadgeHTML = `<div class="level-badge">+${cardInstance.level}</div>`;
+    }
+    
+    // 2. 개정(별) 표시
+    let revisionStarsHTML = '';
+    if (cardInstance && cardInstance.revision > 0) {
+        revisionStarsHTML = `<div class="revision-stars">${'⭐'.repeat(cardInstance.revision)}</div>`;
+    }
+    
+    // 3. 하단 액션 버튼 생성 (기존 로직 유지)
+    let actionButtonsHTML = '';
+    
+    if (mode === 'deckBuilder' && cardInstance) {
+        // ... (덱 빌더 로직 유지) ...
+        const disabled = isDeckFull || isCardInDeck;
+        const buttonText = isCardInDeck ? '편찬됨' : '추가';
+        const buttonColor = isCardInDeck ? 'bg-gray-500' : 'bg-green-500 hover:bg-green-600';
+        actionButtonsHTML = `<button data-action="add-to-deck" data-card-id="${cardInstance.id}" class="w-full mt-2 py-1 rounded-md text-white font-bold text-sm ${buttonColor}" ${disabled ? 'disabled' : ''}>${buttonText}</button>`;
+        
+    } else if (mode === 'inventory') {
+        // ... (인벤토리 로직 유지) ...
+        const isRepresentative = representativeCharacter && representativeCharacter.name === character.name;
+        const repButtonText = isRepresentative ? '대표' : '대표 설정';
+        const repButtonColor = isRepresentative ? 'bg-yellow-500' : 'bg-gray-600 hover:bg-gray-700';
+        actionButtonsHTML = `<button data-action="set-representative" data-card-name="${character.name}" class="w-full mt-2 py-1 rounded-md text-white font-bold text-sm ${repButtonColor}" ${isRepresentative ? 'disabled' : ''}>${repButtonText}</button>`;
+        
+    } else if (mode === 'deckSlot' && cardInstance) {
+        // ... (덱 슬롯 로직 유지) ...
+        actionButtonsHTML = `<button data-action="remove-from-deck" data-card-id="${cardInstance.id}" class="w-full mt-2 py-1 rounded-md text-white font-bold text-sm bg-red-600 hover:bg-red-700 shadow-md">해제</button>`;
+    }
+    
+    // 진영 배지
+    const factionBadge = `<span class="absolute top-2 right-2 text-xs font-bold px-2 py-1 rounded-full ${factionColors[character.faction]} z-10">${character.faction}</span>`;
 
-                // 진영 배지
-                const factionBadge = `<span class="absolute top-2 right-2 text-xs font-bold px-2 py-1 rounded-full ${factionColors[character.faction]} z-10">${character.faction}</span>`;
+    // 4. HTML 조립
+    card.innerHTML = `
+        ${factionBadge} ${levelBadgeHTML} ${revisionStarsHTML} 
+        <div class="relative pointer-events-none">
+            <img src="${character.cardImageUrl}" alt="${character.name}" class="w-full h-full object-cover rounded-md mb-2 border-2 border-white/50 ${glowClass}"> 
+            <p class="font-bold text-sm ${rarityColor} truncate">${character.name}</p>
+            <p class="font-black text-lg ${rarityColor}" style="text-shadow: 1px 1px 2px rgba(255,255,255,0.5);">${character.rarity}</p>
+        </div>
+        ${actionButtonsHTML}
+    `;
 
-                // HTML 조립
-                card.innerHTML = `
-                    ${factionBadge} ${levelBadgeHTML} ${revisionStarsHTML} 
-                    <div class="relative pointer-events-none">
-                        <img src="${character.cardImageUrl}" alt="${character.name}" class="w-full h-auto rounded-md mb-2 border-2 border-white/50">
-                        <p class="font-bold text-sm ${rarityColor} truncate">${character.name}</p>
-                        <p class="font-black text-lg ${rarityColor}" style="text-shadow: 1px 1px 2px rgba(255,255,255,0.5);">${character.rarity}</p>
-                    </div>
-                    ${actionButtonsHTML}
-                `;
+    if (cardInstance && mode !== 'collection') { 
+        card.dataset.uniqueId = cardInstance.id;
+    }
 
-                if (cardInstance && mode !== 'collection') { 
-                    card.dataset.uniqueId = cardInstance.id;
-                }
+    if (typeof animationIndex === 'number') {
+        card.style.opacity = '0';
+        card.style.animationDelay = `${animationIndex * 0.05}s`;
+        card.classList.add('card-animation');
+    }
+    
+    if(mode === 'deckBuilder' && isCardInDeck) {
+        card.classList.add('opacity-50');
+    }
 
-                if (typeof animationIndex === 'number') {
-                    card.style.opacity = '0';
-                    card.style.animationDelay = `${animationIndex * 0.05}s`;
-                    card.classList.add('card-animation');
-                }
-                
-                if(mode === 'deckBuilder' && isCardInDeck) {
-                    card.classList.add('opacity-50');
-                }
-
-                if (mode === 'collection') {
-                    if (isCollected) {
-                        card.dataset.isCollected = "true";
-                    } else {
-                        card.dataset.isCollected = "false";
-                        card.classList.add('grayscale', 'opacity-75');
-                        card.classList.remove('hover:scale-105', 'cursor-pointer');
-                    }
-                }
-                return card;
-            }
+    if (mode === 'collection') {
+        if (isCollected) {
+            card.dataset.isCollected = "true";
+        } else {
+            card.dataset.isCollected = "false";
+            card.classList.add('grayscale', 'opacity-75');
+            card.classList.remove('hover:scale-105', 'cursor-pointer');
+        }
+    }
+    return card;
+}
 
             function getSkillDescription(skill) {
     // 1. 구글 시트에 적어둔 '커스텀 설명'이 있다면 그걸 최우선으로 보여줌
