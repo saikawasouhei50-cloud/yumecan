@@ -414,7 +414,16 @@ body.pointer-events-none {
         <span class="transform skew-x-12 text-[10px] md:text-xl leading-none">소환</span>
     </button>
     
-    <button onclick="switchTab('trade')" class="pointer-events-auto 
+    <button onclick="switchTab('story')" class="pointer-events-auto 
+        w-12 h-10 text-[10px]
+        md:w-[44%] md:max-w-[135px] md:h-14 md:text-lg 
+        bg-indigo-900/80 hover:bg-indigo-800 text-white font-bold transform -skew-x-12 shadow-lg 
+        flex flex-col md:flex-row items-center justify-center border border-white/20 ml-0 md:ml-2">
+    <span class="transform skew-x-12 text-sm md:text-xl mb-0.5 md:mb-0">📖</span>
+    <span class="transform skew-x-12 text-[9px] md:text-lg leading-none">스토리</span>
+</button>
+	
+	<button onclick="switchTab('trade')" class="pointer-events-auto 
             w-12 h-10 text-[10px]
             md:w-[44%] md:max-w-[135px] md:h-14 md:text-lg 
             bg-blue-900/80 hover:bg-blue-800 text-white font-bold transform -skew-x-12 shadow-lg 
