@@ -1829,14 +1829,14 @@ async function saveGameToFirebase() {
         myRoom: playerRoom || { furniture: [], characters: [] },
         ownedFurniture: ownedFurniture || [],
 		systemMailHistory: playerSystemMailHistory || [],
+		lastRaidSpawnId: playerLastRaidSpawnId || 0,
         
         // 프로필 데이터
         profile: safeProfile
     };
-	if (playerRaidLastResetDate instanceof Date && !isNaN(playerRaidLastResetDate)) {
+	if (playerRaidLastResetDate) {
     rawSaveData.raidLastResetDate = playerRaidLastResetDate;
 }
-
     // ✨ [핵심 수정] 여기서 undefined를 null로 싹 변환합니다.
     const finalSaveData = removeUndefined(rawSaveData);
 
@@ -9063,9 +9063,13 @@ async function submitRaidDamage(damage) {
         playerRaidDailyCount = finalCount;
         updateRaidDailyCountUI();
         
-        if (calculatedReward > 0) playerCurrency += calculatedReward;
-        playerRaidDamage += damage; // UI용 임시 갱신
-        
+        // ✨✨ [중요 추가] 로컬 변수를 최신 상태로 동기화해야 저장이 꼬이지 않습니다 ✨✨
+// 1. 현재 치고 있는 보스의 ID를 내 변수에 저장
+if (raidBossData && raidBossData.spawnId) {
+    playerLastRaidSpawnId = raidBossData.spawnId;
+}
+// 2. 공격 시간을 현재 시간으로 갱신 (날짜 카운트 초기화 방지)
+playerRaidLastResetDate = new Date();
         updateUI(); 
 
     } catch (error) {
@@ -9408,8 +9412,6 @@ function updateRaidDailyCountUI() {
     </script>
 </body>
 </html>
-
-
 
 
 
