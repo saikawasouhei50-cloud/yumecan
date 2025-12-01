@@ -588,6 +588,12 @@ body.pointer-events-none {
 
 <div id="event-view" class="hidden">
     
+    <div class="max-w-lg mx-auto mb-2 flex justify-start pl-2">
+        <button onclick="switchTab('event-home')" class="bg-gray-700 hover:bg-gray-600 text-white text-xs md:text-sm font-bold py-1.5 px-4 rounded-full flex items-center gap-1 shadow-md transition-transform hover:scale-105 border border-gray-500">
+            <span>◀</span> 이벤트 홈
+        </button>
+    </div>
+
     <div class="bg-black/20 rounded-full p-1 flex justify-center items-center mb-4 max-w-lg mx-auto">
         <button id="event-sub-tab-battle" class="sub-tab-button active w-1/4 font-bold py-2 px-2 md:px-4 rounded-full text-sm md:text-base">전투</button>
         <button id="event-sub-tab-raid" class="sub-tab-button w-1/4 font-bold py-2 px-2 md:px-4 rounded-full text-sm md:text-base text-red-400">레이드</button>
