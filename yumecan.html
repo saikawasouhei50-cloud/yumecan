@@ -86,7 +86,19 @@
     background-position: center bottom !important; /* 바닥 기준 정렬 */
     background-repeat: no-repeat !important;
 }
-		
+	
+/* 스크롤바 숨기기 (크롬, 사파리, 엣지 등) */
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+
+/* 스크롤바 숨기기 (파이어폭스, IE) */
+.scrollbar-hide {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+
+	
 .iso-floor {
     position: absolute;
     
@@ -588,9 +600,9 @@ body.pointer-events-none {
 
 <div id="event-view" class="hidden">
     
-    <div class="max-w-lg mx-auto mb-2 flex justify-start pl-2">
-        <button onclick="switchTab('event-home')" class="bg-gray-700 hover:bg-gray-600 text-white text-xs md:text-sm font-bold py-1.5 px-4 rounded-full flex items-center gap-1 shadow-md transition-transform hover:scale-105 border border-gray-500">
-            <span>◀</span> 이벤트 홈
+    <div class="w-full flex justify-start mb-2 px-2">
+        <button onclick="switchTab('event-home')" class="gacha-button bg-gray-700 hover:bg-gray-600 text-white font-bold py-1 px-4 rounded-full text-sm flex items-center gap-1 border border-gray-500">
+            <span>⬅</span> 이벤트 홈으로
         </button>
     </div>
 
@@ -686,17 +698,26 @@ body.pointer-events-none {
                     </div>
                 </div>
                 <div id="event-gacha-view" class="hidden">
-                    <div id="event-gacha-info" class="text-center p-2 mb-2 rounded-lg bg-yellow-500/20">
-                        <p class="font-bold text-yellow-300"></p>
-                    </div>
-                    <div class="flex flex-col sm:flex-row justify-center items-center gap-4 mb-4">
-                        <button id="pull-one-event" class="gacha-button w-full sm:w-auto bg-gradient-to-r from-red-500 to-yellow-500 hover:from-red-600 hover:to-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 px-8 rounded-full shadow-lg">🔥 1회 뽑기 (10)</button>
-                        <button id="pull-ten-event" class="gacha-button w-full sm:w-auto bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 px-8 rounded-full shadow-lg">🔥🔥 10회 뽑기 (100)</button>
-						<button onclick="openGachaPoolModal('event')" class="gacha-button w-full sm:w-auto bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-full shadow-lg text-sm mt-2">
-    등장인물 목록 (획득 가능)
-</button>
-                    </div>
-                </div>
+    
+    <div class="flex justify-end mb-2">
+        <button onclick="switchTab('event-home')" class="text-xs font-bold text-pink-300 hover:text-white bg-pink-900/30 px-3 py-1 rounded-full border border-pink-500/30 transition-colors">
+            🏠 이벤트 홈으로 이동
+        </button>
+    </div>
+
+    <div id="event-gacha-info" class="text-center p-2 mb-2 rounded-lg bg-yellow-500/20">
+        <p class="font-bold text-yellow-300"></p>
+    </div>
+    
+    <div class="flex flex-col sm:flex-row justify-center items-center gap-4 mb-4">
+        <button id="pull-one-event" class="gacha-button w-full sm:w-auto bg-gradient-to-r from-red-500 to-yellow-500 hover:from-red-600 hover:to-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 px-8 rounded-full shadow-lg">🔥 1회 뽑기 (10)</button>
+        <button id="pull-ten-event" class="gacha-button w-full sm:w-auto bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 px-8 rounded-full shadow-lg">🔥🔥 10회 뽑기 (100)</button>
+        
+        <button onclick="openGachaPoolModal('event')" class="gacha-button w-full sm:w-auto bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-full shadow-lg text-sm mt-2">
+            등장인물 목록 (획득 가능)
+        </button>
+    </div>
+</div>
                 <div id="results-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 min-h-[200px] bg-black/20 p-4 rounded-xl"></div>
             </div>
 
@@ -793,10 +814,9 @@ body.pointer-events-none {
                     <button id="speed-1x" class="speed-button active bg-gray-600 text-white font-bold py-1 px-3 rounded-full text-sm">1x</button>
                     <button id="speed-2x" class="speed-button bg-gray-600 text-white font-bold py-1 px-3 rounded-full text-sm">2x</button>
                     <button id="speed-4x" class="speed-button bg-gray-600 text-white font-bold py-1 px-3 rounded-full text-sm">4x</button>
+                    
+                    <button id="combat-run-button" class="gacha-button bg-yellow-600 hover:bg-yellow-700 text-black font-bold py-1 px-3 rounded-full text-sm ml-2">항복</button>
                 </div>
-				<div class="flex justify-end items-center gap-2 mt-4">
-    <button id="combat-run-button" class="gacha-button bg-yellow-600 hover:bg-yellow-700 text-black font-bold py-1 px-3 rounded-full text-sm">항복</button>
-    </div>
                 <div id="combat-log-container" class="mt-2 bg-black/30 p-4 rounded-lg h-40 overflow-y-auto">
                     <div id="combat-log"></div>
                 </div>
@@ -1835,14 +1855,14 @@ async function saveGameToFirebase() {
         myRoom: playerRoom || { furniture: [], characters: [] },
         ownedFurniture: ownedFurniture || [],
 		systemMailHistory: playerSystemMailHistory || [],
-		lastRaidSpawnId: playerLastRaidSpawnId || 0,
         
         // 프로필 데이터
         profile: safeProfile
     };
-	if (playerRaidLastResetDate) {
+	if (playerRaidLastResetDate instanceof Date && !isNaN(playerRaidLastResetDate)) {
     rawSaveData.raidLastResetDate = playerRaidLastResetDate;
 }
+
     // ✨ [핵심 수정] 여기서 undefined를 null로 싹 변환합니다.
     const finalSaveData = removeUndefined(rawSaveData);
 
@@ -4366,10 +4386,10 @@ function startStageCombat(chapterIndex, stageIndex) {
     startCombat({ chapter: chapterIndex, stage: stageIndex }, 'main_stage');
 }
 
-				// ✅ 기존 async function startCombat 함수 전체를 이 코드로 교체하세요.
+				// ✅ [수정됨] startCombat 함수: 화면 레이아웃 변경 및 효과 시스템 초기화
 async function startCombat(indices, type) {
     isCombatRunning = true;
-    setCombatSpeed(1); 
+    setCombatSpeed(1);
 
     let monsterData;
 
@@ -4385,8 +4405,7 @@ async function startCombat(indices, type) {
             imageUrl: raidBossData.imageUrl,
             isAoE: true 
         }));
-    } 
-    else if (type === 'main_stage') {
+    } else if (type === 'main_stage') {
         const combatData = mainChapters[indices.chapter].stages[indices.stage];
         monsterData = JSON.parse(JSON.stringify(monsters[combatData.monsterName]));
     } else if (type === 'event') {
@@ -4394,16 +4413,20 @@ async function startCombat(indices, type) {
         monsterData = JSON.parse(JSON.stringify(monsters[combatData.monsterName]));
     }
     // ▲▲▲ 몬스터 데이터 설정 끝 ▲▲▲
-	window.currentCombatIndices = indices;
+    
+    window.currentCombatIndices = indices;
     window.currentCombatType = type;
 
-    // 1. 퇴고/개정 레벨 적용 (여기서 combatDeck 정의)
+    // 1. 퇴고/개정 레벨 적용
     let combatDeck = playerDeck.map(cardInstance => {
         const baseCard = findCharacter(cardInstance.name);
         const enhancedStats = getEnhancedStats(cardInstance);
         return {
             ...baseCard,
             stats: enhancedStats,
+            // ✨ [신규] 활성 효과(버프/디버프) 추적용 배열 추가
+            activeEffects: [], 
+            cardImageUrl: baseCard.cardImageUrl // 이미지 URL 유지
         };
     });
 
@@ -4411,41 +4434,74 @@ async function startCombat(indices, type) {
     combatDeck = applySynergyBonusesToDeck(combatDeck);
 
     // 3. 최대 HP 저장 (원본 보너스 덱 저장)
-    const originalBonusDeck = JSON.parse(JSON.stringify(combatDeck)); 
+    const originalBonusDeck = JSON.parse(JSON.stringify(combatDeck));
 
-    // --- UI 렌더링 ---
+    // --- UI 렌더링 (레이아웃 변경) ---
     const combatMonsterImage = document.getElementById('combat-monster-image');
-    if(combatMonsterImage) combatMonsterImage.classList.remove('shake-animation'); // 애니메이션 잔상 제거
+    if (combatMonsterImage) combatMonsterImage.classList.remove('shake-animation');
 
     // 뷰 전환
     allViews.forEach(view => view.classList.add('hidden'));
     combatInProgressView.classList.remove('hidden');
     combatLog.innerHTML = '';
+    
+    // 1) 전체 컨테이너 설정
+    const container = combatInProgressView.querySelector('.grid');
+    if (container) {
+        container.className = "flex flex-col md:flex-row gap-2 md:gap-4 items-center justify-center h-full max-h-[550px]"; 
+    }
+
+    // 2) 플레이어 덱 영역 (좌측)
+    combatPlayerDeck.className = "w-full md:w-1/2 md:max-w-md flex flex-wrap justify-center content-center gap-1.5 md:gap-2 order-2 md:order-1 overflow-hidden p-2"; 
     combatPlayerDeck.innerHTML = '';
+
+    // 3) 몬스터 영역 (우측)
+    combatMonsterArea.className = "w-full md:w-1/2 flex flex-col items-center justify-center bg-black/40 rounded-xl p-4 order-1 md:order-2 border border-white/10 min-h-[180px]";
     
     // 플레이어 덱 UI 그리기
     combatDeck.forEach((card, index) => {
         const cardEl = document.createElement('div');
-        cardEl.className = 'bg-gray-700 p-2 rounded';
+        
+        // ✨ 등급별 글로우 클래스 이름 생성 (예: rarity-glow-SSR)
+        const glowClass = `rarity-glow-${card.rarity}`;
+
+        cardEl.className = 'relative w-[28%] bg-gray-800 p-0.5 rounded-lg border border-gray-600 shadow-md flex flex-col items-center transition-transform hover:scale-105 hover:z-10';
+        cardEl.id = `combat-card-${index}`;
+
+        const rarityColor = { 'N': 'text-gray-400', 'R': 'text-blue-400', 'SR': 'text-purple-400', 'SSR': 'text-yellow-400' }[card.rarity];
+
         cardEl.innerHTML = `
-            <p class="font-bold text-sm truncate" title="${card.name}">${card.name}</p>
-            <div class="hp-bar-background rounded-full h-2.5 mt-1">
-                <div id="player-hp-bar-${index}" class="hp-bar-foreground h-2.5 rounded-full" style="width: 100%"></div>
+            <div class="relative w-full aspect-[2/3] overflow-hidden rounded mb-0.5">
+                <img src="${card.cardImageUrl}" class="w-full h-full object-cover opacity-90 ${glowClass}">
+                <div id="effect-icons-${index}" class="absolute top-0.5 right-0.5 flex flex-col gap-0.5 items-end transform scale-75 origin-top-right"></div> 
             </div>
-            <p id="player-hp-text-${index}" class="text-xs text-center mt-0.5">${card.stats.hp} / ${originalBonusDeck[index].stats.hp}</p>
+            
+            <p class="font-bold text-[8px] md:text-[10px] truncate w-full text-center ${rarityColor} mb-0.5">${card.name}</p>
+            
+            <div class="w-full hp-bar-background rounded-full h-1 md:h-1.5 bg-gray-600">
+                <div id="player-hp-bar-${index}" class="hp-bar-foreground h-1 md:h-1.5 rounded-full transition-all duration-300" style="width: 100%"></div>
+            </div>
+            <p id="player-hp-text-${index}" class="text-[8px] text-center text-gray-400 mt-0.5 leading-none transform scale-90">${card.stats.hp}</p>
         `;
         combatPlayerDeck.appendChild(cardEl);
     });
 
     // 몬스터 UI 그리기
     combatMonsterArea.innerHTML = `
-        <h3 class="text-2xl font-bold">${monsterData.name}</h3>
-        <img id="combat-monster-image" src="${monsterData.imageUrl}" alt="${monsterData.name}" class="my-4 h-48 w-48 object-contain">
-        <div class="w-full hp-bar-background rounded-full h-4">
-            <div id="monster-hp-bar" class="hp-bar-foreground h-4 rounded-full" style="width: 100%"></div>
+        <h3 class="text-lg md:text-3xl font-bold text-red-500 drop-shadow-md mb-2 md:mb-4 text-center truncate w-full px-2">${monsterData.name}</h3>
+        
+        <div class="relative w-full flex justify-center items-center flex-grow mb-2 md:mb-4">
+             <img id="combat-monster-image" src="${monsterData.imageUrl}" alt="${monsterData.name}" class="h-24 md:h-56 object-contain drop-shadow-2xl transition-transform">
+             <div id="monster-effect-icons" class="absolute top-0 right-2 md:right-4 flex flex-col gap-1"></div> 
         </div>
-        <p id="monster-hp-text" class="text-sm mt-1">${monsterData.stats.hp} / ${monsterData.stats.hp}</p>
+        
+        <div class="w-full max-w-[180px] md:max-w-sm hp-bar-background rounded-full h-3 md:h-5 border border-gray-500 shadow-inner relative overflow-hidden">
+            <div id="monster-hp-bar" class="hp-bar-foreground h-full bg-gradient-to-r from-red-600 to-red-400 transition-all duration-300" style="width: 100%"></div>
+            <p id="monster-hp-text" class="absolute inset-0 flex items-center justify-center text-[9px] md:text-xs font-bold text-white drop-shadow-md">${monsterData.stats.hp} / ${monsterData.stats.hp}</p>
+        </div>
     `;
+    
+    monsterData.activeEffects = [];
 
     // 4. 전투 루프 실행
     await runCombatLoop(combatDeck, originalBonusDeck, monsterData, indices, type); 
@@ -4456,29 +4512,55 @@ async function startCombat(indices, type) {
 
             const delay = ms => new Promise(res => setTimeout(res, ms / combatSpeedMultiplier));
 
-            // ✅ 기존 runCombatLoop 함수를 이 코드로 통째로 교체하세요.
-// ✅ [수정됨] 전투 루프 함수 (항복 시 즉시 중단 기능 추가)
+            // ✅ [수정됨] runCombatLoop: 5턴 지속 효과 및 턴 관리 로직 적용
 async function runCombatLoop(combatDeck, originalBonusDeck, monsterData, indices, type) { 
-    const originalMonsterDef = monsterData.stats.def;
+    const originalMonsterDef = monsterData.stats.def; // 몬스터 기본 방어력 백업
+    const originalMonsterAtk = monsterData.stats.atk; // 몬스터 기본 공격력 백업
     let totalDamageDealt = 0; 
 
-    // 몬스터나 플레이어 중 한 쪽이 전멸할 때까지 반복
     while (monsterData.stats.hp > 0 && combatDeck.some(c => c.stats.hp > 0)) {
-        
-        // ✨ [핵심 1] 루프 시작 시 전투 중인지 체크. 아니라면 즉시 종료.
         if (!isCombatRunning) return;
 
         // ===============================================
         // 1. 플레이어 턴
         // ===============================================
         for (let i = 0; i < combatDeck.length; i++) {
-            // ✨ [핵심 2] 턴 중간에도 수시로 체크
             if (!isCombatRunning) return;
 
             const card = combatDeck[i];
+            
+            // ✨ [신규] 턴 시작 시 지속 효과 체크 (플레이어)
+            if (card.stats.hp > 0 && card.activeEffects) {
+                // 효과 지속시간 감소 및 만료 처리
+                for (let j = card.activeEffects.length - 1; j >= 0; j--) {
+                    card.activeEffects[j].turns--;
+                    if (card.activeEffects[j].turns <= 0) {
+                        // 효과 만료: 스탯 원복
+                        const effect = card.activeEffects[j];
+                        if (effect.type === 'buff_atk') {
+                            // 단순 나눗셈으로 복구 (부동소수점 오차 있을 수 있으나 게임 규모상 허용)
+                            card.stats.atk = Math.floor(card.stats.atk / effect.value);
+                            logCombat(`<span class="text-gray-400">${card.name}의 공격력 증가 효과가 끝났습니다.</span>`);
+                        }
+                        // 배열에서 제거
+                        card.activeEffects.splice(j, 1);
+                    }
+                }
+                updateCombatUI(combatDeck, originalBonusDeck, monsterData); // 아이콘 갱신
+            }
+
             if (card.stats.hp > 0) {
-                await delay(800);
-                if (!isCombatRunning) return; // ✨ 딜레이 직후 체크 필수!
+                // 턴 대기 (카드 활성화 시각효과)
+                const cardEl = document.getElementById(`combat-card-${i}`);
+                if (cardEl) {
+                    cardEl.classList.add('ring-4', 'ring-yellow-400', 'scale-105', 'z-10');
+                    await delay(600);
+                    cardEl.classList.remove('ring-4', 'ring-yellow-400', 'scale-105', 'z-10');
+                } else {
+                    await delay(600);
+                }
+                
+                if (!isCombatRunning) return;
 
                 const monsterImage = document.getElementById('combat-monster-image');
                 
@@ -4494,9 +4576,8 @@ async function runCombatLoop(combatDeck, originalBonusDeck, monsterData, indices
 
                 if (skillToUse) {
                     logCombat(`<strong>${card.name}</strong>의 스킬! <span class="text-yellow-300">"${skillToUse.name}"</span>`);
-                    
                     await delay(400);
-                    if (!isCombatRunning) return; // ✨ 딜레이 직후 체크
+                    if (!isCombatRunning) return; 
 
                     logCombat(`<em>"${skillToUse.dialogue}"</em>`);
                     
@@ -4510,22 +4591,36 @@ async function runCombatLoop(combatDeck, originalBonusDeck, monsterData, indices
                         const maxHp = originalBonusDeck[i].stats.hp;
                         card.stats.hp = Math.min(maxHp, card.stats.hp + healAmount);
                         logCombat(`<strong>${card.name}</strong>이(가) 체력을 ${healAmount} 회복했습니다!`);
+                        
                     } else if (skillToUse.type === 'vampire') {
                         damage = Math.max(1, Math.floor(card.stats.atk * skillToUse.power) - monsterData.stats.def);
                         const healedAmount = Math.floor(damage * 0.5);
                         const maxHp = originalBonusDeck[i].stats.hp;
                         card.stats.hp = Math.min(maxHp, card.stats.hp + healedAmount);
                         logCombat(`<strong>${card.name}</strong>이(가) ${healedAmount}의 체력을 흡수했습니다!`);
+                        
                     } else if (skillToUse.type === 'debuff_def') {
+                        // ✨ [수정] 방어력 감소 (5턴 지속)
+                        // 몬스터에게 효과 적용
                         monsterData.stats.def = Math.max(0, Math.floor(monsterData.stats.def * 0.8));
-                        logCombat(`<strong>${monsterData.name}</strong>의 방어력이 감소했습니다!`);
+                        monsterData.activeEffects.push({ type: 'debuff_def', turns: 5, value: 0.8, name: '방어력↓' });
+                        logCombat(`<strong>${monsterData.name}</strong>의 방어력이 감소했습니다! (5턴)`);
+                        
                     } else if (skillToUse.type === 'debuff_atk') {
+                        // ✨ [수정] 공격력 감소 (5턴 지속)
                         monsterData.stats.atk = Math.max(0, Math.floor(monsterData.stats.atk * 0.9));
-                        logCombat(`<strong>${monsterData.name}</strong>의 공격력이 감소했습니다!`);
+                        monsterData.activeEffects.push({ type: 'debuff_atk', turns: 5, value: 0.9, name: '공격력↓' });
+                        logCombat(`<strong>${monsterData.name}</strong>의 공격력이 감소했습니다! (5턴)`);
+                        
                     } else if (skillToUse.type === 'buff_atk') {
-                        card.stats.atk = Math.floor(card.stats.atk * 1.1);
-                        logCombat(`<strong>${card.name}</strong>의 공격력이 상승했습니다!`);
+                        // ✨ [수정] 공격력 증가 (5턴 지속)
+                        const multiplier = 1.1; // 10% 증가
+                        card.stats.atk = Math.floor(card.stats.atk * multiplier);
+                        card.activeEffects.push({ type: 'buff_atk', turns: 5, value: multiplier, name: '공격력↑' });
+                        logCombat(`<strong>${card.name}</strong>의 공격력이 상승했습니다! (5턴)`);
+                        
                     } else {
+                        // 일반 데미지 스킬
                         damage = Math.max(1, Math.floor(card.stats.atk * skillToUse.power) - monsterData.stats.def);
                     }
 
@@ -4556,7 +4651,26 @@ async function runCombatLoop(combatDeck, originalBonusDeck, monsterData, indices
         // 2. 몬스터 턴
         // ===============================================
         await delay(1000);
-        if (!isCombatRunning) return; // ✨ 딜레이 직후 체크
+        if (!isCombatRunning) return;
+
+        // ✨ [신규] 몬스터 턴 시작 시 지속 효과 체크
+        if (monsterData.activeEffects) {
+             for (let j = monsterData.activeEffects.length - 1; j >= 0; j--) {
+                monsterData.activeEffects[j].turns--;
+                if (monsterData.activeEffects[j].turns <= 0) {
+                    const effect = monsterData.activeEffects[j];
+                    if (effect.type === 'debuff_def') {
+                        monsterData.stats.def = originalMonsterDef; // 원상복구 (단순화: 기본값으로 리셋)
+                        logCombat(`<span class="text-gray-400">${monsterData.name}의 방어력 감소 효과가 끝났습니다.</span>`);
+                    } else if (effect.type === 'debuff_atk') {
+                        monsterData.stats.atk = originalMonsterAtk;
+                         logCombat(`<span class="text-gray-400">${monsterData.name}의 공격력 감소 효과가 끝났습니다.</span>`);
+                    }
+                    monsterData.activeEffects.splice(j, 1);
+                }
+            }
+            updateCombatUI(combatDeck, originalBonusDeck, monsterData);
+        }
 
         const alivePlayers = combatDeck.filter(c => c.stats.hp > 0);
         
@@ -4571,10 +4685,12 @@ async function runCombatLoop(combatDeck, originalBonusDeck, monsterData, indices
                     
                     if (targetCard.stats.hp <= 0 && hpBeforeAttack > 0) {
                         await delay(200);
-                        if (!isCombatRunning) return; // ✨ 체크
-                        if (targetCard.deathDialogue) {
-                            logCombat(`<strong>${targetCard.name}</strong>: <em>"${targetCard.deathDialogue}"</em>`);
-                        }
+                        if (!isCombatRunning) return;
+                        if (targetCard.deathDialogue) logCombat(`<strong>${targetCard.name}</strong>: <em>"${targetCard.deathDialogue}"</em>`);
+                        
+                        // 카드 사망 처리 (흑백)
+                        const deadCardEl = document.getElementById(`combat-card-${combatDeck.indexOf(targetCard)}`);
+                        if(deadCardEl) deadCardEl.classList.add('grayscale', 'opacity-50');
                     }
                 }
             } else {
@@ -4587,10 +4703,11 @@ async function runCombatLoop(combatDeck, originalBonusDeck, monsterData, indices
                 
                 if (targetCard.stats.hp <= 0 && hpBeforeAttack > 0) {
                     await delay(400);
-                    if (!isCombatRunning) return; // ✨ 체크
-                    if (targetCard.deathDialogue) {
-                        logCombat(`<strong>${targetCard.name}</strong>: <em>"${targetCard.deathDialogue}"</em>`);
-                    }
+                    if (!isCombatRunning) return; 
+                    if (targetCard.deathDialogue) logCombat(`<strong>${targetCard.name}</strong>: <em>"${targetCard.deathDialogue}"</em>`);
+                    
+                    const deadCardEl = document.getElementById(`combat-card-${combatDeck.indexOf(targetCard)}`);
+                    if(deadCardEl) deadCardEl.classList.add('grayscale', 'opacity-50');
                 }
             }
             updateCombatUI(combatDeck, originalBonusDeck, monsterData);
@@ -4598,11 +4715,11 @@ async function runCombatLoop(combatDeck, originalBonusDeck, monsterData, indices
     } // while 루프 종료
     
     await delay(1000);
-    if (!isCombatRunning) return; // ✨ 마지막 딜레이 후에도 체크
+    if (!isCombatRunning) return;
 
+    // 전투 종료 시 임시 스탯 복구 (안전장치)
     monsterData.stats.def = originalMonsterDef; 
     
-    // ✨ [핵심 3] 전투가 '항복'으로 인해 이미 끝났는지(false) 확인 후 정상 종료 호출
     if (isCombatRunning) {
         endCombat(monsterData.stats.hp <= 0, {indices: indices, type: type}, totalDamageDealt);
     }
@@ -4706,59 +4823,80 @@ async function runCombatLoop(combatDeck, originalBonusDeck, monsterData, indices
     });
 }
 
-             // yumecan.html 파일의 function updateCombatUI 함수 전체를 이 코드로 교체하세요.
+             // ✅ [수정됨] updateCombatUI: HP바 및 상태 아이콘(버프/디버프) 표시
 function updateCombatUI(deck, originalBonusDeck, monster) {
-    // 1. 플레이어 덱 HP 업데이트
+    // 1. 플레이어 덱 업데이트
     deck.forEach((card, index) => {
         const originalCardWithBonus = originalBonusDeck[index];
-        
-        // ✨ [핵심 수정] 원본 덱 데이터가 존재하고 stats 속성도 있는지 확인합니다.
         if(!originalCardWithBonus || !originalCardWithBonus.stats) return; 
 
-        const maxHp = originalCardWithBonus.stats.hp; // 전투 시작 시점의 최대 HP
+        const maxHp = originalCardWithBonus.stats.hp;
         const currentHp = card.stats.hp;
-
         const hpPercent = maxHp > 0 ? (currentHp / maxHp) * 100 : 0;
         
-        // HP 바 업데이트 (null 체크 추가)
+        // HP 바 업데이트
         const hpBarEl = document.getElementById(`player-hp-bar-${index}`);
         const hpTextEl = document.getElementById(`player-hp-text-${index}`);
+        if (hpBarEl) hpBarEl.style.width = `${hpPercent}%`;
+        if (hpTextEl) hpTextEl.textContent = `${currentHp} / ${maxHp}`;
 
-        if (hpBarEl) {
-            hpBarEl.style.width = `${hpPercent}%`;
-        }
-        if (hpTextEl) {
-            hpTextEl.textContent = `${currentHp} / ${maxHp}`;
+        // ✨ [신규] 플레이어 상태 아이콘 렌더링
+        const iconContainer = document.getElementById(`effect-icons-${index}`);
+        if (iconContainer) {
+            iconContainer.innerHTML = '';
+            if (card.activeEffects) {
+                card.activeEffects.forEach(effect => {
+                    const icon = document.createElement('div');
+                    // 효과별 아이콘 및 색상 설정
+                    let iconChar = '⚡';
+                    let bgClass = 'bg-gray-600';
+                    
+                    if (effect.type === 'buff_atk') { iconChar = '⚔️↑'; bgClass = 'bg-red-600'; }
+                    else if (effect.type === 'buff_def') { iconChar = '🛡️↑'; bgClass = 'bg-blue-600'; }
+                    
+                    icon.className = `${bgClass} text-white text-[10px] px-1 rounded shadow animate-pulse font-bold`;
+                    icon.innerHTML = `${iconChar} <span class="text-[9px]">${effect.turns}턴</span>`;
+                    iconContainer.appendChild(icon);
+                });
+            }
         }
     });
 
-    // 2. 몬스터 HP 업데이트 (이 부분을 아래 코드로 교체하세요)
+    // 2. 몬스터 HP 업데이트
     let monsterMaxHp;
-
-    // A. 레이드 보스 데이터 사용 (전역 변수 raidBossDataSheet와 이름 일치 확인)
     if (typeof raidBossDataSheet !== 'undefined' && monster.name === raidBossDataSheet.name) {
         monsterMaxHp = raidBossDataSheet.maxHp;
-    } 
-    // B. 일반 몬스터 데이터 사용
-    else {
-        // 일반 몬스터 목록에서 Max HP를 가져옵니다.
+    } else {
         monsterMaxHp = monsters[monster.name]?.stats.hp;
     }
 
-    if (monsterMaxHp) { // Max HP를 찾았다면
+    if (monsterMaxHp) {
         const monsterHpPercent = (monster.stats.hp / monsterMaxHp) * 100;
-        
         const monsterHpBar = document.getElementById('monster-hp-bar');
         const monsterHpText = document.getElementById('monster-hp-text');
 
-        if (monsterHpBar) {
-            monsterHpBar.style.width = `${monsterHpPercent}%`;
+        if (monsterHpBar) monsterHpBar.style.width = `${monsterHpPercent}%`;
+        if (monsterHpText) monsterHpText.textContent = `${monster.stats.hp} / ${monsterMaxHp}`;
+    }
+
+    // ✨ [신규] 몬스터 상태 아이콘 렌더링
+    const monsterIconContainer = document.getElementById('monster-effect-icons');
+    if (monsterIconContainer) {
+        monsterIconContainer.innerHTML = '';
+        if (monster.activeEffects) {
+            monster.activeEffects.forEach(effect => {
+                const icon = document.createElement('div');
+                let iconChar = '💀';
+                let bgClass = 'bg-gray-600';
+                
+                if (effect.type === 'debuff_atk') { iconChar = '⚔️↓'; bgClass = 'bg-blue-500'; }
+                else if (effect.type === 'debuff_def') { iconChar = '🛡️↓'; bgClass = 'bg-purple-500'; }
+
+                icon.className = `${bgClass} text-white text-xs px-2 py-1 rounded-full shadow border border-white font-bold`;
+                icon.innerHTML = `${iconChar} ${effect.turns}턴`;
+                monsterIconContainer.appendChild(icon);
+            });
         }
-        if (monsterHpText) {
-            monsterHpText.textContent = `${monster.stats.hp} / ${monsterMaxHp}`;
-        }
-    } else {
-        console.error("몬스터 원본 데이터를 찾을 수 없어 HP 업데이트를 건너뜁니다");
     }
 }
 
@@ -5053,8 +5191,9 @@ function createCard(character, options = {}) {
     return card;
 }
 
-            function getSkillDescription(skill) {
-    // 1. 구글 시트에 적어둔 '커스텀 설명'이 있다면 그걸 최우선으로 보여줌
+            // ✅ [수정됨] getSkillDescription: 5턴 지속 문구 반영
+function getSkillDescription(skill) {
+    // 1. 구글 시트나 데이터 파일에 적어둔 '커스텀 설명'이 있다면 그걸 최우선으로 보여줌
     if (skill.desc && skill.desc !== "") {
         return skill.desc;
     }
@@ -5071,12 +5210,16 @@ function createCard(character, options = {}) {
             return `적을 공격하고 피해량의 50%를 체력으로 흡수합니다.`;
         case 'true_damage': 
             return `적의 방어력을 무시하고 공격력의 ${powerPercent}% 피해를 줍니다.`;
+            
+        // ▼▼▼ 여기 설명들이 변경되었습니다 (1턴 -> 5턴) ▼▼▼
         case 'buff_atk': 
-            return `자신의 공격력이 10% 증가합니다.`;
+            return `자신의 공격력이 5턴 동안 10% 증가합니다.`;
         case 'debuff_atk': 
-            return `적의 공격력을 10% 감소시킵니다.`;
+            return `적의 공격력을 5턴 동안 10% 감소시킵니다.`;
         case 'debuff_def': 
-            return `적의 방어력을 20% 감소시킵니다.`;
+            return `적의 방어력을 5턴 동안 20% 감소시킵니다.`;
+        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+            
         default: 
             return '특별한 효과를 가진 스킬입니다.'; // 타입을 모를 때 나오는 기본 문구
     }
@@ -9069,13 +9212,9 @@ async function submitRaidDamage(damage) {
         playerRaidDailyCount = finalCount;
         updateRaidDailyCountUI();
         
-        // ✨✨ [중요 추가] 로컬 변수를 최신 상태로 동기화해야 저장이 꼬이지 않습니다 ✨✨
-// 1. 현재 치고 있는 보스의 ID를 내 변수에 저장
-if (raidBossData && raidBossData.spawnId) {
-    playerLastRaidSpawnId = raidBossData.spawnId;
-}
-// 2. 공격 시간을 현재 시간으로 갱신 (날짜 카운트 초기화 방지)
-playerRaidLastResetDate = new Date();
+        if (calculatedReward > 0) playerCurrency += calculatedReward;
+        playerRaidDamage += damage; // UI용 임시 갱신
+        
         updateUI(); 
 
     } catch (error) {
@@ -9301,7 +9440,7 @@ function openGachaPoolModal(gachaType) {
             // 픽업 표시
             let pickupBadge = '';
             if (gachaType === 'event') {
-                 const pickupCount = charList.filter(c => EVENT_CHARACTER_NAME.includes(c.name)).length;
+                 const pickupCount = charList.filter(c => EVENT_CHARACTER_NAMES.includes(c.name)).length;
                  if (pickupCount > 0) {
                      pickupBadge = `<span class="ml-2 text-red-400 bg-red-900/30 px-2 py-0.5 rounded-full text-sm font-medium">✨ 픽업 대상 (${pickupCount}종)</span>`;
                  }
@@ -9418,7 +9557,6 @@ function updateRaidDailyCountUI() {
     </script>
 </body>
 </html>
-
 
 
 
