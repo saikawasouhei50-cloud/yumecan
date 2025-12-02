@@ -237,63 +237,59 @@ async function loadGameData() {
 
         // 8. 이벤트 정보 설정 (디버깅 로그 추가 버전)
         if (data.eventInfo && data.eventInfo.length > 0) {
-			allEventInfos = data.eventInfo.map(info => ({
-                id: info.id || `event_${info.title}`,
-                title: info.title,
-                startDate: parseDate(info.startDate),
-                endDate: parseDate(info.endDate)
-            }));
-            const now = new Date(); // 현재 시간
-            console.log("🕒 [시스템 시간]:", now.toLocaleString());
-            
-            // 시트에 있는 이벤트 목록 중 '오늘 날짜'가 진행 기간에 포함되는 이벤트 찾기
-            const activeEvent = data.eventInfo.find(info => {
-                // 시트의 날짜 문자열을 Date 객체로 변환
-                // (문자열 뒤에 'T'가 없으면 호환성을 위해 추가하는 안전장치도 고려 가능하지만, 
-                // 보통 구글 시트 날짜는 "YYYY-MM-DD HH:mm:ss" 형식이면 잘 됩니다.)
-                // 기존 코드: const start = new Date(info.startDate);
-// ✨ [수정] 아래처럼 parseDate 함수를 사용하세요.
-const start = parseDate(info.startDate);
-const end = parseDate(info.endDate);
-                
-                const isOpen = now >= start && now <= end;
+    allEventInfos = data.eventInfo.map(info => ({
+        id: info.id || `event_${info.title}`,
+        title: info.title,
+        startDate: parseDate(info.startDate),
+        endDate: parseDate(info.endDate)
+    }));
 
-                // 디버깅용 로그 (F12 콘솔에서 확인 가능)
-                console.log(`🔍 [이벤트 체크] ${info.title}`);
-                console.log(`   - 시작: ${start.toLocaleString()}`);
-                console.log(`   - 종료: ${end.toLocaleString()}`);
-                console.log(`   - 현재: ${now.toLocaleString()}`);
-                console.log(`   👉 결과: ${isOpen ? "✅ 진행중" : "❌ 기간 아님"}`);
+    // ✨ [수정] 내 PC 시간이 아니라, 무조건 '한국 시간(KST)' 객체를 생성합니다.
+    const nowKST = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Seoul"}));
+    
+    console.log("🕒 [시스템 시간(KST)]:", nowKST.toLocaleString());
+    
+    // 시트에 있는 이벤트 목록 중 '한국 시간 기준'으로 진행 중인 이벤트 찾기
+    const activeEvent = data.eventInfo.find(info => {
+        const start = parseDate(info.startDate);
+        const end = parseDate(info.endDate);
+        
+        // KST 기준으로 비교
+        const isOpen = nowKST >= start && nowKST <= end;
 
-                return isOpen;
-            });
+        // 디버깅용 로그
+        console.log(`🔍 [이벤트 체크] ${info.title}`);
+        console.log(`   - 기간: ${start.toLocaleString()} ~ ${end.toLocaleString()}`);
+        console.log(`   👉 결과: ${isOpen ? "✅ 진행중" : "❌ 기간 아님"}`);
 
-            if (activeEvent) {
-                // ✨ [핵심 수정] 시트에 ID가 없으면 'title'을 대신 ID로 사용합니다.
-                const safeId = activeEvent.id || `event_${activeEvent.title}`; 
+        return isOpen;
+    });
 
-                console.log(`🎉 현재 활성화된 이벤트: ${activeEvent.title} (ID: ${safeId})`);
-                
-                // 전역 변수 업데이트
-                CURRENT_EVENT_ID = safeId; 
-                EVENT_CHARACTER_NAME = activeEvent.gachaCharacterName;
+    if (activeEvent) {
+        // ID 생성 로직 (기존 유지)
+        const safeId = activeEvent.id || `event_${activeEvent.title}`; 
 
-                currentEventInfo = {
-                    id: safeId, // 수정된 ID 사용
-                    title: activeEvent.title,
-                    startDate: new Date(activeEvent.startDate),
-                    endDate: new Date(activeEvent.endDate),
-                    bannerImageUrl: activeEvent.bannerImageUrl,
-                    description: activeEvent.description,
-                    gachaCharacterName: activeEvent.gachaCharacterName
-                };
-            } else {
-                // ... (기존 코드 유지)
-                console.log("⚠️ 현재 날짜에 진행 중인 이벤트가 없습니다. (CURRENT_EVENT_ID = null)");
-                CURRENT_EVENT_ID = null;
-                currentEventInfo = null;
-            }
-        }
+        console.log(`🎉 현재 활성화된 이벤트: ${activeEvent.title} (ID: ${safeId})`);
+        
+        // 전역 변수 업데이트
+        CURRENT_EVENT_ID = safeId; 
+        EVENT_CHARACTER_NAME = activeEvent.gachaCharacterName;
+
+        currentEventInfo = {
+            id: safeId,
+            title: activeEvent.title,
+            startDate: new Date(activeEvent.startDate),
+            endDate: new Date(activeEvent.endDate),
+            bannerImageUrl: activeEvent.bannerImageUrl,
+            description: activeEvent.description,
+            gachaCharacterName: activeEvent.gachaCharacterName
+        };
+    } else {
+        console.log("⚠️ 현재(KST 기준) 진행 중인 이벤트가 없습니다.");
+        CURRENT_EVENT_ID = null;
+        currentEventInfo = null;
+    }
+}
 
         // 10. 가챠 등장 목록(Pool) 설정
         if (data.gachaPool) {
@@ -612,7 +608,6 @@ const genericInteractions = [
     ['안녕하세요!', '반갑습니다.'],
     ['잠시 쉬었다 갈까요?', '좋은 생각입니다.']
 ];
-
 
 
 
