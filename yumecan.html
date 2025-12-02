@@ -1840,9 +1840,12 @@ async function saveGameToFirebase() {
         clearedStages: clearedStages || [],
         currentEventId: (typeof CURRENT_EVENT_ID !== 'undefined') ? CURRENT_EVENT_ID : null,
         eventPoints: playerEventPoints || 0,
-		cumulativeEventPoints: playerCumulativeEventPoints || 0,
-		raidCumulativeDamage: playerRaidDamage || 0,
-		raidDailyCount: playerRaidDailyCount || 0,
+        cumulativeEventPoints: playerCumulativeEventPoints || 0,
+        raidCumulativeDamage: playerRaidDamage || 0,
+        raidDailyCount: playerRaidDailyCount || 0,
+        // ✨ [핵심 수정 1] 누적 데미지 초기화 방지: 보스 ID 필드 추가
+        lastRaidSpawnId: (typeof playerLastRaidSpawnId !== 'undefined') ? playerLastRaidSpawnId : 0,
+        
         clearedEventDungeons: clearedEventDungeons || [],
         purchasedEventItems: purchasedEventItems || {},
         bookmarks: playerBookmarks || 0,
@@ -1854,20 +1857,23 @@ async function saveGameToFirebase() {
         collectedCardNames: Array.from(collectedCardNames || []),
         myRoom: playerRoom || { furniture: [], characters: [] },
         ownedFurniture: ownedFurniture || [],
-		systemMailHistory: playerSystemMailHistory || [],
+        systemMailHistory: playerSystemMailHistory || [],
         
         // 프로필 데이터
         profile: safeProfile
     };
-	if (playerRaidLastResetDate instanceof Date && !isNaN(playerRaidLastResetDate)) {
-    rawSaveData.raidLastResetDate = playerRaidLastResetDate;
-}
 
-    // ✨ [핵심 수정] 여기서 undefined를 null로 싹 변환합니다.
+    // ✨ [핵심 수정 2] 날짜 저장 로직 개선 (Date 객체 여부와 상관없이 값이 있으면 저장 시도)
+    if (playerRaidLastResetDate) {
+        rawSaveData.raidLastResetDate = playerRaidLastResetDate;
+    }
+
+    // undefined를 null로 변환
     const finalSaveData = removeUndefined(rawSaveData);
 
     try {
-        await db.collection('users').doc(currentUser.uid).set(finalSaveData);
+        // merge: true 옵션을 추가하여 혹시 모를 필드 삭제 방지 (권장)
+        await db.collection('users').doc(currentUser.uid).set(finalSaveData, { merge: true });
         console.log("게임 데이터가 Firebase에 저장되었습니다.");
     } catch (error) {
         console.error("Firebase 저장 중 오류 발생:", error);
@@ -1875,7 +1881,8 @@ async function saveGameToFirebase() {
 }
 
             // ✅ 이 코드로 기존 loadGame 함수를 통째로 교체해주세요.
-           async function loadGameFromFirebase(uid) {
+           // ✅ 이 코드로 기존 loadGameFromFirebase 함수를 통째로 교체해주세요.
+async function loadGameFromFirebase(uid) {
     const docRef = db.collection('users').doc(uid);
     const doc = await docRef.get();
 
@@ -1924,15 +1931,14 @@ async function saveGameToFirebase() {
         clearedStageStories = savedData.clearedStageStories || [];
         
         // ============================================================
-        // ✨ [핵심 수정] 이벤트 및 레이드 데이터 로드 (안전장치 강화)
+        // ✨ [핵심 수정] 이벤트 및 레이드 데이터 로드
         // ============================================================
         
-        // 일단 저장된 데이터를 무조건 불러옵니다. (섣불리 0으로 만들지 않음)
         playerEventPoints = savedData.eventPoints !== undefined ? savedData.eventPoints : 0;
         playerCumulativeEventPoints = savedData.cumulativeEventPoints !== undefined ? savedData.cumulativeEventPoints : playerEventPoints;
         
-        // ✨ [수정] 아래 두 줄을 이렇게 깔끔하게 정리하세요.
         playerRaidDamage = savedData.raidCumulativeDamage !== undefined ? savedData.raidCumulativeDamage : 0;
+        // ✨ 여기서 저장된 보스 ID를 확실하게 불러옵니다.
         playerLastRaidSpawnId = savedData.lastRaidSpawnId || 0; 
         
         clearedEventDungeons = savedData.clearedEventDungeons || [];
@@ -1940,38 +1946,39 @@ async function saveGameToFirebase() {
         playerChoices = savedData.playerChoices || {};
         playerSystemMailHistory = savedData.systemMailHistory || [];
 
-        // 4-1. 이벤트 ID 불일치 체크 (데이터 초기화가 아닌, 갱신이 필요한 경우)
-        // CURRENT_EVENT_ID가 존재하고, 저장된 ID와 다를 때만 '이벤트 포인트' 등을 리셋 고려
-        // (단, 레이드 데미지는 보스 ID를 따르므로 여기서 섣불리 지우지 않음)
+        // 4-1. 이벤트 ID 불일치 체크
         if (CURRENT_EVENT_ID && savedData.currentEventId !== CURRENT_EVENT_ID) {
             console.log(`새로운 이벤트[${CURRENT_EVENT_ID}] 감지. 점수판을 갱신합니다.`);
-            // 기존 점수는 초기화하되, DB 자체를 날리진 않고 로컬 변수만 초기화
-            // (다음 저장 시점에 덮어씌워짐)
             playerEventPoints = 0;
             playerCumulativeEventPoints = 0;
             clearedEventDungeons = [];
             purchasedEventItems = {};
             playerChoices = {};
-            // 주의: playerRaidDamage는 여기서 초기화하지 않습니다. (보스 ID 기준이므로)
         }
 
         // 4-2. 레이드 횟수(Daily Count) 체크 (한국 시간 기준)
-        // KST 기준 날짜가 다르면 0, 같으면 저장된 값 사용
         const todayStr = getTodayDateString(new Date()); 
         const lastResetTimestamp = savedData.raidLastResetDate;
         let savedLastRaidDateStr = null;
         
+        // ✨ [핵심 수정] Timestamp를 Date 객체로 변환하여 전역 변수에 저장합니다.
         if (lastResetTimestamp && typeof lastResetTimestamp.toDate === 'function') {
-            savedLastRaidDateStr = getTodayDateString(lastResetTimestamp.toDate());
+            const dateObj = lastResetTimestamp.toDate();
+            savedLastRaidDateStr = getTodayDateString(dateObj);
+            playerRaidLastResetDate = dateObj; // Date 객체로 변환해서 메모리에 저장
+        } else {
+            // 이미 Date 객체거나 null인 경우
+            savedLastRaidDateStr = lastResetTimestamp ? getTodayDateString(new Date(lastResetTimestamp)) : null;
+            playerRaidLastResetDate = lastResetTimestamp ? new Date(lastResetTimestamp) : null;
         }
 
         if (savedLastRaidDateStr !== todayStr) { 
             console.log(`날짜 변경 감지(KST): 횟수 초기화 (${savedLastRaidDateStr} -> ${todayStr})`);
             playerRaidDailyCount = 0; 
+            // 날짜가 바뀌었으면 null로 두었다가, 공격 시점에 갱신하도록 함
             playerRaidLastResetDate = null; 
         } else {
             playerRaidDailyCount = savedData.raidDailyCount ?? 0;
-            playerRaidLastResetDate = savedData.raidLastResetDate;
         }
 
         // 프로필 데이터 로드
@@ -1997,7 +2004,7 @@ async function saveGameToFirebase() {
     checkEventStatus();
     switchTab('home');
     checkAchievements();
-    checkAndSpawnRaidBoss(); // 보스 데이터 확인
+    checkAndSpawnRaidBoss(); 
     updateAchievementBadge(); 
 
     document.getElementById('loading-overlay').classList.add('hidden');
@@ -2795,32 +2802,44 @@ function displayEventHomeView() {
 
             // [수정됨] 이벤트 상점 표시 함수 (포인트 배너 갱신 기능 추가)
 function displayEventShopView() {
-    // 1. 상단 포인트 배너 숫자 갱신 (핵심 기능)
+    // 1. 상단 포인트 배너 갱신
     const shopPointDisplay = document.getElementById('shop-event-point-display');
     if (shopPointDisplay) {
-        // 콤마(,)를 찍어서 보기 좋게 표시
         shopPointDisplay.textContent = (playerEventPoints || 0).toLocaleString();
     }
 
-    // 2. (구버전 호환) 기존 포인트 표시 갱신
     if (typeof eventPointsSpan !== 'undefined' && eventPointsSpan) {
         eventPointsSpan.textContent = playerEventPoints;
     }
     
-    // 3. 상점 목록 생성
     const container = document.getElementById('event-shop-container');
     container.innerHTML = '';
     
-    eventShopItems.forEach(item => {
+    // ✨ [핵심 추가] 현재 진행 중인 이벤트 물품만 필터링!
+    const currentItems = eventShopItems.filter(item => {
+        // 1. 'ALL' 이거나 빈칸이면 무조건 표시 (상시 판매)
+        if (!item.eventId || item.eventId === 'ALL') return true;
+        
+        // 2. 현재 이벤트 ID와 일치하면 표시
+        // (CURRENT_EVENT_ID는 yumecan_data.js에서 날짜 기준으로 자동 설정됨)
+        return item.eventId === CURRENT_EVENT_ID;
+    });
+
+    // 만약 팔 물건이 하나도 없다면?
+    if (currentItems.length === 0) {
+        container.innerHTML = '<p class="col-span-full text-center text-gray-500 py-10">현재 판매 중인 이벤트 상품이 없습니다.</p>';
+        return;
+    }
+    
+    // 필터링된 목록(currentItems)으로 루프를 돌립니다.
+    currentItems.forEach(item => {
         const purchasedCount = purchasedEventItems[item.id] || 0;
         const isSoldOut = purchasedCount >= item.limit;
         const canAfford = playerEventPoints >= item.cost;
 
         const itemEl = document.createElement('div');
-        // 품절 시 투명도 조절
         itemEl.className = `bg-black/20 p-4 rounded-lg flex justify-between items-center border border-white/5 transition-colors hover:bg-black/30 ${isSoldOut ? 'opacity-50' : ''}`;
         
-        // 아이템 타입별 아이콘
         let typeIcon = '';
         if (item.type === 'card') typeIcon = '🃏';
         else if (item.type === 'currency') typeIcon = '💎';
@@ -2828,7 +2847,6 @@ function displayEventShopView() {
         else if (item.type === 'inkwell') typeIcon = '💧';
         else if (item.type === 'bookmark') typeIcon = '🔖';
 
-        // 버튼 스타일 (구매 가능/불가/품절)
         let btnClass = '';
         let btnText = '구매';
         
@@ -9557,7 +9575,6 @@ function updateRaidDailyCountUI() {
     </script>
 </body>
 </html>
-
 
 
 
