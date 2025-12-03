@@ -9458,7 +9458,7 @@ function openGachaPoolModal(gachaType) {
             // 픽업 표시
             let pickupBadge = '';
             if (gachaType === 'event') {
-                 const pickupCount = charList.filter(c => EVENT_CHARACTER_NAMES.includes(c.name)).length;
+                 const pickupCount = charList.filter(c => EVENT_CHARACTER_NAME.includes(c.name)).length;
                  if (pickupCount > 0) {
                      pickupBadge = `<span class="ml-2 text-red-400 bg-red-900/30 px-2 py-0.5 rounded-full text-sm font-medium">✨ 픽업 대상 (${pickupCount}종)</span>`;
                  }
@@ -9575,6 +9575,7 @@ function updateRaidDailyCountUI() {
     </script>
 </body>
 </html>
+
 
 
 
