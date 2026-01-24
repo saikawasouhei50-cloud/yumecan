@@ -2289,84 +2289,92 @@ function saveGame() {
 
             // [수정] 게임 데이터 초기화 (리세마라 + 거래소 삭제 + 친구 관계 완전 삭제)
 async function resetGame() {
-    // 1. 확인 버튼 로직 (한 번 누르면 '확인?'으로 바뀜)
-    if (resetButton.dataset.confirming === 'true') {
-        try {
-            if (currentUser) {
-                console.log("🔥 계정 초기화 시작...");
-
-                // =========================================================
-                // 1단계: 거래소에 올려둔 내 매물 삭제
-                // =========================================================
-                const myTradesSnapshot = await db.collection('trades')
-                    .where('senderUid', '==', currentUser.uid)
-                    .get();
-
-                const tradeBatch = db.batch();
-                myTradesSnapshot.forEach(doc => {
-                    tradeBatch.delete(doc.ref);
-                });
-                await tradeBatch.commit();
-                console.log(`✅ 거래소 매물 ${myTradesSnapshot.size}건 삭제 완료.`);
-
-                // =========================================================
-                // 2단계: 친구 관계 끊기 (나 <-> 친구 양쪽 모두 삭제)
-                // =========================================================
-                const myFriendsSnapshot = await db.collection('users')
-                    .doc(currentUser.uid)
-                    .collection('friends')
-                    .get();
-
-                if (!myFriendsSnapshot.empty) {
-                    const friendBatch = db.batch();
-                    
-                    myFriendsSnapshot.forEach(doc => {
-                        const friendUid = doc.id;
-                        
-                        // 1. 상대방의 친구 목록에서 '나'를 삭제
-                        const theirRef = db.collection('users').doc(friendUid)
-                                           .collection('friends').doc(currentUser.uid);
-                        friendBatch.delete(theirRef);
-
-                        // 2. 내 친구 목록에서 '상대방'을 삭제 (사실 본체 삭제하면 같이 사라지지만 확실하게 처리)
-                        friendBatch.delete(doc.ref);
-                    });
-
-                    await friendBatch.commit();
-                    console.log(`✅ 친구 ${myFriendsSnapshot.size}명과의 관계 삭제 완료.`);
-                }
-
-                // =========================================================
-                // 3단계: 내 유저 데이터(본체) 삭제
-                // =========================================================
-                await db.collection('users').doc(currentUser.uid).delete();
-                console.log("✅ 유저 데이터 삭제 완료.");
-            }
-
-            // 4. 로컬 데이터 삭제 및 새로고침
-            localStorage.removeItem(SAVE_DATA_KEY);
-			playerSystemMailHistory = [];
-
-            alert("계정이 완벽하게 초기화되었습니다.\n(친구 목록, 거래소 매물, 게임 데이터 삭제 완료)");
-            location.reload(); 
-
-        } catch (e) {
-            console.error("초기화 실패:", e);
-            alert("초기화 중 오류가 발생했습니다: " + e.message);
-        }
-    } else {
-        // 버튼 UI 변경 로직
-        resetButton.textContent = '확인?';
+    // 1. [UI] 버튼 상태 변경 로직 (기존과 동일)
+    if (resetButton.dataset.confirming !== 'true') {
+        resetButton.textContent = '정말 삭제?';
         resetButton.dataset.confirming = 'true';
-        resetButton.classList.remove('bg-red-600', 'hover:bg-red-700');
-        resetButton.classList.add('bg-yellow-500', 'hover:bg-yellow-600');
+        resetButton.classList.replace('bg-red-600', 'bg-yellow-500');
         
         setTimeout(() => {
             resetButton.textContent = '초기화';
             resetButton.dataset.confirming = 'false';
-            resetButton.classList.remove('bg-yellow-500', 'hover:bg-yellow-600');
-            resetButton.classList.add('bg-red-600', 'hover:bg-red-700');
+            resetButton.classList.replace('bg-yellow-500', 'bg-red-600');
         }, 3000);
+        return;
+    }
+
+    // 2. [로직] 실제 삭제 시작
+    try {
+        if (!currentUser) return;
+        
+        console.log("🔥 계정 초기화 프로세스 시작...");
+        
+        // ⛔ [중요 1] 삭제 중에 자동 저장이 돌면 데이터가 부활하므로, 자동 저장 타이머가 있다면 끕니다.
+        // (만약 autoSaveInterval 변수가 있다면 clearInterval 하세요)
+        // if (typeof autoSaveInterval !== 'undefined') clearInterval(autoSaveInterval);
+
+        // ⛔ [중요 2] 로딩 오버레이를 띄워 유저가 아무것도 못하게 막습니다.
+        document.getElementById('loading-overlay').classList.remove('hidden');
+        document.body.classList.add('loading');
+
+        // =========================================================
+        // 1단계: 거래소 & 친구 삭제 (기존 코드 유지)
+        // =========================================================
+        const batch = db.batch();
+
+        // (내 매물 삭제)
+        const myTrades = await db.collection('trades').where('senderUid', '==', currentUser.uid).get();
+        myTrades.forEach(doc => batch.delete(doc.ref));
+
+        // (친구 관계 삭제)
+        const myFriends = await db.collection('users').doc(currentUser.uid).collection('friends').get();
+        myFriends.forEach(doc => {
+            // 상대방 친구 목록에서 나 삭제
+            const theirRef = db.collection('users').doc(doc.id).collection('friends').doc(currentUser.uid);
+            batch.delete(theirRef);
+            // 내 친구 목록 삭제
+            batch.delete(doc.ref);
+        });
+
+        await batch.commit();
+        console.log("✅ 거래소 및 친구 관계 정리 완료");
+
+        // =========================================================
+        // 2단계: 유저 데이터(본체) 삭제
+        // =========================================================
+        // delete()는 권한 문제로 가끔 실패할 수 있으므로, 
+        // 확실하게 하기 위해 빈 껍데기로 덮어쓰기(set)를 먼저 하고 삭제합니다.
+        
+        // 1. 빈 데이터로 덮어쓰기 (내용물 비우기)
+        await db.collection('users').doc(currentUser.uid).set({
+            nickname: "Unknown",
+            systemMailHistory: [], // ✨ 우편 기록 확실히 날리기
+            resetTime: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        // 2. 문서 자체 삭제
+        await db.collection('users').doc(currentUser.uid).delete();
+        console.log("✅ 유저 DB 데이터 완전 삭제 성공");
+
+        // =========================================================
+        // 3단계: 로컬 데이터 삭제
+        // =========================================================
+        localStorage.removeItem(SAVE_DATA_KEY);
+        playerSystemMailHistory = []; // 메모리에서도 날림
+
+        // ⛔ [중요 3] alert창은 사용자가 '확인'을 누를 때까지 브라우저를 멈춥니다.
+        // 이 덕분에 삭제가 완료될 시간을 확실하게 벌어줍니다.
+        alert("계정이 초기화되었습니다.\n확인을 누르면 게임을 다시 시작합니다.");
+        
+        location.reload();
+
+    } catch (e) {
+        console.error("초기화 실패:", e);
+        alert("초기화 중 오류 발생: " + e.message + "\n(Firestore 규칙 권한 문제일 수 있습니다)");
+        
+        // 에러가 나도 오버레이는 꺼줍니다.
+        document.getElementById('loading-overlay').classList.add('hidden');
+        document.body.classList.remove('loading');
     }
 }
 
