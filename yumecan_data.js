@@ -24,7 +24,7 @@ let CURRENT_EVENT_ID = null;
 // ==========================================
 // 1. 웹 앱 URL (여기에만 최신 주소를 적으세요!)
 // ==========================================
-const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbwS79OI8cjhLd5gZbM1B3a2YTMAsmGZgvIgFrfiIK_RBoUdOqs5V0fckuPZyTJivkkUeQ/exec";
+const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycby0Tq97edWMchBrVf10sr233P33UMlKFdMsxWvA94eeM7VQ8A10ejyDTGgOf34CoY5TVg/exec";
 
 // 2. 데이터를 가져와서 변수에 채워넣는 함수
 async function loadGameData() {
@@ -60,7 +60,11 @@ async function loadGameData() {
 
         // 1. 캐릭터 데이터 조립
         chibiImages = {}; 
+const rawCharacterData = data.characters || data.Characters || []; 
 
+if (!rawCharacterData || rawCharacterData.length === 0) {
+    console.error("❌ 캐릭터 데이터를 찾을 수 없습니다. (시트 이름 확인 필요)");
+}
         characters = data.characters.map(row => {
             // [수정] baseName 처리: 시트에 값이 없으면 이름에서 [ ]를 떼고 생성
             let rawBase = row.baseName || row.basename || row['baseName ']; 
@@ -153,12 +157,13 @@ async function loadGameData() {
 
         // 4. 이벤트 던전 조립
         if (data.eventDungeons) {
-            eventDungeons = data.eventDungeons.map(row => ({
-                name: row.name,
-                monsterName: row.monsterName,
-                eventPointReward: Number(row.eventPointReward)
-            }));
-        }
+    eventDungeons = data.eventDungeons.map(row => ({
+        eventId: row.eventId || 'ALL', // ✨ eventId 추가 (없으면 ALL)
+        name: row.name,
+        monsterName: row.monsterName,
+        eventPointReward: Number(row.eventPointReward)
+    }));
+}
 
         // 5. 이벤트 상점 조립
         if (data.eventShop) {
@@ -177,7 +182,8 @@ async function loadGameData() {
                     type: row.type,
                     cost: Number(row.cost),
                     limit: Number(row.limit),
-                    itemData: itemData
+                    itemData: itemData,
+					eventId: row.eventId || 'ALL'
                 };
             });
         }
@@ -194,10 +200,11 @@ async function loadGameData() {
                 if (chapterId !== currentMainChapterId) {
                     currentMainChapterId = chapterId;
                     currentMainChapter = {
-                        title: row.title,
-                        dungeonToUnlock: (row.dungeonToUnlock && row.dungeonToUnlock !== "") ? row.dungeonToUnlock : null,
-                        content: []
-                    };
+    id: chapterId, // ✨ 이 줄을 추가해서 0장인지 1장인지 구분할 수 있게 합니다.
+    title: row.title,
+    dungeonToUnlock: (row.dungeonToUnlock && row.dungeonToUnlock !== "") ? row.dungeonToUnlock : null,
+    content: []
+};
                     mainStories.push(currentMainChapter);
                 }
                 currentMainChapter.content.push({
@@ -211,29 +218,41 @@ async function loadGameData() {
 
         // 7. 이벤트 스토리 조립
         if (data.eventStories) {
-            const rawEventStories = data.eventStories;
-            eventStories = [];
-            let currentEventChapter = null;
-            let currentEventChapterId = -1;
+    const rawEventStories = data.eventStories;
+    eventStories = [];
+    let currentEventChapter = null;
+    
+    // 이전 행의 키를 기억하기 위한 변수
+    let lastKey = ""; 
 
-            rawEventStories.forEach(row => {
-                const chapterId = Number(row.chapter_id);
-                if (chapterId !== currentEventChapterId) {
-                    currentEventChapterId = chapterId;
-                    currentEventChapter = {
-                        title: row.title,
-                        content: []
-                    };
-                    eventStories.push(currentEventChapter);
-                }
-                currentEventChapter.content.push({
-                    character: (row.character && row.character !== "") ? row.character : null,
-                    expression: row.expression,
-                    position: row.position,
-                    dialogue: row.dialogue
-                });
-            });
+    rawEventStories.forEach(row => {
+        const eventId = row.eventId || "unknown"; // ✨ 시트의 eventId 컬럼 읽기
+        const chapterId = Number(row.chapter_id);
+        
+        // ✨ [핵심] 이벤트ID와 챕터ID가 모두 같아야 같은 스토리로 인식
+        const uniqueKey = `${eventId}_${chapterId}`;
+
+        if (uniqueKey !== lastKey) {
+            lastKey = uniqueKey;
+            
+            currentEventChapter = {
+                eventId: eventId, // ✨ 여기에 ID 저장 (제목은 저장 안 함)
+                chapterId: chapterId,
+                title: row.title,
+                content: []
+            };
+            eventStories.push(currentEventChapter);
         }
+        
+        // 대사 내용 추가
+        currentEventChapter.content.push({
+            character: (row.character && row.character !== "") ? row.character : null,
+            expression: row.expression,
+            position: row.position,
+            dialogue: row.dialogue
+        });
+    });
+}
 
         // 8. 이벤트 정보 설정 (디버깅 로그 추가 버전)
         if (data.eventInfo && data.eventInfo.length > 0) {
@@ -293,14 +312,19 @@ async function loadGameData() {
 
         // 10. 가챠 등장 목록(Pool) 설정
         if (data.gachaPool) {
-            gachaPool = {};
-            data.gachaPool.forEach(row => {
-                gachaPool[row.name] = {
-                    normal: (row.in_normal === true || row.in_normal === 'TRUE' || row.in_normal === 1),
-                    event: (row.in_event === true || row.in_event === 'TRUE' || row.in_event === 1)
-                };
-            });
-        }
+    gachaPool = {};
+    data.gachaPool.forEach(row => {
+        gachaPool[row.name] = {
+            // 일반 서가 등장 여부 (기존 유지)
+            normal: (row.in_normal === true || row.in_normal === 'TRUE' || row.in_normal === 1),
+            
+            // ✨ [핵심 수정] 단순 TRUE/FALSE가 아니라 '이벤트 ID'를 저장합니다.
+            // 시트 컬럼명이 target_event_id 라고 가정합니다. (시트 헤더와 일치시켜주세요)
+            // 만약 해당 이벤트 때만 등장하게 하려면 여기에 'event_title' 등을 적습니다.
+            targetEventId: row.target_event_id || row.eventId || null 
+        };
+    });
+}
 
         // 11. 스테이지 및 스테이지 스토리 조립
         if (data.stages && data.stageStories) {
@@ -608,9 +632,5 @@ const genericInteractions = [
     ['안녕하세요!', '반갑습니다.'],
     ['잠시 쉬었다 갈까요?', '좋은 생각입니다.']
 ];
-
-
-
-
 
 
