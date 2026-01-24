@@ -2234,6 +2234,7 @@ playerInspHp = savedData.inspHp ?? 0;
     } else {
         console.log("새로운 유저입니다. 초기 데이터로 시작합니다.");
         initializeNewGameData();
+		playerSystemMailHistory = [];
         await saveGameToFirebase(); 
     }
 
